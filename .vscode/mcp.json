@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "nasa-mcp-server": {
+      "command": "node",
+      "args": ["./index.js"],
+      "env": {
+        "NASA_API_KEY": "env:NASA_API_KEY"
+      }
+    }
+  }
+}
