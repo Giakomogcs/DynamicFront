@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model VerifiedApi {
+  idString    String @id @default(uuid())
+  name        String
+  baseUrl     String
+  specUrl     String?  // Optional: URL to Swagger/OpenAPI spec
+  authConfig  String?  // JSON string storing auth details (e.g. { "type": "bearer", "token": "..." })
+  toolConfig  String?  // JSON string storing the Tools definition (OpenAPI generated or LLM generated)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model VerifiedDb {
+  idString          String @id @default(uuid())
+  name              String
+  connectionString  String // connection string to the external DB
+  type              String // 'postgres', 'mysql', etc.
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

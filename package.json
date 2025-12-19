@@ -1,17 +1,17 @@
 {
-  "name": "nasa-mcp-server",
+  "name": "dynamic-front-root",
   "version": "1.0.0",
-  "type": "module",
-  "bin": {
-    "nasa-mcp-server": "./index.js"
-  },
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently \"npm run api --workspace=server\" \"npm run dev --workspace=client\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,magenta\"",
+    "prisma:studio": "npx prisma studio --schema=./server/prisma/schema.prisma",
+    "install:all": "npm install"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.21.1"
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
