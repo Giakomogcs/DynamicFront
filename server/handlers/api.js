@@ -3,9 +3,14 @@ import { z } from "zod";
 /**
  * Validates and fetches an OpenAPI spec from a URL
  */
-export async function validateApiSpec(url) {
+export async function validateApiSpec(url, auth = null) {
     try {
-        const response = await fetch(url);
+        const options = {};
+        if (auth && auth.type === 'basic') {
+            const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
+            options.headers = { 'Authorization': `Basic ${creds}` };
+        }
+        const response = await fetch(url, options);
         if (!response.ok) throw new Error(`Failed to fetch spec: ${response.statusText}`);
         const spec = await response.json();
         // Basic validation: check for 'openapi' or 'swagger' version
@@ -23,8 +28,17 @@ export async function validateApiSpec(url) {
  */
 export async function getApiTools(api) {
     let globalAuth = null;
+    let profiles = {};
     try {
-        if (api.authConfig) globalAuth = JSON.parse(api.authConfig);
+        if (api.authConfig) {
+            const parsed = JSON.parse(api.authConfig);
+            if (parsed.api) {
+                globalAuth = parsed.api.default;
+                profiles = parsed.api.profiles || {};
+            } else {
+                globalAuth = parsed;
+            }
+        }
     } catch { /* ignore */ }
 
     // 1. Check for Pre-Generated Tool Config (LLM Hallucinated or Stored)
@@ -43,13 +57,17 @@ export async function getApiTools(api) {
                         path: tool.apiConfig.path || tool.apiConfig.pathTemplate,
                         baseUrl: tool.apiConfig.baseUrl || api.baseUrl,
                         paramLocation: tool.apiConfig.paramLocation,
-                        auth: tool.apiConfig.auth || globalAuth
+                        path: tool.apiConfig.path || tool.apiConfig.pathTemplate,
+                        baseUrl: tool.apiConfig.baseUrl || api.baseUrl,
+                        paramLocation: tool.apiConfig.paramLocation,
+                        auth: tool.apiConfig.auth || globalAuth,
+                        profiles: profiles
                     }
                 }));
             }
         } catch (e) {
             console.error(`Error parsing stored toolConfig for API ${api.name}:`, e);
-            return [];
+            // Fallthrough to dynamic generation if stored config is corrupt
         }
     }
 
@@ -78,6 +96,12 @@ export async function getApiTools(api) {
                                 params: {
                                     type: "object",
                                     description: "Parameters for the API call (path variables, query params, body)"
+                                },
+                                _authProfile: {
+                                    type: "string",
+                                    description: `Optional: Auth profile to use. Available: ${Object.keys(profiles).length ? Object.keys(profiles).join(', ') : 'none'}`,
+                                    enum: Object.keys(profiles).length > 0 ? Object.keys(profiles) : undefined,
+                                    nullable: true
                                 }
                             },
                         },
@@ -87,7 +111,10 @@ export async function getApiTools(api) {
                             method: method,
                             path: path,
                             baseUrl: api.baseUrl,
-                            auth: globalAuth
+                            path: path,
+                            baseUrl: api.baseUrl,
+                            auth: globalAuth,
+                            profiles: profiles
                         }
                     });
                 }
@@ -104,7 +131,13 @@ export async function getApiTools(api) {
  * Executes an API Tool Call
  */
 export async function executeApiTool(toolExecConfig, args) {
-    const { method, path, baseUrl, auth } = toolExecConfig;
+    const { method, path, baseUrl, profiles } = toolExecConfig;
+    let auth = toolExecConfig.auth;
+
+    if (args._authProfile && profiles && profiles[args._authProfile]) {
+        auth = profiles[args._authProfile];
+    }
+
     let url = baseUrl ? baseUrl.replace(/\/$/, '') + path : path;
 
     // Replace Path Variables
@@ -134,31 +167,22 @@ export async function executeApiTool(toolExecConfig, args) {
         if (auth.type === 'bearer' && auth.token) {
             fetchOptions.headers['Authorization'] = `Bearer ${auth.token}`;
         } else if (auth.type === 'apiKey' && auth.paramName) {
-            // Determine if header or query
-            // Default to query if not specified, or checks spec.
-            // For now, simpler heuristic: try to append to URL if GET, else Header? 
-            // Actually, API Keys are often headers like 'x-api-key' OR query params 'api_key'.
-            // The user input just asks for "Key Name" and "Value".
-            // Let's assume Header by default if it looks like a header name (x-...), else Query?
-            // Or assume Query if method is GET?
-            // Safer: Add as Query Param for GET, Header for others? No, that varies wildy.
-            // Let's look at the example: "envVar": "NASA_API_KEY". 
-            // In the tool def from user: "paramLocation": "query".
-
-            // If the generated tool config has paramLocation, we might know.
-            // But auth object doesn't have it.
-            // Let's support both: check if ends with 'key' or 'token' -> Header x-api-key?
-            // Actually, let's just append as Query Param for now as it's most common for public APIs (NASA etc).
-            // AND set the header just in case.
-
             const keyName = auth.paramName;
             const keyValue = auth.value || process.env[auth.envVar];
+            const location = auth.paramLocation || 'query'; // 'header' | 'query' (default)
 
             if (keyValue) {
-                // 1. Add to Query (always safe-ish for GET, ignored often if not needed)
-                const separator = finalUrl.includes('?') ? '&' : '?';
-                finalUrl += `${separator}${keyName}=${encodeURIComponent(keyValue)}`;
+                if (location === 'header') {
+                    fetchOptions.headers[keyName] = keyValue;
+                } else {
+                    // Default to Query
+                    const separator = finalUrl.includes('?') ? '&' : '?';
+                    finalUrl += `${separator}${keyName}=${encodeURIComponent(keyValue)}`;
+                }
             }
+        } else if (auth.type === 'basic' && auth.username && auth.password) {
+            const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
+            fetchOptions.headers['Authorization'] = `Basic ${creds}`;
         }
     }
 
@@ -166,6 +190,10 @@ export async function executeApiTool(toolExecConfig, args) {
     if (dynamicHeaders && typeof dynamicHeaders === 'object') {
         Object.assign(fetchOptions.headers, dynamicHeaders);
     }
+
+    // DEBUG LOG
+    console.log(`[API Exec] ${method} ${finalUrl}`);
+    console.log(`[API Headers]`, JSON.stringify(fetchOptions.headers).replace(/("Authorization":\s*")[^"]+(")/, '$1[REDACTED]$2'));
 
 
     // 2. Query Params / Body Logic

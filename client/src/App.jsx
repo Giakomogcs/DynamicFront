@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from './Layout';
 import { Chat } from './components/Chat';
 import { ResourcesView } from './components/ResourcesView';
+import { SettingsView } from './components/SettingsView';
 import { Modal, RegisterApiForm, RegisterDbForm } from './components/RegistrationModal';
 
 import { Canvas } from './components/Canvas';
@@ -125,9 +126,68 @@ function App() {
   };
 
 
+  // Fetch Models & Settings
+  const [availableModels, setAvailableModels] = useState([]);
+  const [enabledModels, setEnabledModels] = useState(null); // null = load yet
+  const [selectedModel, setSelectedModel] = useState("");
+
+  useEffect(() => {
+    // Parallel fetch
+    Promise.all([
+      fetch('http://localhost:3000/api/models').then(r => r.json()),
+      fetch('http://localhost:3000/api/settings').then(r => r.json())
+    ]).then(([modelsData, settingsData]) => {
+      const models = Array.isArray(modelsData) ? modelsData : (modelsData.models || []);
+      const defaultModel = modelsData.defaultModel;
+
+      let enabled = [];
+      if (settingsData.enabledModels) {
+        enabled = settingsData.enabledModels;
+      } else {
+        // Default all enabled
+        enabled = models.map(m => m.name);
+      }
+
+      setEnabledModels(enabled);
+      setAvailableModels(models);
+
+      // Determine selection
+      // Filter first
+      const visibleModels = models.filter(m => enabled.includes(m.name));
+
+      if (defaultModel && visibleModels.find(m => m.name === defaultModel)) {
+        setSelectedModel(defaultModel);
+      } else if (visibleModels.length > 0) {
+        setSelectedModel(visibleModels[0].name);
+      } else if (models.length > 0) {
+        // Fallback if user disabled everything (shouldn't happen ideally)
+        setSelectedModel(models[0].name);
+      }
+    }).catch(err => console.error("Failed to fetch initial data", err));
+
+    // Debug log
+    console.log("[App] Mounted / Initial Fetch");
+
+    return () => console.log("[App] Unmounted");
+  }, []); // Run on mount
+
+  // Computed visible models
+  const visibleModels = availableModels.filter(m => !enabledModels || enabledModels.includes(m.name));
+
+  const abortControllerRef = React.useRef(null);
+
   const handleSendMessage = async (text) => {
     // Switch to workspace mode on first message
     if (layoutMode === 'center') setLayoutMode('workspace');
+
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new controller
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     // 1. Add User Message
     const userMsg = { role: 'user', text };
@@ -142,8 +202,10 @@ function App() {
         body: JSON.stringify({
           message: text,
           history: messages,
-          location // Send location context
-        })
+          location, // Send location context
+          model: selectedModel
+        }),
+        signal: controller.signal
       });
 
       const data = await response.json();
@@ -160,49 +222,131 @@ function App() {
       };
       setMessages(prev => [...prev, botMsg]);
 
-      // 4. Update Canvas with new widgets if any (Append or Replace? Let's Append for now, or Replace if user asks new thing?)
-      // For a "Dashboard" feel, we might want to accumulate. 
-      // But usually user wants to see the *answer*. Let's set active widgets to the latest response + keep old ones?
-      // User said: "ter varios chats para esse canvas".
-      // Let's replace for clarity unless we build a complex dashboard builder.
+      // 4. Update Canvas with new widgets if any
       if (data.widgets && data.widgets.length > 0) {
         setActiveWidgets(data.widgets);
       }
 
     } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, { role: 'model', text: `Error: ${error.message}` }]);
+      if (error.name === 'AbortError') {
+        console.log("Generation stopped by user");
+        setMessages(prev => [...prev, { role: 'model', text: "🛑 Generation stopped." }]);
+      } else {
+        console.error(error);
+        setMessages(prev => [...prev, { role: 'model', text: `Error: ${error.message}` }]);
+      }
     } finally {
+      setIsProcessing(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
       setIsProcessing(false);
     }
   };
 
-  const handleRegister = async (type, formData) => {
+  // --- Resource Management (Create / Update) ---
+  const [editingResource, setEditingResource] = useState(null); // { type: 'api'|'db', data: ... }
+
+  const handleRegister = React.useCallback(async (type, formData) => {
     setIsProcessing(true);
     try {
-      const endpoint = type === 'api' ? 'register_api' : 'register_db';
+      // Determine if Create or Update
+      if (editingResource) {
+        // UPDATE
+        const url = `http://localhost:3000/api/resources/${editingResource.type}/${editingResource.data.idString}`;
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Update failed");
+        }
+        setMessages(prev => [...prev, { role: 'model', text: `Updated resource '${formData.name}' successfully.` }]);
+      } else {
+        // CREATE
+        const endpoint = type === 'api' ? 'register_api' : 'register_db';
+        const response = await fetch('http://localhost:3000/api/tools/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: endpoint,
+            args: formData
+          })
+        });
 
-      const response = await fetch('http://localhost:3000/api/tools/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: endpoint,
-          args: formData
-        })
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        setMessages(prev => [...prev, { role: 'model', text: result.content?.[0]?.text || "Registration successful." }]);
+      }
 
       setModalType(null);
-      // Add a system message to chat confirming success
-      setMessages(prev => [...prev, { role: 'model', text: result.content?.[0]?.text || "Registration successful." }]);
+      setEditingResource(null); // Clear edit state
 
     } catch (e) {
       alert(e.message);
     } finally {
       setIsProcessing(false);
     }
+  }, [editingResource]); // Depends on editingResource
+
+  const handleEditResource = React.useCallback((type, data) => {
+    setEditingResource({ type, data });
+    setModalType(type); // Re-use the same modal
+  }, []);
+
+  // Close modal cleanup
+  const closeModal = React.useCallback(() => {
+    setModalType(null);
+    setEditingResource(null);
+  }, []);
+
+  // --- Custom Model Selector Component ---
+  const ModelSelector = ({ models, selected, onSelect }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const selectedModelObj = models.find(m => m.name === selected) || { displayName: 'Select Model', name: '' };
+
+    return (
+      <div className="relative z-50">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors text-sm font-medium text-slate-200"
+        >
+          <span className="text-indigo-400">✨</span>
+          <span>{selectedModelObj.displayName?.replace('models/', '') || selected?.replace('models/', '') || 'Loading...'}</span>
+          <span className="text-slate-500 text-xs">▼</span>
+        </button>
+
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <div className="absolute top-full left-0 mt-2 w-64 max-h-80 overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl shadow-xl shadow-black/50 z-50 p-1">
+              <div className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Available Models</div>
+              {models.map(m => (
+                <button
+                  key={m.name}
+                  onClick={() => { onSelect(m.name); setIsOpen(false); }}
+                  className={`
+                    w-full text-left px-3 py-2 rounded-lg text-sm mb-1 flex flex-col
+                    ${selected === m.name ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-300 hover:bg-slate-800'}
+                  `}
+                >
+                  <span className="font-medium">{m.displayName?.replace('models/', '')}</span>
+                  <span className="text-[10px] text-slate-500 truncate">{m.name}</span>
+                </button>
+              ))}
+              {models.length === 0 && <div className="p-3 text-slate-500 text-xs text-center">Loading models...</div>}
+            </div>
+          </>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -212,6 +356,13 @@ function App() {
       onRegisterApi={() => setModalType('api')}
       onRegisterDb={() => setModalType('db')}
       onOpenLoadModal={() => setShowLoadModal(true)}
+      headerContent={
+        <ModelSelector
+          models={visibleModels}
+          selected={selectedModel}
+          onSelect={setSelectedModel}
+        />
+      }
     >
       {activeTab === 'chat' && (
         <div className="flex h-full w-full overflow-hidden">
@@ -224,6 +375,7 @@ function App() {
               messages={messages}
               onSendMessage={handleSendMessage}
               isProcessing={isProcessing}
+              onStop={handleStopGeneration}
             />
           </div>
 
@@ -240,19 +392,35 @@ function App() {
               />
               <Canvas widgets={activeWidgets} loading={isProcessing} />
             </div>
-
           )}
         </div>
       )}
-      {activeTab === 'resources' && <ResourcesView />}
+      {activeTab === 'resources' && (
+        <ResourcesView
+          onEdit={(type, data) => handleEditResource(type, data)}
+        />
+      )}
+      {activeTab === 'settings' && <SettingsView />}
 
       <Modal
         isOpen={!!modalType}
-        onClose={() => setModalType(null)}
-        title={modalType === 'api' ? 'Connect New API' : 'Connect Database'}
+        onClose={closeModal}
+        title={editingResource ? `Edit ${modalType === 'api' ? 'API' : 'Database'}` : (modalType === 'api' ? 'Connect New API' : 'Connect Database')}
       >
-        {modalType === 'api' && <RegisterApiForm onSubmit={(data) => handleRegister('api', data)} isLoading={isProcessing} />}
-        {modalType === 'db' && <RegisterDbForm onSubmit={(data) => handleRegister('db', data)} isLoading={isProcessing} />}
+        {modalType === 'api' && (
+          <RegisterApiForm
+            onSubmit={(data) => handleRegister('api', data)}
+            isLoading={isProcessing}
+            initialData={editingResource?.type === 'api' ? editingResource.data : null}
+          />
+        )}
+        {modalType === 'db' && (
+          <RegisterDbForm
+            onSubmit={(data) => handleRegister('db', data)}
+            isLoading={isProcessing}
+            initialData={editingResource?.type === 'db' ? editingResource.data : null}
+          />
+        )}
       </Modal>
 
       {/* Load Canvas Modal (Simple) */}

@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "start": "node index.js",
-        "api": "node api_server.js",
+        "api": "node --watch api_server.js",
         "dev": "node --watch index.js",
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev"

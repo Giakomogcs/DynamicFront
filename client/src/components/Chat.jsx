@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { DynamicWidget } from './DynamicWidget';
 
-export const Chat = ({ messages, onSendMessage, isProcessing }) => {
+export const Chat = ({ messages, onSendMessage, isProcessing, onStop }) => {
     const [input, setInput] = useState('');
     const bottomRef = useRef(null);
 
@@ -53,7 +53,7 @@ export const Chat = ({ messages, onSendMessage, isProcessing }) => {
             </div>
 
             <div className="p-4 bg-slate-950 border-t border-slate-800 z-10">
-                <div className="relative">
+                <div className="relative flex gap-2">
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -67,13 +67,24 @@ export const Chat = ({ messages, onSendMessage, isProcessing }) => {
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none resize-none h-[52px]"
                         disabled={isProcessing}
                     />
-                    <button
-                        onClick={handleSend}
-                        disabled={!input.trim() || isProcessing}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-all disabled:opacity-0 disabled:scale-90"
-                    >
-                        <Send size={16} />
-                    </button>
+
+                    {isProcessing ? (
+                        <button
+                            onClick={onStop}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-lg transition-all"
+                            title="Stop Generation"
+                        >
+                            <div className="size-4 bg-current rounded-[2px]" />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleSend}
+                            disabled={!input.trim()}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-all disabled:opacity-0 disabled:scale-90"
+                        >
+                            <Send size={16} />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

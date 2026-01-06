@@ -6,9 +6,15 @@ import { geminiManager } from '../config/gemini.js';
  * Fetches content from a URL (naive implementation).
  * Ideally uses a headless browser or specialized scraper for complex sites.
  */
-async function fetchDocsContent(url) {
+async function fetchDocsContent(url, auth = null) {
   try {
-    const response = await fetch(url);
+    const options = {};
+    if (auth && auth.type === 'basic') {
+      const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
+      options.headers = { 'Authorization': `Basic ${creds}` };
+    }
+
+    const response = await fetch(url, options);
     if (!response.ok) throw new Error(`Failed to fetch docs: ${response.statusText}`);
     const contentType = response.headers.get("content-type");
 
@@ -32,15 +38,19 @@ async function fetchDocsContent(url) {
 /**
  * Generates what the User calls "MCP Tool Config" from raw text.
  */
-export async function generateApiToolsFromDocs(name, url, authConfig) {
-  const docsContent = await fetchDocsContent(url);
+export async function generateApiToolsFromDocs(name, url, authConfigString) {
+  let authConfig = {};
+  try { authConfig = JSON.parse(authConfigString); } catch { }
+
+  const docsAuth = authConfig.docs || null;
+  const docsContent = await fetchDocsContent(url, docsAuth);
 
   const prompt = `
     You are an expert API Developer. Your task is to analyze the following API Documentation (which might be raw HTML, Markdown, or JSON) and extract the available endpoints to create a "Tool Configuration" for an MCP Server.
     
     API Name: ${name}
     Docs URL: ${url}
-    Provided Auth Config (Use this to fill 'auth' fields): ${authConfig}
+    Provided Auth Config (Use this to fill 'auth' fields): ${authConfigString}
 
     --- DOCUMENTATION CONTENT START ---
     ${docsContent}
@@ -62,7 +72,8 @@ export async function generateApiToolsFromDocs(name, url, authConfig) {
             "type": "object",
             "properties": {
               "param_name": { "type": "string|number|boolean", "description": "...", "default": "optional_default" },
-              "_headers": { "type": "object", "description": "Optional: Custom headers (e.g. { 'Authorization': 'Bearer <token>' })", "nullable": true }
+              "_headers": { "type": "object", "description": "Optional: Custom headers (e.g. { 'Authorization': 'Bearer <token>' })", "nullable": true },
+              "_authProfile": { "type": "string", "description": "Optional: Auth profile to use (e.g. 'admin', 'viewer')", "nullable": true }
             },
             "required": ["param_name"]
           },

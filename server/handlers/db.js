@@ -65,15 +65,21 @@ export async function executeDbTool(toolExecConfig, args) {
             `;
             result = await client.query(query);
 
-            // Format schema nicely
-            const schema = {};
+            // Format schema nicely and COMPACTLY
+            // Output: "table_name: column(type), column(type)..."
+            const schemaMap = {};
             result.rows.forEach(row => {
-                if (!schema[row.table_name]) schema[row.table_name] = [];
-                schema[row.table_name].push(`${row.column_name} (${row.data_type})`);
+                if (!schemaMap[row.table_name]) schemaMap[row.table_name] = [];
+                schemaMap[row.table_name].push(`${row.column_name}(${row.data_type})`);
+            });
+
+            // Convert map to compact text lines
+            const lines = Object.entries(schemaMap).map(([table, cols]) => {
+                return `Table ${table}: ${cols.join(', ')}`;
             });
 
             return {
-                content: [{ type: "text", text: JSON.stringify(schema, null, 2) }]
+                content: [{ type: "text", text: lines.join('\n') }]
             };
 
         } else if (action === 'query') {

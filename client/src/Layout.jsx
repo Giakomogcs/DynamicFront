@@ -7,7 +7,7 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal }) => {
+const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent }) => {
 
     return (
         <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden font-sans">
@@ -54,7 +54,12 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                 </nav>
 
                 <div className="p-3 border-t border-slate-800">
-                    <SidebarItem icon={<Settings size={20} />} label="Settings" />
+                    <SidebarItem
+                        icon={<Settings size={20} />}
+                        label="Settings"
+                        isActive={activeTab === 'settings'}
+                        onClick={() => setActiveTab('settings')}
+                    />
                 </div>
             </div>
 
@@ -65,6 +70,8 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                         {activeTab === 'chat' ? 'Agentic Canvas' : activeTab}
                     </h2>
                     <div className="flex items-center gap-2">
+                        {/* Dynamic Header Content (e.g. Model Selector) */}
+                        {headerContent}
                         <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-full border border-green-400/20">
                             System Online
                         </span>

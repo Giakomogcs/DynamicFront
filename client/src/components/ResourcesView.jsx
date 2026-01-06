@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Trash2, Database, Globe, Loader2, AlertCircle } from 'lucide-react';
+import { Trash2, Database, Globe, Loader2, AlertCircle, Eye, RefreshCw, Pencil } from 'lucide-react';
 
-export const ResourcesView = () => {
+export const ResourcesView = ({ onEdit }) => {
     const [resources, setResources] = useState({ apis: [], dbs: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -9,11 +8,18 @@ export const ResourcesView = () => {
 
     const fetchResources = async () => {
         try {
+            console.log('[ResourcesView] Fetching resources...');
             const res = await fetch('http://localhost:3000/api/resources');
             if (!res.ok) throw new Error("Failed to fetch resources");
             const data = await res.json();
-            setResources(data);
+            // Defensive: ensure structure matches
+            const safeData = {
+                apis: Array.isArray(data?.apis) ? data.apis : [],
+                dbs: Array.isArray(data?.dbs) ? data.dbs : []
+            };
+            setResources(safeData);
         } catch (e) {
+            console.error('[ResourcesView] Error:', e);
             setError(e.message);
         } finally {
             setLoading(false);
@@ -21,7 +27,9 @@ export const ResourcesView = () => {
     };
 
     useEffect(() => {
+        console.log('[ResourcesView] Mounted');
         fetchResources();
+        return () => console.log('[ResourcesView] Unmounted');
     }, []);
 
     const handleDelete = async (type, id) => {
@@ -38,10 +46,36 @@ export const ResourcesView = () => {
         }
     };
 
+    const [viewingTools, setViewingTools] = useState(null); // { name: '', tools: [] } | null
+
+    const handleRefresh = async (type, id) => {
+        try {
+            const res = await fetch(`http://localhost:3000/api/resources/${type}/${id}/refresh`, { method: 'POST' });
+            if (!res.ok) throw new Error("Refresh failed");
+            await fetchResources();
+            alert("Resource refreshed successfully!");
+        } catch (e) {
+            alert(e.message);
+        }
+    };
+
+    const handleViewTools = async (type, id, name) => {
+        try {
+            const res = await fetch(`http://localhost:3000/api/resources/${type}/${id}/tools`);
+            const tools = await res.json();
+            setViewingTools({ name, tools });
+        } catch (e) {
+            alert("Failed to load tools");
+        }
+    };
+
     if (loading) return <div className="flex h-full items-center justify-center text-slate-500"><Loader2 className="animate-spin mr-2" /> Loading resources...</div>;
     if (error) return <div className="flex h-full items-center justify-center text-red-500"><AlertCircle className="mr-2" /> {error}</div>;
 
-    const hasResources = resources.apis.length > 0 || resources.dbs.length > 0;
+    // Defensive access
+    const apis = resources?.apis || [];
+    const dbs = resources?.dbs || [];
+    const hasResources = apis.length > 0 || dbs.length > 0;
 
     return (
         <div className="p-6 max-w-4xl mx-auto space-y-8">
@@ -53,13 +87,13 @@ export const ResourcesView = () => {
                 </div>
             )}
 
-            {resources.apis.length > 0 && (
+            {apis.length > 0 && (
                 <div className="space-y-4">
                     <h3 className="text-lg font-medium text-slate-300 flex items-center gap-2">
                         <Globe size={18} className="text-indigo-400" /> APIs
                     </h3>
                     <div className="grid gap-4">
-                        {resources.apis.map(api => (
+                        {apis.map(api => (
                             <ResourceCard
                                 key={api.idString}
                                 icon={<Globe size={20} className="text-indigo-400" />}
@@ -67,6 +101,9 @@ export const ResourcesView = () => {
                                 subtext={api.baseUrl}
                                 details={`Spec: ${api.specUrl || 'N/A'}`}
                                 onDelete={() => handleDelete('api', api.idString)}
+                                onEdit={() => onEdit && onEdit('api', api)}
+                                onRefresh={() => handleRefresh('api', api.idString)}
+                                onViewTools={() => handleViewTools('api', api.idString, api.name)}
                                 isDeleting={deletingId === api.idString}
                             />
                         ))}
@@ -74,13 +111,13 @@ export const ResourcesView = () => {
                 </div>
             )}
 
-            {resources.dbs.length > 0 && (
+            {dbs.length > 0 && (
                 <div className="space-y-4">
                     <h3 className="text-lg font-medium text-slate-300 flex items-center gap-2">
                         <Database size={18} className="text-emerald-400" /> Databases
                     </h3>
                     <div className="grid gap-4">
-                        {resources.dbs.map(db => (
+                        {dbs.map(db => (
                             <ResourceCard
                                 key={db.idString}
                                 icon={<Database size={20} className="text-emerald-400" />}
@@ -88,9 +125,33 @@ export const ResourcesView = () => {
                                 subtext={db.type}
                                 details={db.connectionString.replace(/:[^:]*@/, ':****@')} // Mask password
                                 onDelete={() => handleDelete('db', db.idString)}
+                                onEdit={() => onEdit && onEdit('db', db)}
+                                onRefresh={() => handleRefresh('db', db.idString)}
+                                onViewTools={() => handleViewTools('db', db.idString, db.name)}
                                 isDeleting={deletingId === db.idString}
                             />
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Tools Modal */}
+            {viewingTools && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-slate-900 w-full max-w-2xl rounded-2xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+                        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50">
+                            <h3 className="font-semibold text-white">Tools: {viewingTools.name}</h3>
+                            <button onClick={() => setViewingTools(null)} className="text-slate-500 hover:text-white">✕</button>
+                        </div>
+                        <div className="p-4 overflow-y-auto space-y-3">
+                            {viewingTools.tools.length === 0 && <p className="text-slate-500 text-center">No tools generated for this resource.</p>}
+                            {viewingTools.tools.map((t, idx) => (
+                                <div key={idx} className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                    <div className="font-mono text-sm text-indigo-400 font-semibold">{t.name}</div>
+                                    <div className="text-xs text-slate-400 mt-1">{t.description}</div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
@@ -98,7 +159,7 @@ export const ResourcesView = () => {
     );
 };
 
-const ResourceCard = ({ icon, name, subtext, details, onDelete, isDeleting }) => (
+const ResourceCard = ({ icon, name, subtext, details, onDelete, isDeleting, onEdit, onRefresh, onViewTools }) => (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between hover:border-slate-700 transition-colors">
         <div className="flex items-center gap-4">
             <div className="p-2 bg-slate-800 rounded-lg">{icon}</div>
@@ -108,13 +169,24 @@ const ResourceCard = ({ icon, name, subtext, details, onDelete, isDeleting }) =>
                 <div className="text-xs text-slate-600 font-mono mt-1">{details}</div>
             </div>
         </div>
-        <button
-            onClick={onDelete}
-            disabled={isDeleting}
-            className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all disabled:opacity-50"
-            title="Delete Resource"
-        >
-            {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-        </button>
+        <div className="flex items-center gap-2">
+            <button onClick={onViewTools} className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors" title="View Generated Tools">
+                <Eye size={18} />
+            </button>
+            <button onClick={onRefresh} className="p-2 text-slate-500 hover:text-green-400 hover:bg-slate-800 rounded-lg transition-colors" title="Force Refresh">
+                <RefreshCw size={18} />
+            </button>
+            <button onClick={onEdit} className="p-2 text-slate-500 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors" title="Edit Connection">
+                <Pencil size={18} />
+            </button>
+            <button
+                onClick={onDelete}
+                disabled={isDeleting}
+                className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all disabled:opacity-50"
+                title="Delete Resource"
+            >
+                {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+            </button>
+        </div>
     </div>
 );

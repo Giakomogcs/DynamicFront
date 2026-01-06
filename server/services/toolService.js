@@ -1,5 +1,5 @@
 import prisma from '../registry.js';
-import { registerTools, handleRegisterTool } from '../handlers/register.js';
+import { registerTools, handleRegisterTool, processApiRegistration } from '../handlers/register.js';
 import { getApiTools, executeApiTool } from '../handlers/api.js';
 import { getDbTools, executeDbTool } from '../handlers/db.js';
 
@@ -110,6 +110,105 @@ export class ToolService {
             console.error("Delete failed", e);
             return false;
         }
+    }
+
+    async updateResource(type, id, data) {
+        try {
+            if (type === 'api') {
+                // If specUrl or sensitive auth changed, re-validate/generate
+                const current = await prisma.verifiedApi.findUnique({ where: { idString: id } });
+                if (!current) throw new Error("API not found");
+
+                let updateData = {
+                    name: data.name,
+                    baseUrl: data.baseUrl,
+                    authConfig: data.authConfig,
+                    specUrl: data.specUrl // Allow updating Spec URL
+                };
+
+                // If specUrl, authConfig, or baseUrl changed, Re-Process
+                if (
+                    (data.specUrl && data.specUrl !== current.specUrl) ||
+                    (data.authConfig && data.authConfig !== current.authConfig) ||
+                    (data.baseUrl && data.baseUrl !== current.baseUrl)
+                ) {
+                    const processed = await processApiRegistration(
+                        data.name || current.name,
+                        data.specUrl || current.specUrl,
+                        data.baseUrl || current.baseUrl,
+                        data.authConfig || current.authConfig
+                    );
+                    updateData = processed;
+                    // Preserve ID
+                    delete updateData.idString;
+                }
+
+                const updated = await prisma.verifiedApi.update({
+                    where: { idString: id },
+                    data: updateData
+                });
+                return updated;
+            }
+
+            if (type === 'db') {
+                // For DB, just generic update, maybe validate connection if string changed
+                const updated = await prisma.verifiedDb.update({
+                    where: { idString: id },
+                    data: {
+                        name: data.name,
+                        connectionString: data.connectionString,
+                        type: data.type
+                    }
+                });
+                return updated;
+            }
+        } catch (e) {
+            console.error("Update failed", e);
+            throw e;
+        }
+    }
+
+    async refreshResource(type, id) {
+        if (type === 'api') {
+            const current = await prisma.verifiedApi.findUnique({ where: { idString: id } });
+            if (!current) throw new Error("API not found");
+
+            // Force Re-Process using existing config
+            const processed = await processApiRegistration(current.name, current.specUrl, current.baseUrl, current.authConfig);
+
+            const updated = await prisma.verifiedApi.update({
+                where: { idString: id },
+                data: {
+                    toolConfig: processed.toolConfig,
+                    updatedAt: new Date()
+                }
+            });
+            return updated;
+        }
+        // DB refresh is essentially just validating connection again, or schema introspection if we cached it (we don't cache DB schema currently, meaningful only for APIs)
+        return { success: true, message: "DB refresh not required (dynamic)" };
+    }
+
+    async getResourceTools(type, id) {
+        let tools = [];
+        if (type === 'api') {
+            const api = await prisma.verifiedApi.findUnique({ where: { idString: id } });
+            if (api) {
+                tools = await getApiTools(api);
+            }
+        } else if (type === 'db') {
+            const db = await prisma.verifiedDb.findUnique({ where: { idString: id } });
+            if (db) {
+                tools = getDbTools(db);
+            }
+        }
+
+        // Strip internal execution details for UI display
+        return tools.map(t => ({
+            name: t.name,
+            description: t.description,
+            inputSchema: t.inputSchema
+        }));
     }
 }
 

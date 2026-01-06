@@ -13,7 +13,7 @@ export const registerTools = [
                 name: { type: "string", description: "A friendly name for the API (e.g. 'Petstore')" },
                 specUrl: { type: "string", description: "URL to the OpenAPI JSON/YAML OR Documentation Page" },
                 baseUrl: { type: "string", description: "Optional Base URL override" },
-                authConfig: { type: "string", description: "JSON string for auth (e.g. {'type': 'bearer', 'token': '...'})" }
+                authConfig: { type: "string", description: "JSON string for auth. Supports simple legacy format OR advanced format: { \"docs\": { \"username\": \"...\", \"password\": \"...\" }, \"api\": { \"default\": {...}, \"profiles\": { \"admin\": {...} } } }" }
             },
             required: ["name", "specUrl"]
         }
@@ -33,45 +33,48 @@ export const registerTools = [
     }
 ];
 
+export async function processApiRegistration(name, specUrl, baseUrl, authConfigString) {
+    let toolConfigString = null;
+    let authConfig = {};
+    try { authConfig = JSON.parse(authConfigString || "{}"); } catch { }
+
+    // Extract docs auth profile if it exists (for 401 Spec URLs)
+    const docsAuth = authConfig.docs || null;
+
+    try {
+        // 1. Try Standard OpenAPI Parsing
+        await validateApiSpec(specUrl, docsAuth);
+    } catch (openApiError) {
+        // 2. Fallback: LLM Generation from Docs
+        console.log(`OpenAPI validation failed (${openApiError.message}). Attempting LLM extraction...`);
+        try {
+            const generatedConfig = await generateApiToolsFromDocs(name, specUrl, authConfigString || "{}");
+            toolConfigString = JSON.stringify(generatedConfig);
+        } catch (llmError) {
+            throw new Error(`Failed to register API. Not a valid OpenAPI spec, and LLM extraction failed: ${llmError.message}`);
+        }
+    }
+
+    return {
+        name,
+        specUrl,
+        baseUrl: baseUrl || "",
+        authConfig: authConfigString || "{}",
+        toolConfig: toolConfigString
+    };
+}
+
 export async function handleRegisterTool(name, args) {
     if (name === 'register_api') {
-        let toolConfigString = null;
-
         try {
-            // 1. Try Standard OpenAPI Parsing
-            await validateApiSpec(args.specUrl);
-            // If success, we don't necessarily generate toolConfig yet, we let dynamic parser do it?
-            // OR we can generate it now to normalize everything.
-            // For now, let's keep the old dynamic behavior for valid OpenAPI, 
-            // BUT if we want to "freeze" it, we could. 
-            // Let's stick to: If OpenAPI valid -> toolConfig is null (use dynamic).
+            const data = await processApiRegistration(args.name, args.specUrl, args.baseUrl, args.authConfig);
 
-        } catch (openApiError) {
-            // 2. Fallback: LLM Generation from Docs
-            console.log(`OpenAPI validation failed (${openApiError.message}). Attempting LLM extraction...`);
-            try {
-                const generatedConfig = await generateApiToolsFromDocs(args.name, args.specUrl, args.authConfig || "{}");
-                toolConfigString = JSON.stringify(generatedConfig);
-            } catch (llmError) {
-                return { isError: true, content: [{ type: "text", text: `Failed to register API. Not a valid OpenAPI spec, and LLM extraction failed: ${llmError.message}` }] };
-            }
-        }
-
-        try {
-            const newApi = await prisma.verifiedApi.create({
-                data: {
-                    name: args.name,
-                    specUrl: args.specUrl,
-                    baseUrl: args.baseUrl || "",
-                    authConfig: args.authConfig || "{}",
-                    toolConfig: toolConfigString
-                }
-            });
+            const newApi = await prisma.verifiedApi.create({ data });
             return {
-                content: [{ type: "text", text: `Successfully registered API '${newApi.name}'. ${toolConfigString ? "Tools were auto-generated from documentation." : "OpenAPI spec detected."}` }]
+                content: [{ type: "text", text: `Successfully registered API '${newApi.name}'. ${data.toolConfig ? "Tools were auto-generated from documentation." : "OpenAPI spec detected."}` }]
             };
         } catch (e) {
-            return { isError: true, content: [{ type: "text", text: `Database Error: ${e.message}` }] };
+            return { isError: true, content: [{ type: "text", text: `Error: ${e.message}` }] };
         }
     }
 
