@@ -37,7 +37,8 @@ export class GeminiModelManager {
         // Rate Limiting Queue
         // Free tier varies: 1.5 Flash (15 RPM), 1.5 Pro (2 RPM), 2.0 Flash (15 RPM?), 2.5 Flash (5 RPM?)
         // Safest common denominator is 5 RPM (12s interval).
-        this.requestQueue = new RequestQueue(5);
+        // INCREASED to 15 RPM for Flash as per standard tiers, but queue will handle 429s gracefully.
+        this.requestQueue = new RequestQueue(15);
 
         console.log("[GeminiManager] Initialized.");
         console.log(`[GeminiManager] Primary Model: ${this.primaryModelName}`);
