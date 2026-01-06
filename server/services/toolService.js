@@ -26,13 +26,17 @@ export class ToolService {
         try {
             const apis = await prisma.verifiedApi.findMany();
             for (const api of apis) {
-                const apiTools = await getApiTools(api);
-                apiTools.forEach(t => {
-                    const { _exec, ...clean } = t;
-                    // _exec contains { type: 'api', apiId, ... }
-                    this.executionMap.set(t.name, { type: 'api', config: _exec });
-                    tools.push(clean);
-                });
+                try {
+                    const apiTools = await getApiTools(api);
+                    apiTools.forEach(t => {
+                        const { _exec, ...clean } = t;
+                        // _exec contains { type: 'api', apiId, ... }
+                        this.executionMap.set(t.name, { type: 'api', config: _exec });
+                        tools.push(clean);
+                    });
+                } catch (apiError) {
+                    console.error(`[ToolService] Failed to load tools for API '${api.name}':`, apiError.message);
+                }
             }
         } catch (e) {
             console.error("[ToolService] Error fetching APIs:", e.message);
@@ -42,13 +46,17 @@ export class ToolService {
         try {
             const dbs = await prisma.verifiedDb.findMany();
             for (const db of dbs) {
-                const dbTools = getDbTools(db);
-                dbTools.forEach(t => {
-                    const { _exec, ...clean } = t;
-                    // _exec contains { type: 'db', connectionString, ... }
-                    this.executionMap.set(t.name, { type: 'db', config: _exec });
-                    tools.push(clean);
-                });
+                try {
+                    const dbTools = getDbTools(db);
+                    dbTools.forEach(t => {
+                        const { _exec, ...clean } = t;
+                        // _exec contains { type: 'db', connectionString, ... }
+                        this.executionMap.set(t.name, { type: 'db', config: _exec });
+                        tools.push(clean);
+                    });
+                } catch (dbError) {
+                    console.error(`[ToolService] Failed to load tools for DB '${db.name}':`, dbError.message);
+                }
             }
         } catch (e) {
             console.error("[ToolService] Error fetching DBs (Check connection):", e.message);
@@ -103,8 +111,16 @@ export class ToolService {
 
     async deleteResource(type, id) {
         try {
-            if (type === 'api') await prisma.verifiedApi.delete({ where: { idString: id } });
-            if (type === 'db') await prisma.verifiedDb.delete({ where: { idString: id } });
+            // Note: Cascade Delete is implicitly handled by not keeping separate tables for tools (since tools are generated dynamically or stored in JSON).
+            // If we had a separate 'Tool' table with foreign keys, we'd rely on Prisma's onDelete: Cascade.
+            // Since tools are either in 'toolConfig' (API) or dynamic (DB), deleting the parent record effectively deletes the tools.
+
+            if (type === 'api') {
+                await prisma.verifiedApi.delete({ where: { idString: id } });
+            }
+            if (type === 'db') {
+                await prisma.verifiedDb.delete({ where: { idString: id } });
+            }
             return true;
         } catch (e) {
             console.error("Delete failed", e);

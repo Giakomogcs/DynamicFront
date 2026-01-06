@@ -9,9 +9,16 @@ import { geminiManager } from '../config/gemini.js';
 async function fetchDocsContent(url, auth = null) {
   try {
     const options = {};
-    if (auth && auth.type === 'basic') {
-      const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
-      options.headers = { 'Authorization': `Basic ${creds}` };
+    if (auth) {
+      options.headers = {};
+      if (auth.username && auth.password) {
+         const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
+         options.headers['Authorization'] = `Basic ${creds}`;
+      } else if (auth.token) {
+         options.headers['Authorization'] = `Bearer ${auth.token}`;
+      } else if (auth.apiKey && auth.headerName) {
+         options.headers[auth.headerName] = auth.apiKey;
+      }
     }
 
     const response = await fetch(url, options);

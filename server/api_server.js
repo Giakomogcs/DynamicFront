@@ -17,6 +17,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
+// Global Logging Middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 // Initialize Gemini
 import { geminiManager } from './config/gemini.js';
 
@@ -169,6 +175,12 @@ app.put('/api/canvases/:id', async (req, res) => {
 import { getSettings, updateSetting } from './handlers/settings.js';
 app.get('/api/settings', getSettings);
 app.post('/api/settings', updateSetting);
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error("Unhandled Error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
+});
 
 app.listen(PORT, () => {
     console.log(`API Bridge running on http://localhost:${PORT}`);

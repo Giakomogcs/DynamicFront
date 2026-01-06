@@ -56,15 +56,37 @@ export class ExecutorAgent {
             let turn = 0;
             const maxTurns = 5;
 
+            // Dynamic Auth Store for this session
+            let sessionAuthHeaders = {};
+
             while (functionCalls && functionCalls.length > 0 && turn < maxTurns) {
                 turn++;
                 const parts = [];
 
                 for (const call of functionCalls) {
                     console.log(`[Executor] Tool Call: ${call.name}`);
+
+                    // INJECT AUTH HEADERS if available
+                    if (Object.keys(sessionAuthHeaders).length > 0) {
+                        call.args._headers = { ...call.args._headers, ...sessionAuthHeaders };
+                    }
+
                     let toolResult;
                     try {
                         toolResult = await toolService.executeTool(call.name, call.args);
+
+                        // CAPTURE AUTH TOKEN from Result
+                        if (call.name.includes('login') || call.name.includes('auth')) {
+                             const resultText = toolResult.content?.[0]?.text;
+                             try {
+                                const parsed = JSON.parse(resultText);
+                                if (parsed.token || parsed.access_token || parsed.accessToken) {
+                                    const token = parsed.token || parsed.access_token || parsed.accessToken;
+                                    sessionAuthHeaders['Authorization'] = `Bearer ${token}`;
+                                    console.log(`[Executor] Captured Bearer Token from ${call.name}`);
+                                }
+                             } catch(e) { /* Not JSON */ }
+                        }
                     } catch (e) {
                         console.error(`[Executor] Tool Error (${call.name}):`, e);
                         toolResult = { isError: true, content: [{ text: `Error: ${e.message}` }] };

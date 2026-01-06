@@ -6,9 +6,19 @@ import { z } from "zod";
 export async function validateApiSpec(url, auth = null) {
     try {
         const options = {};
-        if (auth && auth.type === 'basic') {
-            const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
-            options.headers = { 'Authorization': `Basic ${creds}` };
+        if (auth) {
+            options.headers = {};
+            if (auth.username && auth.password) {
+               // Basic Auth
+               const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
+               options.headers['Authorization'] = `Basic ${creds}`;
+            } else if (auth.token) {
+               // Bearer Token
+               options.headers['Authorization'] = `Bearer ${auth.token}`;
+            } else if (auth.apiKey && auth.headerName) {
+               // API Key in Header
+               options.headers[auth.headerName] = auth.apiKey;
+            }
         }
         const response = await fetch(url, options);
         if (!response.ok) throw new Error(`Failed to fetch spec: ${response.statusText}`);

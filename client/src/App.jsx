@@ -44,7 +44,7 @@ function App() {
     fetchCanvases();
   }, []);
 
-  const fetchCanvases = async () => {
+  const fetchCanvases = React.useCallback(async () => {
     try {
       const res = await fetch('http://localhost:3000/api/canvases');
       const data = await res.json();
@@ -52,7 +52,7 @@ function App() {
     } catch (e) {
       console.error("Failed to load canvases", e);
     }
-  };
+  }, []);
 
   const saveCanvas = async (curTitle, curWidgets) => {
     setIsProcessing(true);
