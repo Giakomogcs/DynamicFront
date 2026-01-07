@@ -13,9 +13,10 @@ import { orchestrator } from './agents/Orchestrator.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-
+// Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Initialize Gemini
 import { geminiManager } from './config/gemini.js';
@@ -41,6 +42,7 @@ app.get('/api/models', async (req, res) => {
 app.post('/api/chat', async (req, res) => {
     try {
         const { message, history, location, model } = req.body;
+        console.log(`[API Server] Received chat request: "${message?.substring(0, 50)}..."`);
 
         // Delegate entire process to the Multi-Agent Orchestrator
         const result = await orchestrator.processRequest(message, history, model, location);
@@ -49,8 +51,16 @@ app.post('/api/chat', async (req, res) => {
 
     } catch (error) {
         console.error("Chat Error:", error);
+
+        let userMessage = "I am experiencing heavy traffic or an internal error occurred.";
+
+        // Clearer feedback for Quota/Rate Limits
+        if (error.message.includes('429') || error.message.includes('Quota') || error.message.includes('Too Many Requests')) {
+            userMessage = `⚠️ **Quota Exceeded** for the selected model (${model || 'Default'}).\n\nPlease try:\n1. Switching to a different model (e.g., 'gemini-2.0-flash') using the selector in the header.\n2. Waiting a few minutes.`;
+        }
+
         res.status(500).json({
-            text: "I am experiencing heavy traffic or an error occurred.",
+            text: userMessage,
             error: error.message
         });
     }
@@ -70,6 +80,32 @@ app.post('/api/tools/execute', async (req, res) => {
         res.status(400).json({ error: "Only registration tools allowed on this endpoint" });
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+// 2.5 Test Connection Endpoint
+import { testConnection } from './handlers/test_connection.js';
+app.post('/api/tools/test-connection', async (req, res) => {
+    try {
+        const { baseUrl, authConfig } = req.body;
+        const result = await testConnection(baseUrl, authConfig);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// 2.6 Analyze Auth Endpoint
+import { analyzeAuthFromDocs } from './handlers/auth_analyzer.js';
+app.post('/api/tools/analyze-auth', async (req, res) => {
+    try {
+        const { docsUrl, docsContent, docsAuth } = req.body;
+        console.log(`[API Server] Analyzing Auth from ${docsUrl || 'Text Content'}`);
+        const config = await analyzeAuthFromDocs(docsUrl, docsContent, docsAuth);
+        res.json({ success: true, config });
+    } catch (e) {
+        console.error("[API Server] Auth Analysis Error:", e);
+        res.status(500).json({ success: false, message: e.message });
     }
 });
 

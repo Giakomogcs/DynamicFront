@@ -38,12 +38,12 @@ async function fetchDocsContent(url, auth = null) {
 /**
  * Generates what the User calls "MCP Tool Config" from raw text.
  */
-export async function generateApiToolsFromDocs(name, url, authConfigString) {
+export async function generateApiToolsFromDocs(name, url, authConfigString, rawContent = null) {
   let authConfig = {};
   try { authConfig = JSON.parse(authConfigString); } catch { }
 
   const docsAuth = authConfig.docs || null;
-  const docsContent = await fetchDocsContent(url, docsAuth);
+  const docsContent = rawContent || await fetchDocsContent(url, docsAuth);
 
   const prompt = `
     You are an expert API Developer. Your task is to analyze the following API Documentation (which might be raw HTML, Markdown, or JSON) and extract the available endpoints to create a "Tool Configuration" for an MCP Server.
@@ -101,11 +101,24 @@ export async function generateApiToolsFromDocs(name, url, authConfigString) {
   const response = await result.response;
   let text = response.text();
 
-  // Cleanup markdown if Gemini adds it
-  text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  console.log(`[ApiGenerator] Raw LLM Response:`, text.substring(0, 500) + "...");
+
+  // Robust JSON Extraction
+  // 1. Remove markdown code blocks
+  text = text.replace(/```json/g, '').replace(/```/g, '');
+
+  // 2. Find first opening brace and last closing brace to ignore chatty pre/post text
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    text = text.substring(firstBrace, lastBrace + 1);
+  }
 
   try {
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    console.log(`[ApiGenerator] Successfully generated ${parsed.tools?.length || 0} tools.`);
+    return parsed;
   } catch (e) {
     console.error("Failed to parse LLM generated JSON", text);
     throw new Error("LLM generated invalid JSON for tools.");

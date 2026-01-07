@@ -33,7 +33,7 @@ export const registerTools = [
     }
 ];
 
-export async function processApiRegistration(name, specUrl, baseUrl, authConfigString) {
+export async function processApiRegistration(name, specUrl, baseUrl, authConfigString, docsContent) {
     let toolConfigString = null;
     let authConfig = {};
     try { authConfig = JSON.parse(authConfigString || "{}"); } catch { }
@@ -42,22 +42,40 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
     const docsAuth = authConfig.docs || null;
 
     try {
-        // 1. Try Standard OpenAPI Parsing
-        await validateApiSpec(specUrl, docsAuth);
+        if (!docsContent) {
+            // 1. Try Standard OpenAPI Parsing (If no raw docs provided)
+            console.log(`[Register] Attempting standard OpenAPI validation for: ${specUrl}`);
+            await validateApiSpec(specUrl, docsAuth);
+            console.log(`[Register] OpenAPI validation successful.`);
+        } else {
+            console.log(`[Register] Raw docs content provided. Skipping URL validation.`);
+            throw new Error("Skip to LLM");
+        }
     } catch (openApiError) {
-        // 2. Fallback: LLM Generation from Docs
-        console.log(`OpenAPI validation failed (${openApiError.message}). Attempting LLM extraction...`);
+        // 2. Fallback: LLM Generation from Docs (or Raw Content)
+        console.log(`[Register] OpenAPI validation failed or skipped. Attempting LLM extraction...`);
         try {
-            const generatedConfig = await generateApiToolsFromDocs(name, specUrl, authConfigString || "{}");
+            let generatedConfig;
+            if (docsContent) {
+                // Mock the 'url' arg as 'Raw Text' for the generator
+                generatedConfig = await generateApiToolsFromDocs(name, "RAW_TEXT_INPUT", authConfigString || "{}", docsContent);
+            } else {
+                generatedConfig = await generateApiToolsFromDocs(name, specUrl, authConfigString || "{}");
+            }
+
             toolConfigString = JSON.stringify(generatedConfig);
+            console.log(`[Register] LLM generation successful. Config length: ${toolConfigString.length}`);
         } catch (llmError) {
+            console.error(`[Register] LLM generation failed: ${llmError.message}`);
+            // If manual base URL is provided, we might still want to save the API even if tool generation fails? 
+            // For now, fail hard to ensure quality.
             throw new Error(`Failed to register API. Not a valid OpenAPI spec, and LLM extraction failed: ${llmError.message}`);
         }
     }
 
     return {
         name,
-        specUrl,
+        specUrl: specUrl || "RAW_TEXT",
         baseUrl: baseUrl || "",
         authConfig: authConfigString || "{}",
         toolConfig: toolConfigString
@@ -67,7 +85,7 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
 export async function handleRegisterTool(name, args) {
     if (name === 'register_api') {
         try {
-            const data = await processApiRegistration(args.name, args.specUrl, args.baseUrl, args.authConfig);
+            const data = await processApiRegistration(args.name, args.specUrl, args.baseUrl, args.authConfig, args.docsContent);
 
             const newApi = await prisma.verifiedApi.create({ data });
             return {

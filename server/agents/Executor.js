@@ -1,4 +1,4 @@
-import { geminiManager } from '../config/gemini.js';
+import { modelManager } from '../services/ai/ModelManager.js';
 import { toolService } from '../services/toolService.js';
 import fs from 'fs';
 
@@ -10,21 +10,30 @@ export class ExecutorAgent {
      * @param {string} userMessage 
      * @param {Array} history 
      * @param {string} modelName 
-     * @param {Array} tools - Gemini formatted tools
+     * @param {Array} tools - Gemini formatted tools (TODO: standard format?)
      * @returns {Promise<{text: string, gatheredData: Array}>}
      */
     async execute(userMessage, history, modelName, tools = []) {
-        console.log(`[Executor] Starting execution with ${tools.length} tools.`);
+        console.log(`[Executor] Starting execution with ${tools.length} tools. Model: ${modelName}`);
 
-        const executorModel = geminiManager.getPrimaryModel({
-            model: modelName,
-            tools: tools.length > 0 ? [{ functionDeclarations: tools }] : [],
-            systemInstruction: `You are the EXECUTOR Agent. 
+        // 1. Prepare Initial Messages (Stateless)
+        // Convert history to generic format {role, content}
+        const messages = this.prepareHistory(history);
+
+        // Add current user message
+        messages.push({ role: 'user', content: userMessage });
+
+        const systemInstruction = `You are the EXECUTOR Agent. 
             Goal: Answer the user's question using the provided tools.
+            
+            CRITICAL WORKFLOW:
+            1. **Analyze Capabilities**: Before running queries, checking the available tools to see if they match the User's intent. "api_name_tool" usually implies data from that API. "db_name_inspect" implies a database.
+            2. **Exploration**: If you are unsure where the data is, use 'inspect_schema' or equivalent tools to find the right resource.
+            3. **Execution**: Run the query or API call.
             
             CRITICAL SQL RULES:
             1. **Filter Early**: ALWAYS use 'WHERE' clauses to filter data in the database. NEVER fetch all rows to filter in code.
-            2. **Aggregate**: Use 'COUNT', 'SUM', 'AVG', 'GROUP BY' in SQL. Do not fetch raw rows just to count them.
+            2. **Aggregate**: Use 'COUNT', 'SUM', 'AVG', 'GROUP BY' in SQL. Do not fetch raw rows to count them.
             3. **Limit Results**: Use 'LIMIT' to prevent fetching thousands of rows.
             4. **Be Specific**: Select specific columns (e.g. 'SELECT name, price') instead of 'SELECT *'.
             5. **Relevance**: Only query what is asked. Do not query "All States" if the user asked for "São Paulo".
@@ -33,73 +42,79 @@ export class ExecutorAgent {
             1. Call MULTIPLE tools in PARALLEL whenever possible to save time.
             2. If you need schema for multiple tables, call inspect_schema for all of them at once.
             3. If you have data, return a purely factual summary. 
-            4. Do NOT try to build complex UI widgets here. Focus on the DATA.`
-        });
-
-        // Prepare History
-        const validHistory = this.prepareHistory(history);
-        const chat = executorModel.startChat({ history: validHistory });
+            4. Do NOT try to build complex UI widgets here. Focus on the DATA.`;
 
         let gatheredData = [];
         let finalResponseText = "";
+        let turn = 0;
+        const maxTurns = 5;
 
-        // Initial Message
         try {
-            // We use the queue for the initial message
-            let result = await geminiManager.executeQueuedRequest(() => chat.sendMessage(userMessage));
-            let response = await result.response;
-            let text = response.text();
-            let functionCalls = response.functionCalls();
-
-            finalResponseText = text;
-
-            let turn = 0;
-            const maxTurns = 5;
-
-            while (functionCalls && functionCalls.length > 0 && turn < maxTurns) {
+            while (turn < maxTurns) {
                 turn++;
-                const parts = [];
 
-                for (const call of functionCalls) {
-                    console.log(`[Executor] Tool Call: ${call.name}`);
-                    let toolResult;
-                    try {
-                        toolResult = await toolService.executeTool(call.name, call.args);
-                    } catch (e) {
-                        console.error(`[Executor] Tool Error (${call.name}):`, e);
-                        toolResult = { isError: true, content: [{ text: `Error: ${e.message}` }] };
-                    }
+                // CALL AI
+                const result = await modelManager.generateContentWithFailover(messages, {
+                    model: modelName,
+                    tools: tools, // Provider knows how to map these
+                    systemInstruction
+                });
 
-                    // Track FULL data for Designer
-                    gatheredData.push({ tool: call.name, result: toolResult });
-
-                    // COMPRESS data for LLM Context (Save Tokens)
-                    const compressedContent = this.compressResult(toolResult);
-
-                    parts.push({
-                        functionResponse: {
-                            name: call.name,
-                            response: { content: compressedContent }
-                        }
-                    });
-                }
-
-                // Send tool outputs back via Queue
-                result = await geminiManager.executeQueuedRequest(() => chat.sendMessage(parts));
-                response = await result.response;
-                text = response.text();
-                functionCalls = response.functionCalls();
+                // Parse Result (Universal Response Wrapper)
+                const response = result.response;
+                const text = response.text() || ""; // Sometimes empty if just tool calls
+                const toolCalls = response.functionCalls ? response.functionCalls() : [];
 
                 finalResponseText = text;
-            }
 
+                // Append Assistant Response to History
+                // Note: We need to store toolCalls in the history for next turn context
+                // How we store it depends on the Provider's expectation or our generic format
+                // Generic: { role: 'model', content: text, toolCalls: [] }
+                // But GeminiProvider expects 'parts' mapping.
+                // Let's rely on GeminiProvider to map this correctly if we pass it back.
+
+                // If we have tool calls, we MUST push them to history
+                if (toolCalls.length > 0) {
+                    // For Gemini, we push the tool calls as the model response
+                    messages.push({
+                        role: 'model',
+                        content: text, // might be empty
+                        toolCalls: toolCalls // Pass explicitly for mapping
+                    });
+
+                    // Execute Tools
+                    for (const call of toolCalls) {
+                        console.log(`[Executor] >>> Calling Tool: ${call.name}`);
+                        let toolResult;
+                        try {
+                            toolResult = await toolService.executeTool(call.name, call.args);
+                        } catch (e) {
+                            console.error(`[Executor] Tool Error (${call.name}):`, e);
+                            toolResult = { isError: true, content: [{ text: `Error: ${e.message}` }] };
+                        }
+
+                        gatheredData.push({ tool: call.name, result: toolResult });
+                        const compressedContent = this.compressResult(toolResult);
+
+                        // Append Tool Output to History
+                        messages.push({
+                            role: 'tool',
+                            name: call.name,
+                            content: compressedContent
+                        });
+                    }
+                } else {
+                    // No tools, just text response. We are done.
+                    break;
+                }
+            }
         } catch (error) {
             console.error("[Executor] Error in execution loop:", error);
             fs.writeFileSync('debug_executor.log', `[${new Date().toISOString()}] Error: ${error.message}\n${error.stack}\n`);
 
-            // Expose specific error to user for better debugging (especially 429s)
             if (error.message.includes('429') || error.message.includes('Quota') || error.message.includes('Too Many Requests')) {
-                finalResponseText = `⚠️ **System Limit Reached**: The AI model is currently overloaded (Rate Limit/Quota Exceeded). Please try again in a few moments or switch to a different model in the settings.\n\n_Error: ${error.message}_`;
+                finalResponseText = `⚠️ **System Limit Reached**: The AI model is currently overloaded. Please try again later or switch models.`;
             } else {
                 finalResponseText = `I encountered an error processing your request: ${error.message}`;
             }
@@ -109,28 +124,23 @@ export class ExecutorAgent {
     }
 
     prepareHistory(history) {
+        // Map frontend history to generic {role, content}
         let validHistory = (history || []).map(h => ({
             role: h.role === 'assistant' ? 'model' : h.role,
-            parts: [{ text: h.text }]
+            content: h.text || ""
         })).slice(-10);
 
-        // Ensure first is user
+        // Ensure first is user (Gemini requirement often, but good practice)
         while (validHistory.length > 0 && validHistory[0].role !== 'user') validHistory.shift();
         return validHistory;
     }
 
-    /**
-     * Truncates large responses for the LLM to save context window.
-     * The full data is still saved in 'gatheredData' for the Designer.
-     */
     compressResult(toolResult) {
-        // Deep copy to avoid mutating the original that Designer uses
         const copy = JSON.parse(JSON.stringify(toolResult));
-
         if (copy.content && Array.isArray(copy.content)) {
             copy.content.forEach(c => {
                 if (c.text && c.text.length > 2000) {
-                    c.text = c.text.substring(0, 2000) + "\n... [DATA TRUNCATED FOR CONTEXT EFFICIENCY. FULL DATA AVAILABLE TO DESIGNER]";
+                    c.text = c.text.substring(0, 2000) + "\n... [DATA TRUNCATED FOR CONTEXT EFFICIENCY]";
                 }
             });
         }

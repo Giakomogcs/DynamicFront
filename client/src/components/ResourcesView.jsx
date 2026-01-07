@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Trash2, Database, Globe, Loader2, AlertCircle, Eye, RefreshCw, Pencil } from 'lucide-react';
 
 export const ResourcesView = ({ onEdit }) => {

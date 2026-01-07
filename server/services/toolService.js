@@ -13,6 +13,7 @@ export class ToolService {
      * Rebuilds the execution cache.
      */
     async getAllTools() {
+        console.log("[ToolService] Fetching all tools...");
         const tools = [];
         this.executionMap.clear();
 

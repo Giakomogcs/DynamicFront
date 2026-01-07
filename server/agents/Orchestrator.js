@@ -10,26 +10,31 @@ export class AgentOrchestrator {
     constructor() { }
 
     async processRequest(userMessage, history, modelName = null, location = null) {
-        console.log(`[Orchestrator] Starting process for: "${userMessage?.substring(0, 50)}..."`);
+        console.log(`\n=== [Orchestrator] New Request: "${userMessage?.substring(0, 50)}..." ===`);
 
         // 1. Fetch All Tools
+        console.log("[Orchestrator] Step 1: Fetching available tools...");
         const allMcpTools = await toolService.getAllTools();
         const allGeminiTools = mapMcpToolsToGemini(allMcpTools);
+        console.log(`[Orchestrator] Found ${allMcpTools.length} total tools.`);
 
         // 2. PLAN
+        console.log("[Orchestrator] Step 2: Planning tool usage...");
         const selectedToolNames = await plannerAgent.plan(userMessage, allMcpTools, location, modelName);
+        console.log(`[Orchestrator] Planner selected: [${selectedToolNames.join(', ')}]`);
 
         // Filter Tools
-        // If planner returns empty, we send NO tools (prevent hallucination) OR all tools? 
-        // New Strategy: specific tools only.
         const activeTools = allGeminiTools.filter(t => selectedToolNames.includes(t.name));
-        console.log(`[Orchestrator] Logic selected ${activeTools.length} tools.`);
 
         // 3. EXECUTE
+        console.log(`[Orchestrator] Step 3: Executing with ${activeTools.length} tools...`);
         const executionResult = await executorAgent.execute(userMessage, history, modelName, activeTools);
+        console.log("[Orchestrator] Execution finished. Gathering result...");
 
         // 4. DESIGN
+        console.log("[Orchestrator] Step 4: Designing output widgets...");
         const finalResult = await designerAgent.design(executionResult.text, executionResult.gatheredData, modelName);
+        console.log("=== [Orchestrator] Process Complete ===\n");
 
         return finalResult;
     }

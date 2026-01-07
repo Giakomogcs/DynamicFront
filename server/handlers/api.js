@@ -4,21 +4,39 @@ import { z } from "zod";
  * Validates and fetches an OpenAPI spec from a URL
  */
 export async function validateApiSpec(url, auth = null) {
+    console.log(`[API Handler] Validating/Fetching spec: ${url}`);
     try {
-        const options = {};
-        if (auth && auth.type === 'basic') {
-            const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
-            options.headers = { 'Authorization': `Basic ${creds}` };
+        const options = {
+            signal: AbortSignal.timeout(5000) // 5s timeout
+        };
+        if (auth) {
+            if (auth.type === 'basic' && auth.username && auth.password) {
+                const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
+                options.headers = { 'Authorization': `Basic ${creds}` };
+            } else if (auth.type === 'bearer' && auth.token) {
+                options.headers = { 'Authorization': `Bearer ${auth.token}` };
+            } else if (auth.type === 'apiKey' && auth.paramName && auth.value) {
+                if (auth.paramLocation === 'header') {
+                    options.headers = { [auth.paramName]: auth.value };
+                } else {
+                    // Assume query param
+                    const separator = url.includes('?') ? '&' : '?';
+                    url += `${separator}${auth.paramName}=${encodeURIComponent(auth.value)}`;
+                }
+            }
         }
         const response = await fetch(url, options);
         if (!response.ok) throw new Error(`Failed to fetch spec: ${response.statusText}`);
         const spec = await response.json();
+
         // Basic validation: check for 'openapi' or 'swagger' version
         if (!spec.openapi && !spec.swagger) {
             throw new Error("Invalid OpenAPI/Swagger spec");
         }
+        console.log(`[API Handler] Spec fetched successfully: ${url}`);
         return spec;
     } catch (error) {
+        console.error(`[API Handler] Spec validation failed for ${url}: ${error.message}`);
         throw new Error(`Spec validation failed: ${error.message}`);
     }
 }
@@ -35,7 +53,7 @@ export async function getApiTools(api) {
             if (parsed.api) {
                 globalAuth = parsed.api.default;
                 profiles = parsed.api.profiles || {};
-            } else {
+            } else if (parsed.type) {
                 globalAuth = parsed;
             }
         }
@@ -77,7 +95,61 @@ export async function getApiTools(api) {
     if (!specUrl) return tools;
 
     try {
-        const spec = await validateApiSpec(specUrl);
+        // Use docs auth if available, otherwise fallback to global default auth
+        // We need to parse authConfig again if not passed explicitly, but api object has it as string
+        let specAuth = null;
+        try {
+            const ac = JSON.parse(api.authConfig || '{}');
+            specAuth = ac.docs || ac.api?.default || null;
+        } catch { }
+
+        const spec = await validateApiSpec(specUrl, specAuth);
+
+        // Determine Effective Base URL
+        let effectiveBaseUrl = api.baseUrl;
+        if (!effectiveBaseUrl) {
+            if (spec.servers && spec.servers.length > 0) {
+                // OpenApi 3
+                let serverUrl = spec.servers[0].url;
+                if (!serverUrl.startsWith('http') && specUrl) {
+                    try {
+                        const specObj = new URL(specUrl);
+                        // Handle root-relative or just relative
+                        if (serverUrl.startsWith('/')) {
+                            effectiveBaseUrl = specObj.origin + serverUrl;
+                        } else {
+                            // Resolve relative path (e.g. 'v1') against spec path? 
+                            // Usually servers url is root relative or absolute. simpler to just join with origin if it starts with /
+                            // If it doesn't start with /, it is complicated. But let's assume root relative or absolute for now.
+                            // Actually, let's use the URL constructor to resolve it properly if possible, but specUrl might be deep.
+                            // Safe fallback:
+                            effectiveBaseUrl = new URL(serverUrl, specObj.origin).toString();
+                        }
+                    } catch (e) {
+                        effectiveBaseUrl = serverUrl; // Fallback
+                    }
+                } else {
+                    effectiveBaseUrl = serverUrl;
+                }
+            } else if (spec.host) {
+                // Swagger 2
+                const scheme = (spec.schemes && spec.schemes.length > 0) ? spec.schemes[0] : 'https';
+                effectiveBaseUrl = `${scheme}://${spec.host}${spec.basePath || ''}`;
+            }
+        }
+
+        // 3. Fallback: Use Spec URL Origin
+        if (!effectiveBaseUrl && specUrl) {
+            try {
+                const u = new URL(specUrl);
+                effectiveBaseUrl = u.origin;
+            } catch (e) {
+                console.warn("[API Handler] Failed to parse specUrl for fallback base:", e);
+            }
+        }
+
+        console.log(`[API Handler] Resolved Effective Base URL for '${api.name}': ${effectiveBaseUrl}`);
+
         const paths = spec.paths || {};
 
         for (const [path, methods] of Object.entries(paths)) {
@@ -110,9 +182,7 @@ export async function getApiTools(api) {
                             apiId: api.idString,
                             method: method,
                             path: path,
-                            baseUrl: api.baseUrl,
-                            path: path,
-                            baseUrl: api.baseUrl,
+                            baseUrl: effectiveBaseUrl,
                             auth: globalAuth,
                             profiles: profiles
                         }
@@ -163,8 +233,61 @@ export async function executeApiTool(toolExecConfig, args) {
     };
 
     // --- Authentication Handling ---
+    // --- Authentication Handling ---
     if (auth) {
-        if (auth.type === 'bearer' && auth.token) {
+        // Token Exchange / Login Flow
+        if (auth.type === 'basic' && auth.loginUrl) {
+            try {
+                // Determine Login URL (Absolute or Relative)
+                const loginFullUrl = auth.loginUrl.startsWith('http') ? auth.loginUrl : `${baseUrl.replace(/\/$/, '')}${auth.loginUrl.startsWith('/') ? '' : '/'}${auth.loginUrl}`;
+
+                let loginBody = {};
+                if (auth.loginParams && Array.isArray(auth.loginParams)) {
+                    auth.loginParams.forEach(p => {
+                        if (p.key) loginBody[p.key] = p.value || '';
+                    });
+                } else {
+                    // Legacy
+                    const userKey = auth.usernameKey || 'username';
+                    const passKey = auth.passwordKey || 'password';
+                    loginBody[userKey] = auth.username;
+                    loginBody[passKey] = auth.password;
+
+                    if (auth.extraBody) {
+                        try { Object.assign(loginBody, JSON.parse(auth.extraBody)); } catch (e) { }
+                    }
+                }
+
+                console.log(`[API Exec] Authenticating via ${loginFullUrl}...`);
+                const loginRes = await fetch(loginFullUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(loginBody),
+                    signal: AbortSignal.timeout(5000)
+                });
+
+                if (loginRes.ok) {
+                    const loginData = await loginRes.json();
+                    const tokenPath = auth.tokenPath || 'access_token';
+                    // Extract token via path (simple dot notation support)
+                    const token = tokenPath.split('.').reduce((o, k) => (o || {})[k], loginData);
+
+                    if (token) {
+                        fetchOptions.headers['Authorization'] = `Bearer ${token}`;
+                    } else {
+                        console.warn(`[API Exec] Auth success but token not found at '${tokenPath}'`);
+                    }
+                } else {
+                    console.error(`[API Exec] Auth failed: ${loginRes.status}`);
+                }
+            } catch (e) {
+                console.error(`[API Exec] Auth flow error: ${e.message}`);
+                // Proceeding without fresh token, might fail but let's try or should we throw?
+                // For now, let's proceed (maybe manual one works?) 
+                // actually if login fails, usually the call fails.
+            }
+
+        } else if (auth.type === 'bearer' && auth.token) {
             fetchOptions.headers['Authorization'] = `Bearer ${auth.token}`;
         } else if (auth.type === 'apiKey' && auth.paramName) {
             const keyName = auth.paramName;
@@ -221,13 +344,21 @@ export async function executeApiTool(toolExecConfig, args) {
     try {
         const response = await fetch(finalUrl, fetchOptions);
         const text = await response.text();
+
+        if (!response.ok) {
+            console.error(`[API Error] ${response.status} ${response.statusText} at ${finalUrl}`);
+            console.error(`[API Error Body] ${text}`);
+            throw new Error(`API Error ${response.status}: ${text.substring(0, 500)}`); // Truncate for safety
+        }
+
         let data;
         try { data = JSON.parse(text); } catch { data = text; }
 
         return {
-            content: [{ type: "text", text: JSON.stringify(data, null, 2) }]
+            content: [{ type: "text", text: JSON.stringify(data) }]
         };
     } catch (error) {
+        console.error(`[API Handler] Execution Failed:`, error.message);
         return {
             content: [{ type: "text", text: `Error calling API: ${error.message}` }],
             isError: true

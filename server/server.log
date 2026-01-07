@@ -1,0 +1,1934 @@
+[2026-01-06T17:52:20.007Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:52:20.010Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:52:20.009Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:52:20.012Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:52:20.012Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:52:20.014Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:52:20.014Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:52:20.015Z] [INFO] [GeminiManager] Fetching available models...
+[2026-01-06T17:52:20.016Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:52:20.017Z] [INFO] [GeminiManager] Fetching available models...
+[2026-01-06T17:52:20.136Z] [ERROR] (node:29800) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T17:52:20.138Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:52:20.152Z] [ERROR] (node:3452) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T17:52:20.154Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:52:20.456Z] [INFO] ------------------------------------------------
+[2026-01-06T17:52:20.457Z] [INFO] AVAILABLE GEMINI MODELS (generateContent):
+[2026-01-06T17:52:20.458Z] [INFO] ------------------------------------------------
+[2026-01-06T17:52:20.459Z] [INFO] - models/gemma-3n-e4b-it (001) [Gemma 3n E4B]
+[2026-01-06T17:52:20.459Z] [INFO] - models/gemma-3n-e2b-it (001) [Gemma 3n E2B]
+[2026-01-06T17:52:20.460Z] [INFO] - models/gemma-3-4b-it (001) [Gemma 3 4B]
+[2026-01-06T17:52:20.460Z] [INFO] - models/gemma-3-27b-it (001) [Gemma 3 27B]
+[2026-01-06T17:52:20.460Z] [INFO] - models/gemma-3-1b-it (001) [Gemma 3 1B]
+[2026-01-06T17:52:20.461Z] [INFO] - models/gemma-3-12b-it (001) [Gemma 3 12B]
+[2026-01-06T17:52:20.461Z] [INFO] - models/gemini-robotics-er-1.5-preview (1.5-preview) [Gemini Robotics-ER 1.5 Preview]
+[2026-01-06T17:52:20.462Z] [INFO] - models/gemini-pro-latest (Gemini Pro Latest) [Gemini Pro Latest]
+[2026-01-06T17:52:20.463Z] [INFO] - models/gemini-flash-lite-latest (Gemini Flash-Lite Latest) [Gemini Flash-Lite Latest]
+[2026-01-06T17:52:20.463Z] [INFO] - models/gemini-flash-latest (Gemini Flash Latest) [Gemini Flash Latest]
+[2026-01-06T17:52:20.464Z] [INFO] - models/gemini-exp-1206 (2.5-exp-03-25) [Gemini Experimental 1206]
+[2026-01-06T17:52:20.465Z] [INFO] - models/gemini-3-pro-preview (3-pro-preview-11-2025) [Gemini 3 Pro Preview]
+[2026-01-06T17:52:20.465Z] [INFO] - models/gemini-3-flash-preview (3-flash-preview-12-2025) [Gemini 3 Flash Preview]
+[2026-01-06T17:52:20.466Z] [INFO] - models/gemini-2.5-pro-preview-tts (gemini-2.5-pro-preview-tts-2025-05-19) [Gemini 2.5 Pro Preview TTS]
+[2026-01-06T17:52:20.467Z] [INFO] - models/gemini-2.5-pro (2.5) [Gemini 2.5 Pro]
+[2026-01-06T17:52:20.467Z] [INFO] - models/gemini-2.5-flash-preview-tts (gemini-2.5-flash-exp-tts-2025-05-19) [Gemini 2.5 Flash Preview TTS]
+[2026-01-06T17:52:20.468Z] [INFO] - models/gemini-2.5-flash-preview-09-2025 (Gemini 2.5 Flash Preview 09-2025) [Gemini 2.5 Flash Preview Sep 2025]
+[2026-01-06T17:52:20.468Z] [INFO] - models/gemini-2.5-flash-lite-preview-09-2025 (2.5-preview-09-25) [Gemini 2.5 Flash-Lite Preview Sep 2025]
+[2026-01-06T17:52:20.469Z] [INFO] - models/gemini-2.5-flash-lite (001) [Gemini 2.5 Flash-Lite]
+[2026-01-06T17:52:20.469Z] [INFO] - models/gemini-2.5-flash (001) [Gemini 2.5 Flash]
+[2026-01-06T17:52:20.471Z] [INFO] - models/gemini-2.5-computer-use-preview-10-2025 (Gemini 2.5 Computer Use Preview 10-2025) [Gemini 2.5 Computer Use Preview 10-2025]
+[2026-01-06T17:52:20.471Z] [INFO] - models/gemini-2.0-flash-lite-preview-02-05 (preview-02-05) [Gemini 2.0 Flash-Lite Preview 02-05]
+[2026-01-06T17:52:20.472Z] [INFO] - models/gemini-2.0-flash-lite-preview (preview-02-05) [Gemini 2.0 Flash-Lite Preview]
+[2026-01-06T17:52:20.472Z] [INFO] - models/gemini-2.0-flash-lite-001 (2.0) [Gemini 2.0 Flash-Lite 001]
+[2026-01-06T17:52:20.473Z] [INFO] - models/gemini-2.0-flash-lite (2.0) [Gemini 2.0 Flash-Lite]
+[2026-01-06T17:52:20.474Z] [INFO] - models/gemini-2.0-flash-exp-image-generation (2.0) [Gemini 2.0 Flash (Image Generation) Experimental]
+[2026-01-06T17:52:20.474Z] [INFO] - models/gemini-2.0-flash-exp (2.0) [Gemini 2.0 Flash Experimental]
+[2026-01-06T17:52:20.474Z] [INFO] - models/gemini-2.0-flash-001 (2.0) [Gemini 2.0 Flash 001]
+[2026-01-06T17:52:20.479Z] [INFO] - models/gemini-2.0-flash (2.0) [Gemini 2.0 Flash]
+[2026-01-06T17:52:20.480Z] [INFO] ------------------------------------------------
+[2026-01-06T17:52:20.485Z] [INFO] ------------------------------------------------
+[2026-01-06T17:52:20.486Z] [INFO] AVAILABLE GEMINI MODELS (generateContent):
+[2026-01-06T17:52:20.488Z] [INFO] ------------------------------------------------
+[2026-01-06T17:52:20.489Z] [INFO] - models/gemma-3n-e4b-it (001) [Gemma 3n E4B]
+[2026-01-06T17:52:20.489Z] [INFO] - models/gemma-3n-e2b-it (001) [Gemma 3n E2B]
+[2026-01-06T17:52:20.490Z] [INFO] - models/gemma-3-4b-it (001) [Gemma 3 4B]
+[2026-01-06T17:52:20.491Z] [INFO] - models/gemma-3-27b-it (001) [Gemma 3 27B]
+[2026-01-06T17:52:20.493Z] [INFO] - models/gemma-3-1b-it (001) [Gemma 3 1B]
+[2026-01-06T17:52:20.494Z] [INFO] - models/gemma-3-12b-it (001) [Gemma 3 12B]
+[2026-01-06T17:52:20.495Z] [INFO] - models/gemini-robotics-er-1.5-preview (1.5-preview) [Gemini Robotics-ER 1.5 Preview]
+[2026-01-06T17:52:20.495Z] [INFO] - models/gemini-pro-latest (Gemini Pro Latest) [Gemini Pro Latest]
+[2026-01-06T17:52:20.496Z] [INFO] - models/gemini-flash-lite-latest (Gemini Flash-Lite Latest) [Gemini Flash-Lite Latest]
+[2026-01-06T17:52:20.496Z] [INFO] - models/gemini-flash-latest (Gemini Flash Latest) [Gemini Flash Latest]
+[2026-01-06T17:52:20.497Z] [INFO] - models/gemini-exp-1206 (2.5-exp-03-25) [Gemini Experimental 1206]
+[2026-01-06T17:52:20.498Z] [INFO] - models/gemini-3-pro-preview (3-pro-preview-11-2025) [Gemini 3 Pro Preview]
+[2026-01-06T17:52:20.499Z] [INFO] - models/gemini-3-flash-preview (3-flash-preview-12-2025) [Gemini 3 Flash Preview]
+[2026-01-06T17:52:20.499Z] [INFO] - models/gemini-2.5-pro-preview-tts (gemini-2.5-pro-preview-tts-2025-05-19) [Gemini 2.5 Pro Preview TTS]
+[2026-01-06T17:52:20.500Z] [INFO] - models/gemini-2.5-pro (2.5) [Gemini 2.5 Pro]
+[2026-01-06T17:52:20.501Z] [INFO] - models/gemini-2.5-flash-preview-tts (gemini-2.5-flash-exp-tts-2025-05-19) [Gemini 2.5 Flash Preview TTS]
+[2026-01-06T17:52:20.501Z] [INFO] - models/gemini-2.5-flash-preview-09-2025 (Gemini 2.5 Flash Preview 09-2025) [Gemini 2.5 Flash Preview Sep 2025]
+[2026-01-06T17:52:20.502Z] [INFO] - models/gemini-2.5-flash-lite-preview-09-2025 (2.5-preview-09-25) [Gemini 2.5 Flash-Lite Preview Sep 2025]
+[2026-01-06T17:52:20.503Z] [INFO] - models/gemini-2.5-flash-lite (001) [Gemini 2.5 Flash-Lite]
+[2026-01-06T17:52:20.503Z] [INFO] - models/gemini-2.5-flash (001) [Gemini 2.5 Flash]
+[2026-01-06T17:52:20.505Z] [INFO] - models/gemini-2.5-computer-use-preview-10-2025 (Gemini 2.5 Computer Use Preview 10-2025) [Gemini 2.5 Computer Use Preview 10-2025]
+[2026-01-06T17:52:20.506Z] [INFO] - models/gemini-2.0-flash-lite-preview-02-05 (preview-02-05) [Gemini 2.0 Flash-Lite Preview 02-05]
+[2026-01-06T17:52:20.506Z] [INFO] - models/gemini-2.0-flash-lite-preview (preview-02-05) [Gemini 2.0 Flash-Lite Preview]
+[2026-01-06T17:52:20.507Z] [INFO] - models/gemini-2.0-flash-lite-001 (2.0) [Gemini 2.0 Flash-Lite 001]
+[2026-01-06T17:52:20.508Z] [INFO] - models/gemini-2.0-flash-lite (2.0) [Gemini 2.0 Flash-Lite]
+[2026-01-06T17:52:20.508Z] [INFO] - models/gemini-2.0-flash-exp-image-generation (2.0) [Gemini 2.0 Flash (Image Generation) Experimental]
+[2026-01-06T17:52:20.508Z] [INFO] - models/gemini-2.0-flash-exp (2.0) [Gemini 2.0 Flash Experimental]
+[2026-01-06T17:52:20.509Z] [INFO] - models/gemini-2.0-flash-001 (2.0) [Gemini 2.0 Flash 001]
+[2026-01-06T17:52:20.509Z] [INFO] - models/gemini-2.0-flash (2.0) [Gemini 2.0 Flash]
+[2026-01-06T17:52:20.510Z] [INFO] ------------------------------------------------
+[2026-01-06T17:52:41.188Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:52:41.190Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:52:41.191Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:52:41.192Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:52:41.199Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:52:41.201Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:52:41.202Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:52:41.203Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:52:41.211Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:52:41.220Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:54:08.655Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:54:08.656Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:54:08.657Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:54:08.658Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:54:08.679Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:54:09.096Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:54:09.098Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:54:09.099Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:54:09.100Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:54:09.116Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:54:10.166Z] [INFO] [GeminiManager] Fetching available models...
+[2026-01-06T17:54:10.260Z] [ERROR] (node:27172) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T17:54:10.568Z] [INFO] ------------------------------------------------
+[2026-01-06T17:54:10.569Z] [INFO] AVAILABLE GEMINI MODELS (generateContent):
+[2026-01-06T17:54:10.569Z] [INFO] ------------------------------------------------
+[2026-01-06T17:54:10.570Z] [INFO] - models/gemma-3n-e4b-it (001) [Gemma 3n E4B]
+[2026-01-06T17:54:10.570Z] [INFO] - models/gemma-3n-e2b-it (001) [Gemma 3n E2B]
+[2026-01-06T17:54:10.570Z] [INFO] - models/gemma-3-4b-it (001) [Gemma 3 4B]
+[2026-01-06T17:54:10.571Z] [INFO] - models/gemma-3-27b-it (001) [Gemma 3 27B]
+[2026-01-06T17:54:10.571Z] [INFO] - models/gemma-3-1b-it (001) [Gemma 3 1B]
+[2026-01-06T17:54:10.571Z] [INFO] - models/gemma-3-12b-it (001) [Gemma 3 12B]
+[2026-01-06T17:54:10.572Z] [INFO] - models/gemini-robotics-er-1.5-preview (1.5-preview) [Gemini Robotics-ER 1.5 Preview]
+[2026-01-06T17:54:10.572Z] [INFO] - models/gemini-pro-latest (Gemini Pro Latest) [Gemini Pro Latest]
+[2026-01-06T17:54:10.572Z] [INFO] - models/gemini-flash-lite-latest (Gemini Flash-Lite Latest) [Gemini Flash-Lite Latest]
+[2026-01-06T17:54:10.573Z] [INFO] - models/gemini-flash-latest (Gemini Flash Latest) [Gemini Flash Latest]
+[2026-01-06T17:54:10.573Z] [INFO] - models/gemini-exp-1206 (2.5-exp-03-25) [Gemini Experimental 1206]
+[2026-01-06T17:54:10.574Z] [INFO] - models/gemini-3-pro-preview (3-pro-preview-11-2025) [Gemini 3 Pro Preview]
+[2026-01-06T17:54:10.574Z] [INFO] - models/gemini-3-flash-preview (3-flash-preview-12-2025) [Gemini 3 Flash Preview]
+[2026-01-06T17:54:10.575Z] [INFO] - models/gemini-2.5-pro-preview-tts (gemini-2.5-pro-preview-tts-2025-05-19) [Gemini 2.5 Pro Preview TTS]
+[2026-01-06T17:54:10.575Z] [INFO] - models/gemini-2.5-pro (2.5) [Gemini 2.5 Pro]
+[2026-01-06T17:54:10.575Z] [INFO] - models/gemini-2.5-flash-preview-tts (gemini-2.5-flash-exp-tts-2025-05-19) [Gemini 2.5 Flash Preview TTS]
+[2026-01-06T17:54:10.576Z] [INFO] - models/gemini-2.5-flash-preview-09-2025 (Gemini 2.5 Flash Preview 09-2025) [Gemini 2.5 Flash Preview Sep 2025]
+[2026-01-06T17:54:10.576Z] [INFO] - models/gemini-2.5-flash-lite-preview-09-2025 (2.5-preview-09-25) [Gemini 2.5 Flash-Lite Preview Sep 2025]
+[2026-01-06T17:54:10.577Z] [INFO] - models/gemini-2.5-flash-lite (001) [Gemini 2.5 Flash-Lite]
+[2026-01-06T17:54:10.577Z] [INFO] - models/gemini-2.5-flash (001) [Gemini 2.5 Flash]
+[2026-01-06T17:54:10.578Z] [INFO] - models/gemini-2.5-computer-use-preview-10-2025 (Gemini 2.5 Computer Use Preview 10-2025) [Gemini 2.5 Computer Use Preview 10-2025]
+[2026-01-06T17:54:10.578Z] [INFO] - models/gemini-2.0-flash-lite-preview-02-05 (preview-02-05) [Gemini 2.0 Flash-Lite Preview 02-05]
+[2026-01-06T17:54:10.578Z] [INFO] - models/gemini-2.0-flash-lite-preview (preview-02-05) [Gemini 2.0 Flash-Lite Preview]
+[2026-01-06T17:54:10.579Z] [INFO] - models/gemini-2.0-flash-lite-001 (2.0) [Gemini 2.0 Flash-Lite 001]
+[2026-01-06T17:54:10.579Z] [INFO] - models/gemini-2.0-flash-lite (2.0) [Gemini 2.0 Flash-Lite]
+[2026-01-06T17:54:10.580Z] [INFO] - models/gemini-2.0-flash-exp-image-generation (2.0) [Gemini 2.0 Flash (Image Generation) Experimental]
+[2026-01-06T17:54:10.580Z] [INFO] - models/gemini-2.0-flash-exp (2.0) [Gemini 2.0 Flash Experimental]
+[2026-01-06T17:54:10.580Z] [INFO] - models/gemini-2.0-flash-001 (2.0) [Gemini 2.0 Flash 001]
+[2026-01-06T17:54:10.581Z] [INFO] - models/gemini-2.0-flash (2.0) [Gemini 2.0 Flash]
+[2026-01-06T17:54:10.581Z] [INFO] ------------------------------------------------
+[2026-01-06T17:54:10.585Z] [INFO] [GeminiManager] Fetching available models...
+[2026-01-06T17:54:11.213Z] [INFO] ------------------------------------------------
+[2026-01-06T17:54:11.214Z] [INFO] AVAILABLE GEMINI MODELS (generateContent):
+[2026-01-06T17:54:11.215Z] [INFO] ------------------------------------------------
+[2026-01-06T17:54:11.215Z] [INFO] - models/gemma-3n-e4b-it (001) [Gemma 3n E4B]
+[2026-01-06T17:54:11.215Z] [INFO] - models/gemma-3n-e2b-it (001) [Gemma 3n E2B]
+[2026-01-06T17:54:11.216Z] [INFO] - models/gemma-3-4b-it (001) [Gemma 3 4B]
+[2026-01-06T17:54:11.216Z] [INFO] - models/gemma-3-27b-it (001) [Gemma 3 27B]
+[2026-01-06T17:54:11.216Z] [INFO] - models/gemma-3-1b-it (001) [Gemma 3 1B]
+[2026-01-06T17:54:11.217Z] [INFO] - models/gemma-3-12b-it (001) [Gemma 3 12B]
+[2026-01-06T17:54:11.217Z] [INFO] - models/gemini-robotics-er-1.5-preview (1.5-preview) [Gemini Robotics-ER 1.5 Preview]
+[2026-01-06T17:54:11.218Z] [INFO] - models/gemini-pro-latest (Gemini Pro Latest) [Gemini Pro Latest]
+[2026-01-06T17:54:11.218Z] [INFO] - models/gemini-flash-lite-latest (Gemini Flash-Lite Latest) [Gemini Flash-Lite Latest]
+[2026-01-06T17:54:11.218Z] [INFO] - models/gemini-flash-latest (Gemini Flash Latest) [Gemini Flash Latest]
+[2026-01-06T17:54:11.219Z] [INFO] - models/gemini-exp-1206 (2.5-exp-03-25) [Gemini Experimental 1206]
+[2026-01-06T17:54:11.219Z] [INFO] - models/gemini-3-pro-preview (3-pro-preview-11-2025) [Gemini 3 Pro Preview]
+[2026-01-06T17:54:11.219Z] [INFO] - models/gemini-3-flash-preview (3-flash-preview-12-2025) [Gemini 3 Flash Preview]
+[2026-01-06T17:54:11.220Z] [INFO] - models/gemini-2.5-pro-preview-tts (gemini-2.5-pro-preview-tts-2025-05-19) [Gemini 2.5 Pro Preview TTS]
+[2026-01-06T17:54:11.220Z] [INFO] - models/gemini-2.5-pro (2.5) [Gemini 2.5 Pro]
+[2026-01-06T17:54:11.221Z] [INFO] - models/gemini-2.5-flash-preview-tts (gemini-2.5-flash-exp-tts-2025-05-19) [Gemini 2.5 Flash Preview TTS]
+[2026-01-06T17:54:11.221Z] [INFO] - models/gemini-2.5-flash-preview-09-2025 (Gemini 2.5 Flash Preview 09-2025) [Gemini 2.5 Flash Preview Sep 2025]
+[2026-01-06T17:54:11.221Z] [INFO] - models/gemini-2.5-flash-lite-preview-09-2025 (2.5-preview-09-25) [Gemini 2.5 Flash-Lite Preview Sep 2025]
+[2026-01-06T17:54:11.222Z] [INFO] - models/gemini-2.5-flash-lite (001) [Gemini 2.5 Flash-Lite]
+[2026-01-06T17:54:11.222Z] [INFO] - models/gemini-2.5-flash (001) [Gemini 2.5 Flash]
+[2026-01-06T17:54:11.223Z] [INFO] - models/gemini-2.5-computer-use-preview-10-2025 (Gemini 2.5 Computer Use Preview 10-2025) [Gemini 2.5 Computer Use Preview 10-2025]
+[2026-01-06T17:54:11.223Z] [INFO] - models/gemini-2.0-flash-lite-preview-02-05 (preview-02-05) [Gemini 2.0 Flash-Lite Preview 02-05]
+[2026-01-06T17:54:11.223Z] [INFO] - models/gemini-2.0-flash-lite-preview (preview-02-05) [Gemini 2.0 Flash-Lite Preview]
+[2026-01-06T17:54:11.224Z] [INFO] - models/gemini-2.0-flash-lite-001 (2.0) [Gemini 2.0 Flash-Lite 001]
+[2026-01-06T17:54:11.224Z] [INFO] - models/gemini-2.0-flash-lite (2.0) [Gemini 2.0 Flash-Lite]
+[2026-01-06T17:54:11.224Z] [INFO] - models/gemini-2.0-flash-exp-image-generation (2.0) [Gemini 2.0 Flash (Image Generation) Experimental]
+[2026-01-06T17:54:11.225Z] [INFO] - models/gemini-2.0-flash-exp (2.0) [Gemini 2.0 Flash Experimental]
+[2026-01-06T17:54:11.225Z] [INFO] - models/gemini-2.0-flash-001 (2.0) [Gemini 2.0 Flash 001]
+[2026-01-06T17:54:11.225Z] [INFO] - models/gemini-2.0-flash (2.0) [Gemini 2.0 Flash]
+[2026-01-06T17:54:11.226Z] [INFO] ------------------------------------------------
+[2026-01-06T17:56:32.059Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:56:32.062Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:56:32.063Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:56:32.067Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:56:32.068Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:56:32.070Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:56:32.072Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:56:32.073Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:56:32.099Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:56:32.104Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:56:34.059Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:56:34.060Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:56:34.061Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:56:34.062Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:56:34.068Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T17:56:34.071Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T17:56:34.071Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T17:56:34.072Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T17:56:34.077Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T17:56:34.086Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:00:51.604Z] [INFO] [API Server] Received chat request: "quantos senais tem em diadema?..."
+[2026-01-06T18:00:51.605Z] [INFO] [Orchestrator] Starting process for: "quantos senais tem em diadema?..."
+[2026-01-06T18:00:51.606Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:00:51.640Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:00:51.710Z] [ERROR] (node:8084) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T18:00:52.739Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:00:52.745Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T18:00:53.827Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:00:53.828Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:01:05.684Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:01:05.686Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:01:17.019Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:01:17.020Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:01:29.052Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:01:29.053Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:01:45.463Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:01:45.464Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:01:58.789Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:01:58.791Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:01:58.791Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:01:58.792Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:01:59.217Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:01:59.219Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:01:59.220Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:01:59.221Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:01:59.231Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:01:59.233Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:01:59.234Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:01:59.234Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:01:59.237Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:01:59.257Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:02:00.526Z] [ERROR] (node:3372) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T18:02:43.552Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:02:43.554Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:02:43.555Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:02:43.556Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:02:43.556Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:02:43.557Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:02:43.558Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:02:43.559Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:02:43.572Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:02:43.577Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:02:55.078Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:02:55.080Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:02:55.080Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:02:55.081Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:02:55.081Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:02:55.083Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:02:55.084Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:02:55.084Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:02:55.099Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:02:55.099Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:02:57.205Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:02:57.207Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:02:57.208Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:02:57.209Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:02:57.216Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:02:57.218Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:02:57.218Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:02:57.219Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:02:57.232Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:02:57.238Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:09:54.695Z] [INFO] [API Server] Received chat request: "quantos cursos de mecatronica existe no brasil?..."
+[2026-01-06T18:09:54.696Z] [INFO] 
+=== [Orchestrator] New Request: "quantos cursos de mecatronica existe no brasil?..." ===
+[2026-01-06T18:09:54.696Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T18:09:54.698Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:09:54.728Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:09:54.797Z] [ERROR] (node:30224) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T18:09:55.946Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:09:55.953Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T18:09:55.954Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T18:09:55.955Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T18:09:56.353Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:09:56.354Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:10:08.228Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:10:08.229Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:10:20.212Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:10:20.212Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:10:23.368Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:10:23.370Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:10:23.371Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:10:23.371Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:10:23.387Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:10:23.641Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:10:23.643Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:10:23.644Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:10:23.644Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:10:23.665Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:10:23.908Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:10:23.910Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:10:23.910Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:10:23.911Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:10:23.922Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:10:25.353Z] [ERROR] (node:20664) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T18:10:44.796Z] [INFO] [API Server] Received chat request: "quais os estados com mais unidades senai?..."
+[2026-01-06T18:10:44.797Z] [INFO] 
+=== [Orchestrator] New Request: "quais os estados com mais unidades senai?..." ===
+[2026-01-06T18:10:44.797Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T18:10:44.798Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:10:44.804Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:10:45.490Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:10:45.494Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T18:10:45.495Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T18:10:45.495Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T18:10:45.791Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:10:45.792Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:10:57.762Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:10:57.763Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:11:09.752Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:11:09.753Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:11:21.784Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:11:21.785Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:11:38.038Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:11:38.039Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:12:10.392Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T18:12:10.393Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+[2026-01-06T18:12:10.394Z] [ERROR] [GeminiManager] User-selected model 'models/gemini-2.5-flash' failed. NOT falling back to secondary. Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+[2026-01-06T18:12:10.396Z] [ERROR] [Planner] Error: {"status":429,"statusText":"Too Many Requests"}
+[2026-01-06T18:12:10.398Z] [INFO] [Orchestrator] Planner selected: []
+[2026-01-06T18:12:10.399Z] [INFO] [Orchestrator] Step 3: Executing with 0 tools...
+[2026-01-06T18:12:10.400Z] [INFO] [Executor] Starting execution with 0 tools.
+[2026-01-06T18:12:22.264Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:12:22.265Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:12:34.273Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:12:34.274Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:12:46.264Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:12:46.264Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:12:58.267Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:12:58.267Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:13:14.524Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:13:14.525Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:13:26.288Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:13:26.290Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:13:26.291Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:13:26.292Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:13:26.307Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:13:26.311Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:13:26.312Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:13:26.312Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:13:26.313Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:13:26.330Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:13:26.399Z] [INFO] [API Server] Received chat request: "quais os estados com mais unidades senai?..."
+[2026-01-06T18:13:26.400Z] [INFO] 
+=== [Orchestrator] New Request: "quais os estados com mais unidades senai?..." ===
+[2026-01-06T18:13:26.400Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T18:13:26.401Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:13:26.430Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:13:26.497Z] [ERROR] (node:30628) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T18:13:27.521Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:13:27.527Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T18:13:27.528Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T18:13:27.530Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T18:13:27.788Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:13:27.789Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:13:39.767Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:13:39.767Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:13:51.773Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:13:51.775Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:14:03.864Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:14:03.865Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:14:05.622Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:14:05.624Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:14:05.625Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:14:05.627Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:14:05.643Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:14:05.645Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:14:05.645Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:14:05.646Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:14:05.645Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:14:05.665Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:15:00.763Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:15:00.765Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:15:00.766Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:15:00.767Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:15:00.778Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:15:00.779Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:15:00.780Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:15:00.781Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:15:00.786Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:15:00.798Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:16:11.449Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:16:11.455Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:16:11.456Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:16:11.457Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:16:11.461Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:16:11.463Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:16:11.464Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:16:11.465Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:16:11.478Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:16:11.483Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:16:55.454Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:16:55.456Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:16:55.457Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:16:55.457Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:16:55.474Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:16:55.476Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:16:55.477Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:16:55.476Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:16:55.478Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:16:55.493Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:47:07.192Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:47:07.194Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:47:07.195Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:47:07.195Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:47:07.195Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:47:07.197Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:47:07.197Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:47:07.198Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:47:07.216Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:47:07.216Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:47:08.423Z] [ERROR] (node:28804) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T18:47:14.054Z] [INFO] [API Server] Received chat request: "quais os estados com mais unidades senai?..."
+[2026-01-06T18:47:14.055Z] [INFO] 
+=== [Orchestrator] New Request: "quais os estados com mais unidades senai?..." ===
+[2026-01-06T18:47:14.056Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T18:47:14.057Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:47:14.062Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:47:14.613Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:47:14.615Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:47:14.615Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:47:14.616Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:47:14.632Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:47:14.783Z] [INFO] [API Server] Received chat request: "quais os estados com mais unidades senai?..."
+[2026-01-06T18:47:14.784Z] [INFO] 
+=== [Orchestrator] New Request: "quais os estados com mais unidades senai?..." ===
+[2026-01-06T18:47:14.785Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T18:47:14.785Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:47:14.816Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:47:14.885Z] [ERROR] (node:30128) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T18:47:15.579Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:47:15.584Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T18:47:15.585Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T18:47:15.586Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T18:47:15.586Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-06T18:47:16.622Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:47:16.623Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:47:28.009Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:47:28.010Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:47:39.867Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:47:39.867Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:47:51.836Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:47:51.836Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:48:08.123Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:48:08.124Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:48:40.366Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T18:48:40.367Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+[2026-01-06T18:48:40.367Z] [ERROR] [GeminiManager] User-selected model 'models/gemini-2.5-flash' failed. NOT falling back. Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+[2026-01-06T18:48:40.369Z] [ERROR] [Planner] Error: {"status":429,"statusText":"Too Many Requests"}
+[2026-01-06T18:48:40.370Z] [INFO] [Orchestrator] Planner selected: []
+[2026-01-06T18:48:40.370Z] [INFO] [Orchestrator] Step 3: Executing with 0 tools...
+[2026-01-06T18:48:40.375Z] [INFO] [Executor] Starting execution with 0 tools.
+[2026-01-06T18:48:44.765Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:48:44.767Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:48:44.768Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:48:44.768Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:48:44.779Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:48:52.361Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:48:52.363Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:48:55.131Z] [INFO] [API Server] Received chat request: "quais os estados com mais unidades senai?..."
+[2026-01-06T18:48:55.131Z] [INFO] 
+=== [Orchestrator] New Request: "quais os estados com mais unidades senai?..." ===
+[2026-01-06T18:48:55.132Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T18:48:55.132Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:48:55.134Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:48:55.939Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:48:55.944Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T18:48:55.945Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T18:48:55.946Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T18:48:55.948Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-06T18:49:04.363Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:49:04.363Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:49:16.383Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:49:16.384Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:49:28.439Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:49:28.440Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:49:44.707Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:49:44.708Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:50:17.042Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T18:50:17.043Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+[2026-01-06T18:50:17.044Z] [ERROR] [Executor] Error in execution loop: {"status":429,"statusText":"Too Many Requests"}
+[2026-01-06T18:50:17.045Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-06T18:50:17.045Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-06T18:50:17.046Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-06T18:50:28.972Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:50:28.972Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:50:40.947Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:50:40.948Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:50:52.948Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:50:52.949Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:51:04.957Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:51:04.957Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:51:21.210Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:51:21.211Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:51:53.527Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T18:51:53.527Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+[2026-01-06T18:51:53.528Z] [ERROR] [GeminiManager] User-selected model 'models/gemini-2.5-flash' failed. NOT falling back. Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+[2026-01-06T18:51:53.529Z] [ERROR] [Planner] Error: {"status":429,"statusText":"Too Many Requests"}
+[2026-01-06T18:51:53.530Z] [INFO] [Orchestrator] Planner selected: []
+[2026-01-06T18:51:53.531Z] [INFO] [Orchestrator] Step 3: Executing with 0 tools...
+[2026-01-06T18:51:53.531Z] [INFO] [Executor] Starting execution with 0 tools.
+[2026-01-06T18:51:55.304Z] [INFO] [API Server] Received chat request: "quais os estados com mais unidades senai?..."
+[2026-01-06T18:51:55.305Z] [INFO] 
+=== [Orchestrator] New Request: "quais os estados com mais unidades senai?..." ===
+[2026-01-06T18:51:55.305Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T18:51:55.306Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:51:55.312Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:51:56.459Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:51:56.463Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T18:51:56.464Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T18:51:56.465Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T18:51:56.465Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-06T18:52:05.438Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:52:05.439Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:52:17.433Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:52:17.433Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:52:30.209Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:52:30.210Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:52:41.437Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:52:41.439Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:52:57.661Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:52:57.662Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:53:30.035Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T18:53:30.036Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+[2026-01-06T18:53:30.037Z] [ERROR] [Executor] Error in execution loop: {"status":429,"statusText":"Too Many Requests"}
+[2026-01-06T18:53:30.038Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-06T18:53:30.039Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-06T18:53:30.039Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-06T18:54:08.681Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:54:08.681Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:54:10.886Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:54:10.886Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:54:19.779Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:54:19.781Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:54:19.782Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:54:19.782Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:54:19.796Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:54:20.008Z] [INFO] [API Server] Received chat request: "quais os estados com mais unidades senai?..."
+[2026-01-06T18:54:20.009Z] [INFO] 
+=== [Orchestrator] New Request: "quais os estados com mais unidades senai?..." ===
+[2026-01-06T18:54:20.010Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T18:54:20.011Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T18:54:20.060Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:54:20.152Z] [ERROR] (node:29428) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T18:54:20.203Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:54:20.205Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:54:20.206Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:54:20.206Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:54:20.223Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:54:21.301Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T18:54:21.313Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T18:54:21.314Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T18:54:21.314Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T18:54:21.315Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-06T18:54:21.606Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:54:21.606Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:54:33.630Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:54:33.631Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:54:45.605Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:54:45.606Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:54:57.650Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:54:57.650Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:55:13.927Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:55:13.929Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:55:46.192Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T18:55:46.193Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash
+Please retry in 3.845087763s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"3s"}]
+[2026-01-06T18:55:46.194Z] [ERROR] [GeminiManager] User-selected model 'models/gemini-2.0-flash' failed. NOT falling back. Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash
+Please retry in 3.845087763s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"3s"}]
+[2026-01-06T18:55:46.202Z] [ERROR] [Planner] Error: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"3s"}]}
+[2026-01-06T18:55:46.204Z] [INFO] [Orchestrator] Planner selected: []
+[2026-01-06T18:55:46.204Z] [INFO] [Orchestrator] Step 3: Executing with 0 tools...
+[2026-01-06T18:55:46.206Z] [INFO] [Executor] Starting execution with 0 tools.
+[2026-01-06T18:55:58.239Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T18:55:58.240Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T18:56:10.155Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T18:56:10.156Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T18:56:22.168Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T18:56:22.169Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T18:56:34.912Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T18:56:34.913Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T18:56:51.144Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T18:56:51.145Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T18:57:05.066Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:57:05.068Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:57:05.069Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:57:05.070Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:57:05.071Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:57:05.073Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:57:05.074Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:57:05.075Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:57:05.087Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:57:05.091Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:57:11.168Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:57:11.171Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:57:11.170Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:57:11.172Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:57:11.172Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:57:11.173Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:57:11.173Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:57:11.175Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:57:11.194Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:57:11.193Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:57:41.021Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:57:41.023Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:57:41.024Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:57:41.025Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:57:41.040Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:57:41.042Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:57:41.044Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:57:41.044Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:57:41.045Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:57:41.060Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:58:00.811Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:58:00.813Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:58:00.814Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:58:00.815Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:58:00.819Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:58:00.821Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:58:00.822Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:58:00.823Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:58:00.833Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:58:00.837Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:59:48.703Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:59:48.705Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:59:48.708Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:59:48.706Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T18:59:48.709Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:59:48.710Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T18:59:48.711Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T18:59:48.713Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T18:59:48.732Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T18:59:48.734Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:01:47.920Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:01:47.928Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:01:47.932Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:01:47.934Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:01:47.952Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:01:47.964Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:01:47.965Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:01:47.966Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:01:48.024Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:01:48.032Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:02:09.246Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:02:09.251Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:02:09.253Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:02:09.254Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:02:09.260Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:02:09.264Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:02:09.265Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:02:09.267Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:02:09.281Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:02:09.289Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:02:10.596Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:02:10.600Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:02:10.605Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:02:10.606Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:02:10.614Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:02:10.618Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:02:10.621Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:02:10.623Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:02:10.641Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:02:10.649Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:03:18.265Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:03:18.265Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:03:18.267Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:03:18.268Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:03:18.268Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:03:18.269Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:03:18.270Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:03:18.269Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:03:18.289Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:03:18.289Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:03:20.127Z] [ERROR] (node:9780) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T19:03:28.330Z] [INFO] [API Server] Received chat request: "quantos senais tem no brasil?..."
+[2026-01-06T19:03:28.332Z] [INFO] 
+=== [Orchestrator] New Request: "quantos senais tem no brasil?..." ===
+[2026-01-06T19:03:28.332Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T19:03:28.333Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T19:03:28.339Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T19:03:29.364Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T19:03:29.372Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T19:03:29.373Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T19:03:29.374Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T19:03:29.375Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-06T19:03:29.650Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T19:03:29.651Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T19:03:41.636Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T19:03:41.637Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T19:03:53.638Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T19:03:53.639Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T19:04:05.618Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T19:04:05.619Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T19:04:14.872Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:04:14.875Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:04:14.876Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:04:14.877Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:04:14.903Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:04:21.963Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T19:04:21.964Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T19:04:46.005Z] [INFO] [API Server] Received chat request: "Quantos senais temos no brasil?..."
+[2026-01-06T19:04:46.006Z] [INFO] 
+=== [Orchestrator] New Request: "Quantos senais temos no brasil?..." ===
+[2026-01-06T19:04:46.006Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T19:04:46.007Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T19:04:46.011Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T19:04:46.689Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T19:04:46.692Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T19:04:46.693Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T19:04:46.694Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T19:04:46.695Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-06T19:04:54.252Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T19:04:54.253Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3-pro
+Please retry in 55.767093774s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerDay-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"55s"}]
+[2026-01-06T19:04:54.254Z] [ERROR] [GeminiManager] User-selected model 'models/gemini-3-pro-preview' failed. NOT falling back. Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3-pro
+Please retry in 55.767093774s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerDay-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"55s"}]
+[2026-01-06T19:04:54.256Z] [ERROR] [Planner] Error: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerDay-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"55s"}]}
+[2026-01-06T19:04:54.258Z] [INFO] [Orchestrator] Planner selected: []
+[2026-01-06T19:04:54.258Z] [INFO] [Orchestrator] Step 3: Executing with 0 tools...
+[2026-01-06T19:04:54.260Z] [INFO] [Executor] Starting execution with 0 tools.
+[2026-01-06T19:05:07.292Z] [INFO] [Planner] Thought: "The user is asking to count the number of SENAI units in Brazil. The `dn_companiescontroller_getsenaiunits` tool appears to be the most relevant tool to retrieve information about SENAI units, which I can then count."
+[2026-01-06T19:05:07.293Z] [INFO] [Planner] Selected: dn_companiescontroller_getsenaiunits
+[2026-01-06T19:05:07.294Z] [INFO] [Orchestrator] Planner selected: [dn_companiescontroller_getsenaiunits]
+[2026-01-06T19:05:07.295Z] [INFO] [Orchestrator] Step 3: Executing with 1 tools...
+[2026-01-06T19:05:07.295Z] [INFO] [Executor] Starting execution with 1 tools.
+[2026-01-06T19:05:18.224Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T19:05:18.225Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T19:05:30.223Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T19:05:30.224Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T19:05:42.191Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:05:42.195Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:05:42.197Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:05:42.199Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:05:42.211Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T19:05:42.212Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T19:05:42.230Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:05:54.323Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T19:05:54.324Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T19:06:10.594Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T19:06:10.595Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T19:06:42.823Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T19:06:42.824Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3-pro
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-3-pro
+Please retry in 7.192780451s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerDay-FreeTier","quotaDimensions":{"model":"gemini-3-pro","location":"global"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-3-pro","location":"global"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"7s"}]
+[2026-01-06T19:06:42.826Z] [ERROR] [Executor] Error in execution loop: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerDay-FreeTier","quotaDimensions":{"model":"gemini-3-pro","location":"global"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-3-pro","location":"global"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3-pro"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"7s"}]}
+[2026-01-06T19:06:42.827Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-06T19:06:42.828Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-06T19:06:42.829Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-06T19:06:54.979Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T19:06:54.979Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T19:07:08.229Z] [INFO] [Executor] >>> Calling Tool: dn_companiescontroller_getsenaiunits
+[2026-01-06T19:07:08.230Z] [INFO] [API Exec] get /api/companies/senai-units
+[2026-01-06T19:07:08.231Z] [INFO] [API Headers] {"Content-Type":"application/json"}
+[2026-01-06T19:07:19.088Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T19:07:19.089Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T19:07:30.884Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T19:07:30.884Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T19:07:43.021Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T19:07:43.022Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T19:07:54.900Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T19:07:54.901Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T19:08:11.209Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T19:08:11.210Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T19:08:43.632Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T19:08:43.632Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 6.437549904s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"6s"}]
+[2026-01-06T19:08:43.634Z] [ERROR] [Executor] Error in execution loop: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"6s"}]}
+[2026-01-06T19:08:43.635Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-06T19:08:43.636Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-06T19:08:43.636Z] [INFO] [Designer] Generating Widgets...
+[2026-01-06T19:08:55.532Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 0
+[2026-01-06T19:08:55.533Z] [INFO] [RequestQueue] Backing off for 2000ms...
+[2026-01-06T19:09:07.502Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 1
+[2026-01-06T19:09:07.503Z] [INFO] [RequestQueue] Backing off for 4000ms...
+[2026-01-06T19:09:19.523Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 2
+[2026-01-06T19:09:19.524Z] [INFO] [RequestQueue] Backing off for 8000ms...
+[2026-01-06T19:09:31.505Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 3
+[2026-01-06T19:09:31.506Z] [INFO] [RequestQueue] Backing off for 16000ms...
+[2026-01-06T19:09:47.805Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 4
+[2026-01-06T19:09:47.806Z] [INFO] [RequestQueue] Backing off for 32000ms...
+[2026-01-06T19:10:20.101Z] [WARN] [RequestQueue] Hit Rate Limit (429). Retries: 5
+[2026-01-06T19:10:20.103Z] [ERROR] [RequestQueue] Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 29.963051681s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"29s"}]
+[2026-01-06T19:10:20.105Z] [ERROR] [GeminiManager] User-selected model 'models/gemini-2.5-flash' failed. NOT falling back. Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 29.963051681s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"29s"}]
+[2026-01-06T19:10:20.106Z] [ERROR] [Designer] Failed: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"29s"}]}
+[2026-01-06T19:10:20.108Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-06T19:21:35.672Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:21:35.672Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:21:35.676Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:21:35.677Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:21:35.676Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:21:35.679Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:21:35.679Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:21:35.681Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:21:35.705Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:21:35.708Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:21:36.643Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:21:36.646Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:21:36.647Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:21:36.648Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:21:36.674Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:21:36.811Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:21:36.813Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:21:36.814Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:21:36.815Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:21:36.838Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:21:36.835Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:21:36.841Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:21:36.842Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:21:36.844Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:21:36.872Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:21:51.491Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:21:51.493Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:21:51.494Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:21:51.494Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:21:51.514Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:22:01.635Z] [ERROR] (node:25196) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T19:23:18.078Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:23:18.082Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:23:18.083Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:23:18.084Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:23:18.087Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:23:18.092Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:23:18.093Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:23:18.094Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:23:18.116Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:23:18.116Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:23:18.115Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:23:18.119Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:23:18.120Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:23:18.122Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:23:18.142Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:23:19.850Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:23:19.853Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:23:19.853Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:23:19.854Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:23:19.861Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:23:19.865Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:23:19.868Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:23:19.868Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:23:19.867Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:23:19.870Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:23:19.871Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:23:19.872Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:23:19.881Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:23:19.892Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:23:19.902Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:24:18.690Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:24:18.690Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:24:18.694Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:24:18.695Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:24:18.698Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:24:18.701Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:24:18.702Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:24:18.703Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:24:18.722Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:24:18.730Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:24:18.732Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:24:18.733Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:24:18.743Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:24:18.743Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:24:18.761Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:35:39.317Z] [INFO] [GeminiManager] Initialized.
+[2026-01-06T19:35:39.319Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-06T19:35:39.319Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-06T19:35:39.320Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-06T19:35:39.335Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-06T19:35:41.127Z] [ERROR] (node:27392) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-06T19:35:56.157Z] [INFO] [API Server] Received chat request: "quantos cursos existem no brasil?..."
+[2026-01-06T19:35:56.158Z] [INFO] 
+=== [Orchestrator] New Request: "quantos cursos existem no brasil?..." ===
+[2026-01-06T19:35:56.159Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-06T19:35:56.160Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-06T19:35:56.169Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T19:35:57.319Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-06T19:35:57.327Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-06T19:35:57.331Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-06T19:35:57.332Z] [INFO] [Planner] Analyzing request...
+[2026-01-06T19:35:57.334Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-06T19:35:57.709Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-06T19:35:57.716Z] [INFO] [RequestQueue] 🌙 Backing off for 2.8s...
+[2026-01-06T19:35:57.717Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:35:58.718Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:36:01.654Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-06T19:36:01.655Z] [INFO] [RequestQueue] 🌙 Backing off for 4.6s...
+[2026-01-06T19:36:01.655Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-06T19:36:02.657Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-06T19:36:03.659Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:36:04.660Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:36:06.669Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-06T19:36:06.670Z] [INFO] [RequestQueue] 🌙 Backing off for 8.3s...
+[2026-01-06T19:36:09.673Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-06T19:36:10.676Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-06T19:36:11.679Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-06T19:36:12.683Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:36:13.686Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:36:15.334Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-06T19:36:15.334Z] [INFO] [RequestQueue] 🌙 Backing off for 16.3s...
+[2026-01-06T19:36:16.336Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-06T19:36:21.345Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-06T19:36:26.349Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-06T19:36:27.351Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-06T19:36:28.355Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-06T19:36:29.356Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:36:30.357Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:36:31.915Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 5/5
+[2026-01-06T19:36:31.916Z] [INFO] [RequestQueue] 🌙 Backing off for 32.3s...
+[2026-01-06T19:36:33.917Z] [INFO] [RequestQueue] Retrying in 30s...
+[2026-01-06T19:36:38.922Z] [INFO] [RequestQueue] Retrying in 25s...
+[2026-01-06T19:36:43.926Z] [INFO] [RequestQueue] Retrying in 20s...
+[2026-01-06T19:36:48.932Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-06T19:36:53.935Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-06T19:36:58.937Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-06T19:36:59.938Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-06T19:37:00.941Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-06T19:37:01.943Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:37:02.944Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:37:04.737Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 6/5
+[2026-01-06T19:37:04.738Z] [ERROR] [RequestQueue] ❌ Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 45.326636777s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-2.5-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"45s"}]
+[2026-01-06T19:37:04.739Z] [ERROR] [GeminiManager] User-selected model 'models/gemini-2.5-flash' failed. NOT falling back. Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 45.326636777s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-2.5-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"45s"}]
+[2026-01-06T19:37:04.740Z] [ERROR] [Planner] Error: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-2.5-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"45s"}]}
+[2026-01-06T19:37:04.741Z] [INFO] [Orchestrator] Planner selected: []
+[2026-01-06T19:37:04.742Z] [INFO] [Orchestrator] Step 3: Executing with 0 tools...
+[2026-01-06T19:37:04.743Z] [INFO] [Executor] Starting execution with 0 tools.
+[2026-01-06T19:37:04.744Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 3.5s...
+[2026-01-06T19:37:08.589Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-06T19:37:08.590Z] [INFO] [RequestQueue] 🌙 Backing off for 2.1s...
+[2026-01-06T19:37:08.590Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:37:09.592Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:37:12.523Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-06T19:37:12.524Z] [INFO] [RequestQueue] 🌙 Backing off for 4.2s...
+[2026-01-06T19:37:12.525Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-06T19:37:13.527Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-06T19:37:14.528Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:37:15.529Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:37:16.993Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-06T19:37:16.994Z] [INFO] [RequestQueue] 🌙 Backing off for 8.0s...
+[2026-01-06T19:37:19.997Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-06T19:37:20.999Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-06T19:37:22.003Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-06T19:37:23.006Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:37:24.008Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:37:25.324Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-06T19:37:25.324Z] [INFO] [RequestQueue] 🌙 Backing off for 16.9s...
+[2026-01-06T19:37:26.326Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-06T19:37:31.332Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-06T19:37:36.338Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-06T19:37:37.340Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-06T19:37:38.342Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-06T19:37:39.343Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:37:40.344Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:37:42.466Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 5/5
+[2026-01-06T19:37:42.467Z] [INFO] [RequestQueue] 🌙 Backing off for 32.2s...
+[2026-01-06T19:37:44.467Z] [INFO] [RequestQueue] Retrying in 30s...
+[2026-01-06T19:37:49.468Z] [INFO] [RequestQueue] Retrying in 25s...
+[2026-01-06T19:37:54.472Z] [INFO] [RequestQueue] Retrying in 20s...
+[2026-01-06T19:37:59.476Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-06T19:38:04.478Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-06T19:38:09.488Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-06T19:38:10.488Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-06T19:38:11.490Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-06T19:38:12.494Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-06T19:38:13.497Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-06T19:38:15.867Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-06T19:38:15.868Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-06T19:38:15.868Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-07T11:08:10.970Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:08:10.972Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:08:10.973Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:08:10.973Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:08:11.030Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:08:11.493Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:08:11.495Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:08:11.495Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:08:11.496Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:08:11.515Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:11:22.471Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:11:22.473Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:11:22.473Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:11:22.474Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:11:22.490Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:11:27.265Z] [ERROR] (node:26096) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T11:12:12.859Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:12:12.861Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:12:12.861Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:12:12.862Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:12:12.881Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:12:22.678Z] [ERROR] (node:24164) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T11:16:36.040Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:16:36.041Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:16:36.042Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:16:36.042Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:16:36.057Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:16:40.869Z] [ERROR] (node:17752) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T11:17:06.155Z] [INFO] [API Server] Received chat request: "quantos senais tem no brasil?..."
+[2026-01-07T11:17:06.156Z] [INFO] 
+=== [Orchestrator] New Request: "quantos senais tem no brasil?..." ===
+[2026-01-07T11:17:06.156Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-07T11:17:06.157Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-07T11:17:06.165Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:17:09.724Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:17:09.728Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-07T11:17:09.729Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-07T11:17:09.730Z] [INFO] [Planner] Analyzing request...
+[2026-01-07T11:17:09.731Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-07T11:17:11.249Z] [INFO] [Planner] Thought: "The user is asking for the number of SENAI units in Brazil. The `dn_companiescontroller_getsenaiunits` tool is designed to retrieve information about SENAI units, which is directly relevant to the user's request."
+[2026-01-07T11:17:11.251Z] [INFO] [Planner] Selected: dn_companiescontroller_getsenaiunits
+[2026-01-07T11:17:11.252Z] [INFO] [Orchestrator] Planner selected: [dn_companiescontroller_getsenaiunits]
+[2026-01-07T11:17:11.253Z] [INFO] [Orchestrator] Step 3: Executing with 1 tools...
+[2026-01-07T11:17:11.255Z] [INFO] [Executor] Starting execution with 1 tools.
+[2026-01-07T11:17:11.263Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.5s...
+[2026-01-07T11:17:16.777Z] [INFO] [Executor] >>> Calling Tool: dn_companiescontroller_getsenaiunits
+[2026-01-07T11:17:16.779Z] [INFO] [API Exec] get /api/companies/senai-units
+[2026-01-07T11:17:16.780Z] [INFO] [API Headers] {"Content-Type":"application/json"}
+[2026-01-07T11:17:18.868Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-07T11:17:18.869Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-07T11:17:18.870Z] [INFO] [Designer] Generating Widgets...
+[2026-01-07T11:17:18.871Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.9s...
+[2026-01-07T11:17:24.939Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-07T11:22:39.505Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:22:39.506Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:22:39.507Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:22:39.507Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:22:39.519Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:22:49.770Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:22:49.771Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:22:49.771Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:22:49.772Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:22:49.785Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:23:12.529Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:23:12.532Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:23:12.533Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:23:12.535Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:23:12.564Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:26:05.399Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:26:05.401Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:26:05.402Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:26:05.403Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:26:05.423Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:26:43.069Z] [INFO] [API Server] Received chat request: "quais senais estão perto de mim?..."
+[2026-01-07T11:26:43.070Z] [INFO] 
+=== [Orchestrator] New Request: "quais senais estão perto de mim?..." ===
+[2026-01-07T11:26:43.071Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-07T11:26:43.072Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-07T11:26:43.124Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:26:43.214Z] [ERROR] (node:9696) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T11:26:44.021Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:26:44.027Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-07T11:26:44.027Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-07T11:26:44.028Z] [INFO] [Planner] Analyzing request...
+[2026-01-07T11:26:44.029Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-07T11:26:45.807Z] [INFO] [Planner] Thought: "The user is asking to find SENAI units near their current location. The `dn_companiescontroller_getsenaiunits` tool is designed to retrieve SENAI units and can likely accept location parameters to find nearby units."
+[2026-01-07T11:26:45.808Z] [INFO] [Planner] Selected: dn_companiescontroller_getsenaiunits
+[2026-01-07T11:26:45.809Z] [INFO] [Orchestrator] Planner selected: [dn_companiescontroller_getsenaiunits]
+[2026-01-07T11:26:45.809Z] [INFO] [Orchestrator] Step 3: Executing with 1 tools...
+[2026-01-07T11:26:45.810Z] [INFO] [Executor] Starting execution with 1 tools.
+[2026-01-07T11:26:45.811Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.2s...
+[2026-01-07T11:26:49.020Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-07T11:26:49.021Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-07T11:26:49.021Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-07T11:27:12.762Z] [INFO] [API Server] Received chat request: "quantos senais tem no brasil?..."
+[2026-01-07T11:27:12.763Z] [INFO] 
+=== [Orchestrator] New Request: "quantos senais tem no brasil?..." ===
+[2026-01-07T11:27:12.763Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-07T11:27:12.764Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-07T11:27:12.766Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:27:13.926Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:27:13.932Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-07T11:27:13.932Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-07T11:27:13.933Z] [INFO] [Planner] Analyzing request...
+[2026-01-07T11:27:13.934Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-07T11:27:16.428Z] [INFO] [Planner] Thought: "The user is asking for the number of SENAI units in Brazil. The `dn_companiescontroller_getsenaiunits` tool is designed to retrieve information about SENAI units. I will use this tool to get the list of units and then count them to answer the user's question."
+[2026-01-07T11:27:16.428Z] [INFO] [Planner] Selected: dn_companiescontroller_getsenaiunits
+[2026-01-07T11:27:16.429Z] [INFO] [Orchestrator] Planner selected: [dn_companiescontroller_getsenaiunits]
+[2026-01-07T11:27:16.429Z] [INFO] [Orchestrator] Step 3: Executing with 1 tools...
+[2026-01-07T11:27:16.430Z] [INFO] [Executor] Starting execution with 1 tools.
+[2026-01-07T11:27:19.324Z] [INFO] [Executor] >>> Calling Tool: dn_companiescontroller_getsenaiunits
+[2026-01-07T11:27:19.326Z] [INFO] [API Exec] get http://localhost:3000/api/companies/senai-units
+[2026-01-07T11:27:19.327Z] [INFO] [API Headers] {"Content-Type":"application/json"}
+[2026-01-07T11:27:19.335Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.6s...
+[2026-01-07T11:27:23.273Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-07T11:27:23.273Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-07T11:27:23.274Z] [INFO] [Designer] Generating Widgets...
+[2026-01-07T11:27:23.274Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.7s...
+[2026-01-07T11:27:29.376Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-07T11:29:00.209Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:29:00.210Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:29:00.211Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:29:00.211Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:29:00.230Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:35:43.836Z] [INFO] [API Server] Received chat request: "quais cursos mais se repetem?..."
+[2026-01-07T11:35:43.837Z] [INFO] 
+=== [Orchestrator] New Request: "quais cursos mais se repetem?..." ===
+[2026-01-07T11:35:43.838Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-07T11:35:43.838Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-07T11:35:43.872Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:35:43.950Z] [ERROR] (node:1596) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T11:35:44.971Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:35:44.972Z] [INFO] [API Handler] Resolved Effective Base URL for 'DN': http://localhost:3000
+[2026-01-07T11:35:44.978Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-07T11:35:44.979Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-07T11:35:44.980Z] [INFO] [Planner] Analyzing request...
+[2026-01-07T11:35:44.981Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-07T11:35:47.510Z] [INFO] [Planner] Thought: "The user is asking to identify the most frequent or repeated courses. The `dn_dashboardcontroller_gettopcourses` tool seems directly relevant as it is designed to retrieve information about top courses, which can be interpreted as courses that are most popular or frequently requested/offered."
+[2026-01-07T11:35:47.511Z] [INFO] [Planner] Selected: dn_dashboardcontroller_gettopcourses
+[2026-01-07T11:35:47.511Z] [INFO] [Orchestrator] Planner selected: [dn_dashboardcontroller_gettopcourses]
+[2026-01-07T11:35:47.512Z] [INFO] [Orchestrator] Step 3: Executing with 1 tools...
+[2026-01-07T11:35:47.513Z] [INFO] [Executor] Starting execution with 1 tools.
+[2026-01-07T11:35:50.357Z] [INFO] [Executor] >>> Calling Tool: dn_dashboardcontroller_gettopcourses
+[2026-01-07T11:35:50.359Z] [INFO] [API Exec] get http://localhost:3000/api/dashboard/top-courses
+[2026-01-07T11:35:50.360Z] [INFO] [API Headers] {"Content-Type":"application/json"}
+[2026-01-07T11:35:50.371Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.6s...
+[2026-01-07T11:35:54.507Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-07T11:35:54.509Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-07T11:35:54.510Z] [INFO] [Designer] Generating Widgets...
+[2026-01-07T11:35:54.511Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.5s...
+[2026-01-07T11:35:59.075Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-07T11:40:01.844Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:40:01.846Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:40:01.846Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:40:01.847Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:40:01.863Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:41:24.399Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:41:24.401Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:41:24.401Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:41:24.402Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:41:24.420Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:41:26.155Z] [ERROR] (node:27112) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T11:41:45.673Z] [INFO] [API Server] Received chat request: "quais cursos mais se repetem..."
+[2026-01-07T11:41:45.674Z] [INFO] 
+=== [Orchestrator] New Request: "quais cursos mais se repetem..." ===
+[2026-01-07T11:41:45.674Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-07T11:41:45.675Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-07T11:41:45.680Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:41:46.827Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:41:46.828Z] [INFO] [API Handler] Resolved Effective Base URL for 'DN': http://localhost:3000
+[2026-01-07T11:41:46.833Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-07T11:41:46.834Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-07T11:41:46.835Z] [INFO] [Planner] Analyzing request...
+[2026-01-07T11:41:46.836Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-07T11:41:48.717Z] [INFO] [Planner] Thought: "The user wants to know which courses are most repeated or popular. The `dn_dashboardcontroller_gettopcourses` tool is designed to retrieve the top courses, which directly answers this request."
+[2026-01-07T11:41:48.717Z] [INFO] [Planner] Selected: dn_dashboardcontroller_gettopcourses
+[2026-01-07T11:41:48.718Z] [INFO] [Orchestrator] Planner selected: [dn_dashboardcontroller_gettopcourses]
+[2026-01-07T11:41:48.718Z] [INFO] [Orchestrator] Step 3: Executing with 1 tools...
+[2026-01-07T11:41:48.719Z] [INFO] [Executor] Starting execution with 1 tools.
+[2026-01-07T11:41:48.720Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.1s...
+[2026-01-07T11:41:52.300Z] [INFO] [Executor] >>> Calling Tool: dn_dashboardcontroller_gettopcourses
+[2026-01-07T11:41:52.302Z] [INFO] [API Exec] get http://localhost:3000/api/dashboard/top-courses
+[2026-01-07T11:41:52.302Z] [INFO] [API Headers] {"Content-Type":"application/json"}
+[2026-01-07T11:41:52.309Z] [ERROR] [API Error] 404 Not Found at http://localhost:3000/api/dashboard/top-courses
+[2026-01-07T11:41:52.310Z] [ERROR] [API Error Body] <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/dashboard/top-courses</pre>
+</body>
+</html>
+
+[2026-01-07T11:41:52.310Z] [ERROR] [API Handler] Execution Failed: API Error 404: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/dashboard/top-courses</pre>
+</body>
+</html>
+
+[2026-01-07T11:41:52.311Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.5s...
+[2026-01-07T11:41:56.604Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-07T11:41:56.605Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-07T11:41:56.606Z] [INFO] [Designer] Generating Widgets...
+[2026-01-07T11:41:56.607Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.2s...
+[2026-01-07T11:42:02.681Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-07T11:48:12.186Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T11:48:12.191Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T11:48:12.191Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T11:48:12.192Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T11:48:12.208Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T11:48:13.810Z] [ERROR] (node:28344) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T11:48:17.653Z] [INFO] [API Server] Received chat request: "quais cursos mais se repetem?"..."
+[2026-01-07T11:48:17.654Z] [INFO] 
+=== [Orchestrator] New Request: "quais cursos mais se repetem?"..." ===
+[2026-01-07T11:48:17.655Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-07T11:48:17.657Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-07T11:48:17.664Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:48:18.792Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T11:48:18.793Z] [INFO] [API Handler] Resolved Effective Base URL for 'DN': https://api.aprendizagem-busca-curso.dev.senai.br
+[2026-01-07T11:48:18.799Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-07T11:48:18.800Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-07T11:48:18.802Z] [INFO] [Planner] Analyzing request...
+[2026-01-07T11:48:18.803Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-07T11:48:20.281Z] [INFO] [Planner] Thought: "The user wants to know 'quais cursos mais se repetem?' (which courses repeat the most?). This can be interpreted as identifying the most popular or frequently occurring courses. The `dn_dashboardcontroller_gettopcourses` tool is designed to retrieve top courses, which directly addresses this request."
+[2026-01-07T11:48:20.282Z] [INFO] [Planner] Selected: dn_dashboardcontroller_gettopcourses
+[2026-01-07T11:48:20.283Z] [INFO] [Orchestrator] Planner selected: [dn_dashboardcontroller_gettopcourses]
+[2026-01-07T11:48:20.284Z] [INFO] [Orchestrator] Step 3: Executing with 1 tools...
+[2026-01-07T11:48:20.284Z] [INFO] [Executor] Starting execution with 1 tools.
+[2026-01-07T11:48:20.285Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.5s...
+[2026-01-07T11:48:24.317Z] [INFO] [Executor] >>> Calling Tool: dn_dashboardcontroller_gettopcourses
+[2026-01-07T11:48:24.319Z] [INFO] [API Exec] get https://api.aprendizagem-busca-curso.dev.senai.br/api/dashboard/top-courses
+[2026-01-07T11:48:24.320Z] [INFO] [API Headers] {"Content-Type":"application/json"}
+[2026-01-07T11:48:24.731Z] [ERROR] [API Error] 401 Unauthorized at https://api.aprendizagem-busca-curso.dev.senai.br/api/dashboard/top-courses
+[2026-01-07T11:48:24.732Z] [ERROR] [API Error Body] {"statusCode":401,"timestamp":"2026-01-07 11:48:35","message":"Token JWT ausente"}
+[2026-01-07T11:48:24.733Z] [ERROR] [API Handler] Execution Failed: API Error 401: {"statusCode":401,"timestamp":"2026-01-07 11:48:35","message":"Token JWT ausente"}
+[2026-01-07T11:48:24.735Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.1s...
+[2026-01-07T11:48:28.189Z] [INFO] [Executor] >>> Calling Tool: dn_dashboardcontroller_gettopcourses
+[2026-01-07T11:48:28.190Z] [INFO] [API Exec] get https://api.aprendizagem-busca-curso.dev.senai.br/api/dashboard/top-courses
+[2026-01-07T11:48:28.190Z] [INFO] [API Headers] {"Content-Type":"application/json","Authorization":"[REDACTED]"}
+[2026-01-07T11:48:28.329Z] [ERROR] [API Error] 401 Unauthorized at https://api.aprendizagem-busca-curso.dev.senai.br/api/dashboard/top-courses
+[2026-01-07T11:48:28.330Z] [ERROR] [API Error Body] {"statusCode":401,"timestamp":"2026-01-07 11:48:38","message":"Token invalido"}
+[2026-01-07T11:48:28.331Z] [ERROR] [API Handler] Execution Failed: API Error 401: {"statusCode":401,"timestamp":"2026-01-07 11:48:38","message":"Token invalido"}
+[2026-01-07T11:48:28.331Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.5s...
+[2026-01-07T11:48:32.174Z] [INFO] [Executor] >>> Calling Tool: dn_dashboardcontroller_gettopcourses
+[2026-01-07T11:48:32.175Z] [INFO] [API Exec] get https://api.aprendizagem-busca-curso.dev.senai.br/api/dashboard/top-courses
+[2026-01-07T11:48:32.176Z] [INFO] [API Headers] {"Content-Type":"application/json","Authorization":"[REDACTED]"}
+[2026-01-07T11:48:32.316Z] [ERROR] [API Error] 401 Unauthorized at https://api.aprendizagem-busca-curso.dev.senai.br/api/dashboard/top-courses
+[2026-01-07T11:48:32.317Z] [ERROR] [API Error Body] {"statusCode":401,"timestamp":"2026-01-07 11:48:42","message":"Token invalido"}
+[2026-01-07T11:48:32.318Z] [ERROR] [API Handler] Execution Failed: API Error 401: {"statusCode":401,"timestamp":"2026-01-07 11:48:42","message":"Token invalido"}
+[2026-01-07T11:48:32.319Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 2.5s...
+[2026-01-07T11:48:35.075Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T11:48:35.076Z] [INFO] [RequestQueue] 🌙 Backing off for 2.9s...
+[2026-01-07T11:48:35.077Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T11:48:36.079Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T11:48:41.210Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-07T11:48:41.211Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-07T11:48:41.212Z] [INFO] [Designer] Generating Widgets...
+[2026-01-07T11:48:43.056Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T11:48:43.057Z] [INFO] [RequestQueue] 🌙 Backing off for 2.7s...
+[2026-01-07T11:48:43.058Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T11:48:44.059Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T11:48:47.054Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T11:48:47.055Z] [INFO] [RequestQueue] 🌙 Backing off for 4.1s...
+[2026-01-07T11:48:47.056Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T11:48:48.057Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T11:48:49.058Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T11:48:50.059Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T11:48:51.515Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-07T11:48:51.516Z] [INFO] [RequestQueue] 🌙 Backing off for 8.6s...
+[2026-01-07T11:48:54.517Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T11:48:55.520Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T11:48:56.521Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T11:48:57.521Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T11:48:58.524Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T11:49:00.508Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-07T11:49:00.508Z] [INFO] [RequestQueue] 🌙 Backing off for 16.1s...
+[2026-01-07T11:49:01.508Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T12:01:35.130Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:01:35.133Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:01:35.133Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:01:35.134Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:01:35.157Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:02:33.463Z] [INFO] [TestConnection] Testing https://api.aprendizagem-busca-curso.dev.senai.br with auth type: basic
+[2026-01-07T12:02:33.627Z] [ERROR] (node:9516) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T12:02:44.455Z] [INFO] [Register] Attempting standard OpenAPI validation for: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:02:44.456Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:02:45.137Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:02:45.139Z] [INFO] [Register] OpenAPI validation successful.
+[2026-01-07T12:02:45.157Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-07T12:02:45.163Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:02:45.329Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:02:45.330Z] [INFO] [API Handler] Resolved Effective Base URL for 'DN': https://api.aprendizagem-busca-curso.dev.senai.br
+[2026-01-07T12:32:07.490Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:32:07.492Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:32:07.492Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:32:07.493Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:32:07.509Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:32:07.988Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:32:07.989Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:32:07.990Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:32:07.990Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:32:08.003Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:32:34.792Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:32:34.794Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:32:34.795Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:32:34.796Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:32:34.819Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:33:20.504Z] [ERROR] (node:2548) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T12:36:50.615Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:36:50.619Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:36:50.620Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:36:50.621Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:36:50.638Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:36:52.643Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:36:52.646Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:36:52.647Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:36:52.647Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:36:52.662Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:39:05.754Z] [INFO] [TestConnection] Attempting Login Flow via /auth/session
+[2026-01-07T12:39:05.880Z] [ERROR] (node:18516) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T12:39:06.348Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:39:06.349Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:39:06.350Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:39:06.350Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:39:06.369Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:39:06.483Z] [INFO] [TestConnection] Attempting Login Flow via /auth/session
+[2026-01-07T12:39:06.565Z] [ERROR] (node:25340) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T12:43:01.937Z] [INFO] [TestConnection] Attempting Login Flow via http://localhost:3005/api/auth/login
+[2026-01-07T12:43:01.980Z] [INFO] [TestConnection] Login Successful. Got token. Proceeding to test root.
+[2026-01-07T12:43:01.981Z] [INFO] [TestConnection] Testing http://localhost:3005/api/protected/data with auth type: basic
+[2026-01-07T12:43:29.546Z] [INFO] [TestConnection] Attempting Login Flow via http://localhost:3005/api/auth/login
+[2026-01-07T12:43:29.551Z] [INFO] [TestConnection] Login Successful. Got token. Proceeding to test root.
+[2026-01-07T12:43:29.552Z] [INFO] [TestConnection] Testing http://localhost:3005/api/protected/data with auth type: basic
+[2026-01-07T12:47:20.064Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:47:20.065Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:47:20.065Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:47:20.066Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:47:20.079Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:48:43.295Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:48:43.297Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:48:43.298Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:48:43.298Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:48:43.311Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:49:35.728Z] [INFO] [API Server] Analyzing Auth from Text Content
+[2026-01-07T12:49:35.867Z] [ERROR] (node:10116) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T12:49:38.812Z] [INFO] [AuthAnalyzer] AI Identified Config: {"type":"basic","description":"Authenticate via POST to /api/auth/login with CPF and password to receive a bearer token.","loginUrl":"/api/auth/login","tokenPath":"data.token","loginParams":[{"key":"cpf","label":"CPF","value":"","type":"text"},{"key":"password","label":"Password","value":"","type":"password"}]}
+[2026-01-07T12:49:48.956Z] [INFO] [TestConnection] Testing Profile 'Default' via Login Flow: http://localhost:3005/api/auth/login
+[2026-01-07T12:49:48.969Z] [INFO] [TestConnection] Testing Profile 'analyst' via Login Flow: /api/auth/login
+[2026-01-07T12:50:35.473Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:50:35.473Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:50:36.239Z] [ERROR] [API Server] Auth Analysis Error: {}
+[2026-01-07T12:52:30.343Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:52:30.345Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:52:30.346Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:52:30.346Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:52:30.362Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:52:34.270Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T12:52:34.272Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T12:52:34.272Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T12:52:34.273Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T12:52:34.293Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T12:52:41.156Z] [ERROR] (node:15244) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T12:53:00.609Z] [INFO] [API Server] Analyzing Auth from http://localhost:3005/protected/docs.json
+[2026-01-07T12:53:00.610Z] [INFO] [AuthAnalyzer] Fetching docs from http://localhost:3005/protected/docs.json
+[2026-01-07T12:53:00.618Z] [ERROR] [API Server] Auth Analysis Error: {}
+[2026-01-07T12:54:45.347Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:54:45.348Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T12:54:47.182Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T12:54:47.183Z] [INFO] [RequestQueue] 🌙 Backing off for 2.1s...
+[2026-01-07T12:54:47.184Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T12:54:48.186Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T12:54:51.011Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T12:54:51.013Z] [INFO] [RequestQueue] 🌙 Backing off for 4.3s...
+[2026-01-07T12:54:51.014Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T12:54:52.015Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T12:54:53.017Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T12:54:54.019Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T13:03:41.856Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T13:03:41.857Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T13:03:41.858Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T13:03:41.858Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T13:03:41.881Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T13:03:56.287Z] [ERROR] (node:13028) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T13:04:03.359Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:04:03.363Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:04:04.897Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T13:04:04.898Z] [INFO] [RequestQueue] 🌙 Backing off for 2.7s...
+[2026-01-07T13:04:04.898Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T13:04:05.899Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T13:04:08.778Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T13:04:08.779Z] [INFO] [RequestQueue] 🌙 Backing off for 4.3s...
+[2026-01-07T13:04:08.779Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T13:04:09.780Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T13:04:10.782Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T13:36:36.751Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T13:36:36.752Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T13:36:36.752Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T13:36:36.753Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T13:36:36.773Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T13:36:37.274Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T13:36:37.275Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T13:36:37.275Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T13:36:37.276Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T13:36:37.291Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T13:36:38.739Z] [ERROR] (node:25888) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T13:36:58.739Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:36:58.741Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:37:20.609Z] [INFO] [AuthAnalyzer] AI Identified Config: {"type":"basic","description":"API uses JWT Bearer tokens. A login endpoint is provided at `/api/auth/session` but the required request body parameters and the path to the token in the response are not specified in the documentation.","loginUrl":"/api/auth/session","tokenPath":"","loginParams":[]}
+[2026-01-07T13:38:05.814Z] [ERROR] PayloadTooLargeError: request entity too large
+    at readStream (C:\Github\DynamicFront\node_modules\raw-body\index.js:163:17)
+    at getRawBody (C:\Github\DynamicFront\node_modules\raw-body\index.js:116:12)
+    at read (C:\Github\DynamicFront\node_modules\body-parser\lib\read.js:114:3)
+    at jsonParser (C:\Github\DynamicFront\node_modules\body-parser\lib\types\json.js:90:5)
+    at Layer.handleRequest (C:\Github\DynamicFront\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (C:\Github\DynamicFront\node_modules\router\index.js:342:13)
+    at C:\Github\DynamicFront\node_modules\router\index.js:297:9
+    at processParams (C:\Github\DynamicFront\node_modules\router\index.js:582:12)
+    at next (C:\Github\DynamicFront\node_modules\router\index.js:291:5)
+    at cors (C:\Github\DynamicFront\node_modules\cors\lib\index.js:188:7)
+[2026-01-07T13:50:27.837Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T13:50:27.839Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T13:50:27.840Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T13:50:27.841Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T13:50:29.722Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T13:50:29.724Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T13:50:29.725Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T13:50:29.726Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T13:51:19.716Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T13:51:19.718Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T13:51:19.718Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T13:51:19.718Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T13:52:01.331Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T13:52:01.333Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T13:52:01.333Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T13:52:01.334Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T13:52:01.351Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T13:52:59.506Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:52:59.509Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:52:59.690Z] [ERROR] (node:29136) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T13:53:00.441Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T13:53:00.443Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T13:53:00.444Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T13:53:00.444Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T13:53:00.462Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T13:53:00.499Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:53:00.500Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:53:00.595Z] [ERROR] (node:10972) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T13:53:16.205Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:53:16.206Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T13:53:17.155Z] [INFO] [AuthAnalyzer] AI Identified Config: {"type":"bearer","description":"The API uses HTTP Bearer tokens (JWT). While a POST /api/auth/session endpoint is present, its request body schema and response body schema are empty, so the specific parameters for obtaining the token are not documented.","loginUrl":null,"tokenPath":null,"loginParams":[]}
+[2026-01-07T13:53:17.490Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T13:53:17.491Z] [INFO] [RequestQueue] 🌙 Backing off for 2.5s...
+[2026-01-07T13:53:17.491Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T13:53:18.493Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T13:53:21.428Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T13:53:21.429Z] [INFO] [RequestQueue] 🌙 Backing off for 4.8s...
+[2026-01-07T13:53:21.429Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T13:53:22.431Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T13:53:23.435Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T14:20:25.801Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T14:20:25.802Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T14:20:25.802Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T14:20:25.803Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T14:20:25.817Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T14:20:27.505Z] [ERROR] (node:13220) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T14:20:34.957Z] [INFO] [API Server] Analyzing Auth from Text Content
+[2026-01-07T14:20:35.561Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T14:20:35.562Z] [INFO] [RequestQueue] 🌙 Backing off for 2.7s...
+[2026-01-07T14:20:35.563Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T14:20:36.565Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T14:20:39.482Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T14:20:39.484Z] [INFO] [RequestQueue] 🌙 Backing off for 4.6s...
+[2026-01-07T14:20:39.485Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T14:20:40.487Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T14:20:41.488Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T14:20:42.489Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T14:23:51.234Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T14:23:51.236Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T14:23:51.236Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T14:23:51.237Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T14:23:51.254Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T14:23:54.398Z] [ERROR] (node:21056) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T14:24:03.300Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T14:24:03.301Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T14:24:14.277Z] [INFO] [AuthAnalyzer] AI Identified Config: {"type":"bearer","description":"API expects a Bearer Token (JWT) as indicated by the securitySchemes. The provided documentation does not include an endpoint for obtaining this token via a login process that accepts credentials and returns an access token. The /api/auth/session endpoint takes an email but returns a boolean message, not a token.","loginUrl":"","tokenPath":"","loginParams":[]}
+[2026-01-07T15:27:33.361Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T15:27:33.363Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T15:27:33.364Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T15:27:33.365Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T15:27:33.385Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T15:27:33.953Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T15:27:33.954Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T15:27:33.955Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T15:27:33.955Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T15:27:33.971Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T15:30:18.116Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T15:30:18.118Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T15:30:18.119Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T15:30:18.119Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T15:30:18.138Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T15:30:20.719Z] [ERROR] (node:6864) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T15:30:25.550Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T15:30:25.553Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T15:30:26.181Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T15:30:26.182Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T15:30:26.183Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T15:30:26.183Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T15:30:26.200Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T15:30:26.290Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T15:30:26.291Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T15:30:26.380Z] [ERROR] (node:30424) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T15:30:34.732Z] [INFO] [AuthAnalyzer] AI Identified Config: {"type":"session","description":"Session-based authentication. The '/api/auth/session' endpoint establishes a session using an email, returning a boolean message. Subsequent authentication for protected routes likely relies on a session cookie or an implicitly generated token, consistent with the 'bearer' JWT security scheme defined for the API.","loginUrl":"/api/auth/session","tokenPath":"cookie","loginParams":[{"key":"email","label":"Email","value":"","type":"text"}],"roles":[]}
+[2026-01-07T15:33:55.822Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T15:33:55.824Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T15:33:55.824Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T15:33:55.825Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T15:33:55.840Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T15:34:59.260Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T15:34:59.262Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T15:34:59.263Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T15:34:59.264Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T15:34:59.293Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T15:36:17.611Z] [ERROR] (node:8252) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T15:42:37.374Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T15:42:37.376Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T15:42:37.376Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T15:42:37.377Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T15:42:37.392Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T15:42:39.903Z] [ERROR] (node:25312) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T15:42:45.514Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T15:42:45.516Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T15:42:47.021Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T15:42:47.023Z] [INFO] [RequestQueue] 🌙 Backing off for 2.0s...
+[2026-01-07T15:42:47.024Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:42:48.025Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:42:50.949Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T15:42:50.950Z] [INFO] [RequestQueue] 🌙 Backing off for 4.5s...
+[2026-01-07T15:42:50.951Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:42:51.953Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:42:52.956Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:42:53.961Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:43:06.278Z] [INFO] [AuthAnalyzer] AI Identified Config: {"type":"basic","description":"Authenticate with email and password to receive a JWT token for subsequent requests.","loginUrl":"/api/auth/session","tokenPath":"access_token","loginParams":[{"key":"email","label":"Email","placeholder":"user@example.com","value":"","type":"text"},{"key":"password","label":"Password","placeholder":"********","value":"","type":"password"}],"roles":[]}
+[2026-01-07T15:50:06.664Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T15:50:06.665Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T15:50:08.260Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T15:50:08.262Z] [INFO] [RequestQueue] 🌙 Backing off for 2.2s...
+[2026-01-07T15:50:08.264Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:50:09.266Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:50:12.133Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T15:50:12.135Z] [INFO] [RequestQueue] 🌙 Backing off for 4.2s...
+[2026-01-07T15:50:12.136Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:50:13.137Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:50:14.140Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:50:15.141Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:50:16.692Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-07T15:50:16.695Z] [INFO] [RequestQueue] 🌙 Backing off for 8.6s...
+[2026-01-07T15:50:19.698Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T15:50:20.701Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:50:21.704Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:50:22.707Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:50:23.709Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:50:25.714Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-07T15:50:25.716Z] [INFO] [RequestQueue] 🌙 Backing off for 16.1s...
+[2026-01-07T15:50:26.720Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T15:50:31.725Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T15:50:36.729Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T15:50:37.733Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:50:38.736Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:50:39.739Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:50:40.743Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:50:42.162Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 5/5
+[2026-01-07T15:50:42.163Z] [INFO] [RequestQueue] 🌙 Backing off for 32.9s...
+[2026-01-07T15:50:44.167Z] [INFO] [RequestQueue] Retrying in 30s...
+[2026-01-07T15:50:49.171Z] [INFO] [RequestQueue] Retrying in 25s...
+[2026-01-07T15:50:54.177Z] [INFO] [RequestQueue] Retrying in 20s...
+[2026-01-07T15:50:59.183Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T15:51:04.185Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T15:51:09.188Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T15:51:10.191Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:51:11.194Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:51:12.196Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:51:13.198Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:51:15.491Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 6/5
+[2026-01-07T15:51:15.492Z] [ERROR] [RequestQueue] ❌ Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 33.982095129s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"33s"}]
+[2026-01-07T15:51:15.493Z] [WARN] [GeminiManager] Primary model failed. Trying secondary (gemini-2.0-flash). Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 33.982095129s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"33s"}]
+[2026-01-07T15:51:15.496Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 3.7s...
+[2026-01-07T15:51:19.377Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T15:51:19.378Z] [INFO] [RequestQueue] 🌙 Backing off for 2.8s...
+[2026-01-07T15:51:19.379Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:51:20.382Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:51:23.372Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T15:51:23.374Z] [INFO] [RequestQueue] 🌙 Backing off for 4.8s...
+[2026-01-07T15:51:23.375Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:51:24.377Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:51:25.379Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:51:26.382Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:51:28.420Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-07T15:51:28.421Z] [INFO] [RequestQueue] 🌙 Backing off for 8.6s...
+[2026-01-07T15:51:31.424Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T15:51:32.427Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:51:33.430Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:51:34.432Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:51:35.436Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:51:37.251Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-07T15:51:37.253Z] [INFO] [RequestQueue] 🌙 Backing off for 16.9s...
+[2026-01-07T15:51:38.255Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T15:51:43.258Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T15:51:48.262Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T15:51:49.264Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:51:50.267Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:51:51.269Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:51:52.272Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:51:54.494Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 5/5
+[2026-01-07T15:51:54.496Z] [INFO] [RequestQueue] 🌙 Backing off for 32.2s...
+[2026-01-07T15:51:56.499Z] [INFO] [RequestQueue] Retrying in 30s...
+[2026-01-07T15:52:01.506Z] [INFO] [RequestQueue] Retrying in 25s...
+[2026-01-07T15:52:06.512Z] [INFO] [RequestQueue] Retrying in 20s...
+[2026-01-07T15:52:11.518Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T15:52:16.522Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T15:52:21.525Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T15:52:22.525Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T15:52:23.526Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T15:52:24.529Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T15:52:25.531Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T15:52:27.262Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 6/5
+[2026-01-07T15:52:27.263Z] [ERROR] [RequestQueue] ❌ Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash
+Please retry in 22.151625031s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"22s"}]
+[2026-01-07T15:52:27.265Z] [ERROR] [GeminiManager] Secondary model also failed. {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"22s"}]}
+[2026-01-07T15:52:27.267Z] [ERROR] [AuthAnalyzer] Analysis Failed: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}},{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count","quotaId":"GenerateContentInputTokensPerModelPerMinute-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.0-flash"}}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"22s"}]}
+[2026-01-07T15:52:27.268Z] [ERROR] [API Server] Auth Analysis Error: {}
+[2026-01-07T16:05:37.087Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T16:05:37.090Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T16:05:37.091Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T16:05:37.092Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T16:05:37.115Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T16:05:40.311Z] [ERROR] (node:18316) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T16:05:46.872Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T16:05:46.875Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T16:05:48.210Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T16:05:48.212Z] [INFO] [RequestQueue] 🌙 Backing off for 2.9s...
+[2026-01-07T16:05:48.214Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:05:49.218Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:05:52.207Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T16:05:52.208Z] [INFO] [RequestQueue] 🌙 Backing off for 4.5s...
+[2026-01-07T16:05:52.209Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:05:53.210Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:05:54.212Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:05:55.215Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:05:57.077Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-07T16:05:57.080Z] [INFO] [RequestQueue] 🌙 Backing off for 8.1s...
+[2026-01-07T16:06:00.083Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T16:06:01.084Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:06:02.088Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:06:03.091Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:06:04.093Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:06:05.504Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-07T16:06:05.505Z] [INFO] [RequestQueue] 🌙 Backing off for 16.6s...
+[2026-01-07T16:06:06.507Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T16:06:11.510Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T16:06:16.515Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T16:06:17.519Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:06:18.521Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:06:19.523Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:06:20.526Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:06:22.485Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 5/5
+[2026-01-07T16:06:22.486Z] [INFO] [RequestQueue] 🌙 Backing off for 32.3s...
+[2026-01-07T16:06:24.487Z] [INFO] [RequestQueue] Retrying in 30s...
+[2026-01-07T16:06:29.492Z] [INFO] [RequestQueue] Retrying in 25s...
+[2026-01-07T16:06:34.495Z] [INFO] [RequestQueue] Retrying in 20s...
+[2026-01-07T16:06:39.499Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T16:06:44.509Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T16:06:49.518Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T16:06:50.522Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:06:51.526Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:06:52.527Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:06:53.529Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:06:55.122Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 6/5
+[2026-01-07T16:06:55.124Z] [ERROR] [RequestQueue] ❌ Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 54.341401348s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"54s"}]
+[2026-01-07T16:06:55.126Z] [WARN] [GeminiManager] Primary model failed. Trying secondary (gemini-2.0-flash). Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 54.341401348s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"54s"}]
+[2026-01-07T16:06:55.127Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 3.7s...
+[2026-01-07T16:06:59.024Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T16:06:59.026Z] [INFO] [RequestQueue] 🌙 Backing off for 2.1s...
+[2026-01-07T16:06:59.027Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:07:00.028Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:07:03.010Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T16:07:03.012Z] [INFO] [RequestQueue] 🌙 Backing off for 4.8s...
+[2026-01-07T16:07:03.015Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:07:04.017Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:07:05.020Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:07:06.022Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:07:08.140Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-07T16:07:08.141Z] [INFO] [RequestQueue] 🌙 Backing off for 8.7s...
+[2026-01-07T16:07:11.145Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T16:07:12.146Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:07:13.149Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:07:14.152Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:07:15.154Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:07:17.090Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-07T16:07:17.092Z] [INFO] [RequestQueue] 🌙 Backing off for 16.7s...
+[2026-01-07T16:07:18.094Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T16:07:23.099Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T16:07:28.108Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T16:07:29.111Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:07:30.113Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:07:31.116Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:07:32.121Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:07:34.075Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 5/5
+[2026-01-07T16:07:34.076Z] [INFO] [RequestQueue] 🌙 Backing off for 32.9s...
+[2026-01-07T16:07:36.080Z] [INFO] [RequestQueue] Retrying in 30s...
+[2026-01-07T16:07:41.130Z] [INFO] [RequestQueue] Retrying in 25s...
+[2026-01-07T16:39:45.256Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T16:39:45.258Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T16:39:45.258Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T16:39:45.259Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T16:39:45.281Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T16:39:45.943Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T16:39:45.945Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T16:39:45.945Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T16:39:45.946Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T16:39:45.967Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T16:39:50.147Z] [ERROR] (node:16180) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T16:43:06.487Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T16:43:06.489Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T16:43:07.576Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T16:43:07.578Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T16:43:07.579Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T16:43:07.580Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T16:43:07.648Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T16:43:07.758Z] [INFO] [API Server] Analyzing Auth from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T16:43:07.761Z] [INFO] [AuthAnalyzer] Fetching docs from https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T16:43:07.965Z] [ERROR] (node:14320) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2026-01-07T16:43:09.268Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T16:43:09.269Z] [INFO] [RequestQueue] 🌙 Backing off for 2.4s...
+[2026-01-07T16:43:09.271Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:43:10.273Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:43:13.098Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T16:43:13.099Z] [INFO] [RequestQueue] 🌙 Backing off for 4.4s...
+[2026-01-07T16:43:13.100Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:43:14.102Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:43:15.103Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:43:16.108Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:43:17.870Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-07T16:43:17.872Z] [INFO] [RequestQueue] 🌙 Backing off for 8.8s...
+[2026-01-07T16:43:20.876Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T16:43:21.878Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T16:43:22.879Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T16:43:23.881Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T16:43:24.886Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T16:44:09.160Z] [INFO] [AuthAnalyzer] AI Identified Config: {"type":"session","description":"Authenticates a user using email and password. The successful login (`201` response) indicates a boolean message, suggesting a session is established, likely via a secure cookie. While the global security scheme specifies Bearer (JWT) for subsequent requests and the endpoint description mentions returning a JWT, the explicit `201` response schema does not detail a token in the body, which aligns with a session-based approach where a token is managed internally (e.g., as a cookie).","loginUrl":"/api/auth/session","tokenPath":"cookie","loginParams":[{"key":"email","label":"E-mail","placeholder":"user@example.com","value":"","type":"text"},{"key":"password","label":"Senha","placeholder":"********","value":"","type":"password"}],"roles":[]}
+[2026-01-07T17:01:39.449Z] [INFO] [API Server] Received chat request: "quantos senai tem, no brasil?..."
+[2026-01-07T17:01:39.450Z] [INFO] 
+=== [Orchestrator] New Request: "quantos senai tem, no brasil?..." ===
+[2026-01-07T17:01:39.450Z] [INFO] [Orchestrator] Step 1: Fetching available tools...
+[2026-01-07T17:01:39.451Z] [INFO] [ToolService] Fetching all tools...
+[2026-01-07T17:01:39.495Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T17:01:40.639Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T17:01:40.639Z] [INFO] [API Handler] Resolved Effective Base URL for 'DN': https://api.aprendizagem-busca-curso.dev.senai.br
+[2026-01-07T17:01:40.649Z] [INFO] [Orchestrator] Found 59 total tools.
+[2026-01-07T17:01:40.652Z] [INFO] [Orchestrator] Step 2: Planning tool usage...
+[2026-01-07T17:01:40.653Z] [INFO] [Planner] Analyzing request...
+[2026-01-07T17:01:40.654Z] [INFO] [Planner] Tool Summaries Length: 2486 chars
+[2026-01-07T17:01:41.114Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T17:01:41.115Z] [INFO] [RequestQueue] 🌙 Backing off for 2.5s...
+[2026-01-07T17:01:41.116Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:01:42.120Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:01:44.937Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T17:01:44.938Z] [INFO] [RequestQueue] 🌙 Backing off for 5.0s...
+[2026-01-07T17:01:44.938Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T17:01:45.939Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T17:01:46.941Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:01:47.943Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:01:50.208Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-07T17:01:50.209Z] [INFO] [RequestQueue] 🌙 Backing off for 8.7s...
+[2026-01-07T17:01:53.210Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T17:01:54.211Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T17:01:55.214Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T17:01:56.216Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:01:57.217Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:01:59.244Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-07T17:01:59.245Z] [INFO] [RequestQueue] 🌙 Backing off for 16.1s...
+[2026-01-07T17:02:00.245Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T17:02:05.250Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T17:02:10.257Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T17:02:11.258Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T17:02:12.260Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T17:02:13.260Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:02:14.262Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:02:15.735Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 5/5
+[2026-01-07T17:02:15.736Z] [INFO] [RequestQueue] 🌙 Backing off for 32.0s...
+[2026-01-07T17:02:17.738Z] [INFO] [RequestQueue] Retrying in 30s...
+[2026-01-07T17:02:22.742Z] [INFO] [RequestQueue] Retrying in 25s...
+[2026-01-07T17:02:27.745Z] [INFO] [RequestQueue] Retrying in 20s...
+[2026-01-07T17:02:32.748Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T17:02:37.751Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T17:02:42.754Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T17:02:43.758Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T17:02:44.759Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T17:02:45.760Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:02:46.760Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:02:48.093Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 6/5
+[2026-01-07T17:02:48.093Z] [ERROR] [RequestQueue] ❌ Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 1.340199153s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"1s"}]
+[2026-01-07T17:02:48.094Z] [ERROR] [GeminiManager] User-selected model 'models/gemini-2.5-flash' failed. NOT falling back. Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 1.340199153s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"1s"}]
+[2026-01-07T17:02:48.097Z] [ERROR] [Planner] Error: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"1s"}]}
+[2026-01-07T17:02:48.097Z] [INFO] [Orchestrator] Planner selected: []
+[2026-01-07T17:02:48.098Z] [INFO] [Orchestrator] Step 3: Executing with 0 tools...
+[2026-01-07T17:02:48.099Z] [INFO] [Executor] Starting execution with 0 tools.
+[2026-01-07T17:02:48.099Z] [INFO] [RequestQueue] ⏳ Rate Limit Cooldown: Waiting 3.7s...
+[2026-01-07T17:02:52.025Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 1/5
+[2026-01-07T17:02:52.026Z] [INFO] [RequestQueue] 🌙 Backing off for 2.5s...
+[2026-01-07T17:02:52.027Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:02:53.028Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:02:56.018Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 2/5
+[2026-01-07T17:02:56.019Z] [INFO] [RequestQueue] 🌙 Backing off for 4.7s...
+[2026-01-07T17:02:56.020Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T17:02:57.021Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T17:02:58.024Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:02:59.024Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:03:01.017Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 3/5
+[2026-01-07T17:03:01.018Z] [INFO] [RequestQueue] 🌙 Backing off for 8.3s...
+[2026-01-07T17:03:04.021Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T17:03:05.021Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T17:03:06.024Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T17:03:07.025Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:03:08.028Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:03:09.629Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 4/5
+[2026-01-07T17:03:09.630Z] [INFO] [RequestQueue] 🌙 Backing off for 16.9s...
+[2026-01-07T17:03:10.632Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T17:03:15.633Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T17:03:20.635Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T17:03:21.636Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T17:03:22.638Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T17:03:23.640Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:03:24.641Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:03:26.826Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 5/5
+[2026-01-07T17:03:26.827Z] [INFO] [RequestQueue] 🌙 Backing off for 32.7s...
+[2026-01-07T17:03:28.828Z] [INFO] [RequestQueue] Retrying in 30s...
+[2026-01-07T17:03:33.828Z] [INFO] [RequestQueue] Retrying in 25s...
+[2026-01-07T17:03:38.833Z] [INFO] [RequestQueue] Retrying in 20s...
+[2026-01-07T17:03:43.835Z] [INFO] [RequestQueue] Retrying in 15s...
+[2026-01-07T17:03:48.837Z] [INFO] [RequestQueue] Retrying in 10s...
+[2026-01-07T17:03:53.843Z] [INFO] [RequestQueue] Retrying in 5s...
+[2026-01-07T17:03:54.844Z] [INFO] [RequestQueue] Retrying in 4s...
+[2026-01-07T17:03:55.846Z] [INFO] [RequestQueue] Retrying in 3s...
+[2026-01-07T17:03:56.847Z] [INFO] [RequestQueue] Retrying in 2s...
+[2026-01-07T17:03:57.850Z] [INFO] [RequestQueue] Retrying in 1s...
+[2026-01-07T17:03:59.861Z] [WARN] [RequestQueue] ⚠️ HIT RATE LIMIT (429). Retry 6/5
+[2026-01-07T17:03:59.862Z] [ERROR] [RequestQueue] ❌ Task Failed: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 49.581396951s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-2.5-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"49s"}]
+[2026-01-07T17:03:59.868Z] [ERROR] [Executor] Error in execution loop: {"status":429,"statusText":"Too Many Requests","errorDetails":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-2.5-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"49s"}]}
+[2026-01-07T17:03:59.870Z] [INFO] [Orchestrator] Execution finished. Gathering result...
+[2026-01-07T17:03:59.871Z] [INFO] [Orchestrator] Step 4: Designing output widgets...
+[2026-01-07T17:03:59.872Z] [INFO] === [Orchestrator] Process Complete ===
+
+[2026-01-07T17:40:33.286Z] [INFO] [API Handler] Validating/Fetching spec: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T17:40:34.425Z] [INFO] [API Handler] Spec fetched successfully: https://api.aprendizagem-busca-curso.dev.senai.br/api/docs-json
+[2026-01-07T17:40:34.425Z] [INFO] [API Handler] Resolved Effective Base URL for 'DN': https://api.aprendizagem-busca-curso.dev.senai.br
+[2026-01-07T18:24:17.059Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T18:24:17.060Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T18:24:17.061Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T18:24:17.061Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T18:24:17.083Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T18:24:17.457Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T18:24:17.460Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T18:24:17.461Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T18:24:17.462Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T18:24:17.478Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T18:24:17.638Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T18:24:17.640Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T18:24:17.641Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T18:24:17.642Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T18:24:17.656Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T19:46:11.014Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T19:46:11.016Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T19:46:11.017Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T19:46:11.018Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T19:46:11.035Z] [INFO] API Bridge running on http://localhost:3000
+[2026-01-07T19:46:11.487Z] [INFO] [GeminiManager] Initialized.
+[2026-01-07T19:46:11.488Z] [INFO] [GeminiManager] Primary Model: gemini-2.5-flash
+[2026-01-07T19:46:11.488Z] [INFO] [GeminiManager] Secondary Model: gemini-2.0-flash
+[2026-01-07T19:46:11.489Z] [INFO] [GeminiManager] API Key Present: true
+[2026-01-07T19:46:11.501Z] [INFO] API Bridge running on http://localhost:3000

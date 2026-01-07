@@ -18,8 +18,46 @@ export class PlannerAgent {
         // Heuristic: If no tools, return empty.
         if (!availableTools || availableTools.length === 0) return [];
 
-        // Optimize: Send only necessary schema info to save tokens
-        const toolSummaries = availableTools.map(t => `- ${t.name}: ${t.description?.substring(0, 150)}`).join('\n');
+        // CACHE CHECK: Simple in-memory cache for identical queries
+        // This is "economical and viable" for testing/debugging
+        if (this.lastPlan &&
+            this.lastPlan.query === userMessage.trim().toLowerCase() &&
+            this.lastPlan.toolCount === availableTools.length) {
+            console.log(`[Planner] ⚡ Using Cached Plan for: "${userMessage.substring(0, 20)}..."`);
+            return this.lastPlan.tools;
+        }
+
+        // Optimize: Smart Compression for many tools
+        let toolSummaries = "";
+
+        if (availableTools.length > 20) {
+            // 1. Group by prefix to detect "Related Resources"
+            const groups = {};
+            availableTools.forEach(t => {
+                const prefix = t.name.split('_')[0];
+                if (!groups[prefix]) groups[prefix] = [];
+                groups[prefix].push(t);
+            });
+
+            const lines = [];
+            for (const [prefix, tools] of Object.entries(groups)) {
+                if (tools.length > 5) {
+                    // Compress this group
+                    const names = tools.map(t => t.name).join(', ');
+                    // Use the description of the first tool to hint at purpose, or generic
+                    const sampleDesc = tools[0].description ? tools[0].description.split('.')[0] : 'Various tools';
+                    lines.push(`- **${prefix.toUpperCase()} Tools** (Count: ${tools.length}): [${names}]... Purpose: ${sampleDesc}`);
+                } else {
+                    // List normally
+                    tools.forEach(t => lines.push(`- ${t.name}: ${t.description?.substring(0, 100)}`));
+                }
+            }
+            toolSummaries = lines.join('\n');
+        } else {
+            // Aggressive compression: Name + first 60 chars of description only
+            toolSummaries = availableTools.map(t => `- ${t.name}: ${(t.description || '').substring(0, 60).replace(/\s+/g, ' ')}`).join('\n');
+        }
+        console.log(`[Planner] Tool Summaries Length: ${toolSummaries.length} chars`);
 
         const planningPrompt = `
 You are the PLANNER Agent.
@@ -38,15 +76,27 @@ INSTRUCTIONS:
 
         try {
             // Use Queue with Failover
-            const result = await geminiManager.generateContentWithFailover(planningPrompt, {
-                model: modelName,
-                systemInstruction: "You are the PLANNER Agent. Output strictly JSON."
+            const finalPrompt = `SYSTEM: You are the PLANNER Agent. Output strictly JSON.\n${planningPrompt}`;
+
+            const result = await geminiManager.generateContentWithFailover(finalPrompt, {
+                model: modelName
             });
             const text = result.response.text();
 
             const planJson = this.extractJson(text);
             if (planJson && Array.isArray(planJson.tools)) {
+                if (planJson.thought) {
+                    console.log(`[Planner] Thought: "${planJson.thought}"`);
+                }
                 console.log(`[Planner] Selected: ${planJson.tools.join(', ')}`);
+
+                // Save to Cache
+                this.lastPlan = {
+                    query: userMessage.trim().toLowerCase(),
+                    tools: planJson.tools,
+                    toolCount: availableTools.length
+                };
+
                 return planJson.tools;
             }
             return [];

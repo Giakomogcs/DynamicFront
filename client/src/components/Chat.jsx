@@ -19,14 +19,14 @@ export const Chat = ({ messages, onSendMessage, isProcessing, onStop }) => {
     return (
         <div className="flex flex-col h-full w-full bg-slate-900/30 border-r border-slate-800">
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {messages.length === 0 && (
+                {(!messages || messages.length === 0) && (
                     <div className="flex flex-col items-center justify-center h-full text-slate-500 opacity-60">
                         <Sparkles size={32} className="mb-4 text-indigo-500" />
                         <p className="text-sm font-medium">AI Assistant</p>
                     </div>
                 )}
 
-                {messages.map((msg, idx) => (
+                {Array.isArray(messages) && messages.map((msg, idx) => (
                     <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                         <div className={`size-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-slate-700' : 'bg-indigo-600'}`}>
                             {msg.role === 'user' ? <User size={14} className="text-white" /> : <Bot size={14} className="text-white" />}
