@@ -251,6 +251,7 @@ function App() {
 
   // --- Resource Management (Create / Update) ---
   const [editingResource, setEditingResource] = useState(null); // { type: 'api'|'db', data: ... }
+  const [resourcesVersion, setResourcesVersion] = useState(0);
 
   const handleRegister = React.useCallback(async (type, formData) => {
     setIsProcessing(true);
@@ -288,6 +289,7 @@ function App() {
 
       setModalType(null);
       setEditingResource(null); // Clear edit state
+      setResourcesVersion(v => v + 1); // Trigger refresh of ResourcesView
 
     } catch (e) {
       alert(e.message);
@@ -397,6 +399,7 @@ function App() {
       )}
       {activeTab === 'resources' && (
         <ResourcesView
+          key={resourcesVersion}
           onEdit={(type, data) => handleEditResource(type, data)}
         />
       )}

@@ -20,36 +20,44 @@ export class ExecutorAgent {
         // Convert history to generic format {role, content}
         const messages = this.prepareHistory(history);
 
-        // Add current user message with STRONG reinforcement if tools are present
         let finalUserMessage = userMessage;
         if (tools && tools.length > 0) {
-            finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available to answer this. YOU MUST USE THE TOOLS. Do not describe what you would do. CALL THE TOOLS NOW. Return only the tool calls.]`;
+            finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available. You are in FUNCTION CALLING MODE. You MUST INVOKE the tools using the native function calling mechanism. Do NOT write any text, plan, or explanation. Output ONLY the function call object.]`;
         }
         messages.push({ role: 'user', content: finalUserMessage });
 
+        const safeToolNames = tools.map(t => t.name).join(', ');
         const systemInstruction = `You are the EXECUTOR Agent. 
             Goal: Answer the user's question using the provided tools.
-            
+            AVAILABLE TOOLS: [${safeToolNames}]
+
             CRITICAL WORKFLOW:
-            1. **Analyze Capabilities**: Before running queries, checking the available tools to see if they match the User's intent. "api_name_tool" usually implies data from that API. "db_name_inspect" implies a database.
+            1. **Analyze Capabilities**: Use ONLY the tools listed above.
             2. **Exploration**: If you are unsure where the data is, use 'inspect_schema' or equivalent tools to find the right resource.
             3. **Execution**: Run the query or API call.
             
             CRITICAL SQL RULES:
-            1. **Filter Early**: ALWAYS use 'WHERE' clauses to filter data in the database. NEVER fetch all rows to filter in code.
-            2. **Aggregate**: Use 'COUNT', 'SUM', 'AVG', 'GROUP BY' in SQL. Do not fetch raw rows to count them.
-            3. **Limit Results**: Use 'LIMIT' to prevent fetching thousands of rows.
-            4. **Be Specific**: Select specific columns (e.g. 'SELECT name, price') instead of 'SELECT *'.
-            5. **Relevance**: Only query what is asked. Do not query "All States" if the user asked for "São Paulo".
+            1. **Filter Early**: ALWAYS use 'WHERE' clauses to filter data.
+            2. **Robustness**: When filtering text columns (e.g. names, cities), ALWAYS use 'ILIKE' (Postgres) or equivalent for case-insensitive matching.
+            3. **Fuzzy Matching**: If unsure of exact spelling, use wildcard '%' (e.g. WHERE city ILIKE '%paulo%').
+
+            4. **Aggregate**: Use 'COUNT', 'SUM', 'AVG', 'GROUP BY' instead of fetching raw rows.
+            5. **Limit**: ALWAYS use 'LIMIT 10' (or similar) unless specifically asked for all.
             
+            CRITICAL: DATA FORMATTING & ROBUSTNESS:
+            1. **Strict Types**: If a tool asks for an Integer, do NOT send a String. If it asks for "YYYY-MM-DD", do NOT send "01/01/2025".
+            2. **Read Descriptions**: Pay extreme attention to tool descriptions. They often contain hidden constraints (e.g. "Input must be 6 digits", "Use uppercase codes").
+            3. **Normalize Input**: If the user says "são paulo" but the API/DB is likely to use normalized data or if previous attempts failed, try variations (e.g. "Sao Paulo", "SAO PAULO").
+            4. **Retry Logic**: If a tool fails with a formatting error (e.g. "Invalid date"), RETRY immediately with the corrected format. Do NOT give up.
+
             General Rules:
-            1. Call MULTIPLE tools in PARALLEL whenever possible to save time.
+            1. Call MULTIPLE tools in PARALLEL whenever possible.
             2. If you need schema for multiple tables, call inspect_schema for all of them at once.
             3. If you have data, return a purely factual summary. 
             4. Do NOT try to build complex UI widgets here. Focus on the DATA.
-            5. **IMPORTANT**: If tools are provided, you MUST use them to answer questions about data. Do NOT reply with "I cannot access the database" if you have tools like \`inspect_schema\` or \`run_query\`. USE THEM.
-            6. **Context Awareness**: You may be running on a backup model (failover). Even so, you have full access to tools. Be confident.
-            7. **API vs Database**: NEVER hallucinate SQL queries (like \`run_query\`) if you are working with an API. If the available tools look like API endpoints (e.g., \`api_name_get_something\`), use THOSE specific tools. Openapi/Swagger IPs are NOT SQL databases. Use the HTTP tools provided.`;
+            5. **IMPORTANT**: If tools are provided, you MUST use them.
+            6. **API vs Database**: NEVER hallucinate SQL queries (like \`run_query\`) if you are working with an API. If the available tools look like API endpoints (e.g., \`api_name_get_something\`), use THOSE specific tools.
+            7. **Tool Usage**: Do NOT simulate the tool call in text. Generate a native Function Call object.`;
 
         let gatheredData = [];
         let finalResponseText = "";
@@ -75,13 +83,132 @@ export class ExecutorAgent {
                 finalResponseText = text;
 
                 // Append Assistant Response to History
-                // Note: We need to store toolCalls in the history for next turn context
-                // How we store it depends on the Provider's expectation or our generic format
-                // Generic: { role: 'model', content: text, toolCalls: [] }
-                // But GeminiProvider expects 'parts' mapping.
-                // Let's rely on GeminiProvider to map this correctly if we pass it back.
+                if (toolCalls.length > 0) {
+                     // Native call found
+                }
 
-                // If we have tool calls, we MUST push them to history
+                // FALLBACK: If no native tool calls, check if model wrote them in text (Common with Llama/Backup models)
+                if (toolCalls.length === 0 && text) {
+                    const knownToolNames = tools.map(t => t.name);
+
+                    // Strategy A: Try parsing the whole text as a JSON Tool Call
+                    try {
+                        const json = JSON.parse(text);
+                        // Check if it matches { name: "...", parameters/args: ... }
+                        if (json.name && knownToolNames.includes(json.name)) {
+                             console.log(`[Executor] 🛠️ Detected JSON-based tool call for '${json.name}'.`);
+                             toolCalls.push({
+                                 name: json.name,
+                                 args: json.parameters || json.args || {}
+                             });
+                        } else if (json.type === 'function' && json.name) { // OpenAI style sometimes leaked
+                             toolCalls.push({
+                                 name: json.name,
+                                 args: json.parameters || json.arguments || {}
+                             });
+                        } else if (Array.isArray(json) && json.length >= 1 && knownToolNames.includes(json[0])) {
+                             // Handle [ "tool_name", "arg_string_or_obj" ]
+                             console.log(`[Executor] 🛠️ Detected Array-based tool call for '${json[0]}'.`);
+                             let args = json[1] || {};
+                             // specific fix for ["run_query", "SELECT..."] where args is just the SQL string
+                             if (typeof args === 'string') {
+                                 if (json[0].includes('query')) args = { sql: args };
+                                 else if (json[0].includes('inspect')) args = { search: args };
+                             }
+                             toolCalls.push({
+                                 name: json[0],
+                                 args: args
+                             });
+                        }
+                    } catch (e) {
+                         // Not a pure JSON response
+                    }
+
+                    // Strategy B: XML-style <function>name</function>(args)
+                    if (toolCalls.length === 0) {
+                        const xmlRegex = /<function>([^<]+)<\/function>\s*\(([^)]*)\)/i;
+                        const match = text.match(xmlRegex);
+                        if (match) {
+                             const tName = match[1];
+                             if (knownToolNames.includes(tName)) {
+                                 console.log(`[Executor] 🛠️ Detected XML-based tool call for '${tName}'.`);
+                                 let argsString = match[2];
+                                 let args = {};
+                                 try { args = JSON.parse(argsString); } catch(e) { 
+                                     // fallback for strings
+                                     if (tName.includes('query')) args = { sql: argsString.replace(/^["']|["']$/g, '') };
+                                     else args = { search: argsString.replace(/^["']|["']$/g, '') };
+                                 } 
+                                 toolCalls.push({ name: tName, args: args || {} });
+                             }
+                        }
+                    }
+
+                    // Strategy C: Regex Match tool_name(args)
+                    // We look for known tool names followed by parenthesis
+                    if (toolCalls.length === 0) {
+                        for (const toolName of knownToolNames) {
+                            if (text.includes(toolName)) {
+                                // Simple regex to capture arguments: toolName( ... )
+                                const regex = new RegExp(`${toolName}\\s*\\(([^)]*)\\)`, 'i');
+                                const match = text.match(regex);
+                                if (match) {
+                                    console.log(`[Executor] 🛠️ Detected text-based tool call for '${toolName}'. Parsing...`);
+                                    let argsString = match[1].trim();
+                                    let args = {};
+                                    try {
+                                        // Try strict JSON first
+                                        args = JSON.parse(argsString);
+                                    } catch (e) {
+                                        try {
+                                            // Heuristic A: Key-Value pairs (param="value")
+                                            // Matches: key="value" or key='value' or key=value (simple)
+                                            const kvRegex = /(\w+)=["']?([^"'\s]+)["']?/g; // Simple non-spaced values
+                                            // Better Regex for quoted string support: (\w+)=(["'])(.*?)\2
+                                            const kvRegexComplex = /(\w+)=(["'])(.*?)\2/g;
+                                            
+                                            let kvMatch;
+                                            let hasKv = false;
+                                            
+                                            // Try capturing all key="val" matches
+                                            while ((kvMatch = kvRegexComplex.exec(argsString)) !== null) {
+                                                args[kvMatch[1]] = kvMatch[3];
+                                                hasKv = true;
+                                            }
+                                            
+                                            if (!hasKv) {
+                                                // Heuristic B: SQL/Search single string fallback
+                                                if (toolName.includes('query') && !argsString.trim().startsWith('{')) {
+                                                     const sql = argsString.replace(/^["']|["']$/g, '');
+                                                     args = { sql };
+                                                } else if (toolName.includes('inspect') && !argsString.trim().startsWith('{')) {
+                                                     const table = argsString.replace(/^["']|["']$/g, '');
+                                                     args = { search: table };
+                                                     if (tools.find(t=>t.name === toolName).parameters?.properties?.table_name) {
+                                                        args = { table_name: table };
+                                                     }
+                                                } else {
+                                                    // Warning but don't crash loop
+                                                    console.warn(`[Executor] Could not parse args for ${toolName}: ${argsString}`);
+                                                    continue; 
+                                                }
+                                            }
+                                        } catch (e2) {
+                                            console.warn(`[Executor] Parsing failed for ${toolName}`);
+                                            continue;
+                                        }
+                                    }
+                                    
+                                    toolCalls.push({
+                                        name: toolName,
+                                        args: args
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (toolCalls.length > 0) {
                     // For Gemini, we push the tool calls as the model response
                     messages.push({
@@ -97,13 +224,30 @@ export class ExecutorAgent {
                         try {
                             toolResult = await toolService.executeTool(call.name, call.args);
 
-                            // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
+                        // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
                             if (toolResult && toolResult.isError && toolResult.content && toolResult.content[0].text.includes('not found')) {
                                 const validToolNames = tools.map(t => t.name).join(', ');
                                 console.warn(`[Executor] ⚠️ Hallucination detected: '${call.name}'. Triggering Self-Correction.`);
 
                                 // Override error with GUIDANCE
                                 toolResult.content[0].text = `[SYSTEM ERROR]: Tool '${call.name}' does not exist. You are HALLUCINATING generic tools. You MUST use one of the following available tools: [${validToolNames}]. Retry now using the correct tool name.`;
+                            } 
+                            // DATA ROBUSTNESS: Check for empty results and suggest retries
+                            else if (toolResult && !toolResult.isError) {
+                                const resultStr = JSON.stringify(toolResult.content);
+                                // Simple heuristic: length of result is small or explicit "empty"/"no results"
+                                // If args contained a string value, try to suggest normalization
+                                if (resultStr.length < 50 || resultStr.includes('"length":0') || resultStr.includes('[]')) {
+                                    const argValues = Object.values(call.args).filter(v => typeof v === 'string');
+                                    if (argValues.length > 0) {
+                                        console.log(`[Executor] 🔄 Empty result detected. Suggesting normalization retry for: ${argValues.join(', ')}`);
+                                        // We append a "system hint" to the result for the NEXT turn
+                                        toolResult.content.push({
+                                            type: "text",
+                                            text: `\n[SYSTEM HINT]: The search returned NO results for "${argValues.join(', ')}". \n1. Try REMOVING accents (e.g. "São Paulo" -> "Sao Paulo").\n2. Try UPPERCASE or lowercase.\n3. Try a broader search term.\nRETRY IMMEDIATELY with a modified argument.`
+                                        });
+                                    }
+                                }
                             }
 
                         } catch (e) {

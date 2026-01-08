@@ -159,23 +159,50 @@ export async function getApiTools(api) {
                     const operationId = operation.operationId || `${method}_${pathSuffix}`;
                     const toolName = `${api.name.toLowerCase().replace(/\s+/g, '_')}_${operationId}`.toLowerCase();
 
+// ... Inside getApiTools loop ...
+                    
+                    // Flatten Parameters for Better LLM Compatibility
+                    const flatProperties = {};
+                    const requiredParams = [];
+
+                    // 1. Path Params
+                    if (operation.parameters) {
+                        operation.parameters.forEach(p => {
+                            if (p.in === 'path' || p.in === 'query') {
+                                flatProperties[p.name] = {
+                                    type: p.schema?.type || "string",
+                                    description: p.description
+                                };
+                                if (p.required) requiredParams.push(p.name);
+                            }
+                        });
+                    }
+
+                    // 2. Body Params?
+                    // Simplified: specific keys if defined, or just 'body' object
+                    if (operation.requestBody) {
+                        // Attempt to extract top-level keys from body schema if possible for cleaner tools
+                        // For now, let's keep it simple: if complex body, use 'body' arg? 
+                        // Or try to merge them.
+                        // For MVP, letting models send 'body' JSON is safer if complex.
+                        // But if it's a simple object, merging is better.
+                    }
+
+                    // Add reserved auth param
+                    flatProperties['_authProfile'] = {
+                        type: "string",
+                        description: `Optional: Auth profile to use. Available: ${Object.keys(profiles).length ? Object.keys(profiles).join(', ') : 'none'}`,
+                        enum: Object.keys(profiles).length > 0 ? Object.keys(profiles) : undefined,
+                        nullable: true
+                    };
+
                     tools.push({
                         name: toolName,
                         description: operation.summary || operation.description || `Call ${method.toUpperCase()} ${path}`,
                         inputSchema: {
                             type: "object",
-                            properties: {
-                                params: {
-                                    type: "object",
-                                    description: "Parameters for the API call (path variables, query params, body)"
-                                },
-                                _authProfile: {
-                                    type: "string",
-                                    description: `Optional: Auth profile to use. Available: ${Object.keys(profiles).length ? Object.keys(profiles).join(', ') : 'none'}`,
-                                    enum: Object.keys(profiles).length > 0 ? Object.keys(profiles) : undefined,
-                                    nullable: true
-                                }
-                            },
+                            properties: flatProperties,
+                            required: requiredParams
                         },
                         _exec: {
                             type: 'api',
@@ -184,7 +211,9 @@ export async function getApiTools(api) {
                             path: path,
                             baseUrl: effectiveBaseUrl,
                             auth: globalAuth,
-                            profiles: profiles
+                            profiles: profiles,
+                            // Flag to tell executor to re-pack params? No, executor needs to handle flat params.
+                            flatParams: true 
                         }
                     });
                 }
@@ -201,7 +230,7 @@ export async function getApiTools(api) {
  * Executes an API Tool Call
  */
 export async function executeApiTool(toolExecConfig, args) {
-    const { method, path, baseUrl, profiles } = toolExecConfig;
+    const { method, path, baseUrl, profiles, flatParams } = toolExecConfig;
     let auth = toolExecConfig.auth;
 
     if (args._authProfile && profiles && profiles[args._authProfile]) {
@@ -210,10 +239,20 @@ export async function executeApiTool(toolExecConfig, args) {
 
     let url = baseUrl ? baseUrl.replace(/\/$/, '') + path : path;
 
-    // Replace Path Variables
-    const params = args.params || {};
-    // Extract dynamic headers if present (Agent-Driven Auth)
+    // Handle Params (Flat or Legacy)
+    let params = {};
     const dynamicHeaders = args._headers || {};
+
+    if (flatParams) {
+        // Exclude internal keys
+        for (const [k, v] of Object.entries(args)) {
+            if (k !== '_authProfile' && k !== '_headers') {
+                params[k] = v;
+            }
+        }
+    } else {
+        params = args.params || {};
+    }
 
     let finalUrl = url;
 

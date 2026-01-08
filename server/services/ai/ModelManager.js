@@ -17,6 +17,7 @@ class ModelManager {
 
         const settings = await this.loadSettings();
 
+        // Safe loading of keys
         this.registerProvider(new GeminiProvider({
             apiKey: settings.GEMINI_API_KEY || process.env.GEMINI_API_KEY
         }));
@@ -39,6 +40,16 @@ class ModelManager {
 
         this.isInitialized = true;
         console.log("[ModelManager] Initialized.");
+    }
+
+    async reload() {
+        if (this.reloadTimer) clearTimeout(this.reloadTimer);
+        this.reloadTimer = setTimeout(async () => {
+            console.log("[ModelManager] Reloading settings and providers...");
+            this.providers = new Map();
+            this.isInitialized = false;
+            await this.init();
+        }, 500); // 500ms debounce
     }
 
     async loadSettings() {

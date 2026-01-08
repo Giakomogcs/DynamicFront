@@ -87,14 +87,8 @@ export const SettingsView = () => {
             }
 
             // Force Refresh of Models (re-init providers with new keys)
-            // Ideally backend ModelManager should watch DB or we trigger a reload. 
-            // For now, next request will reload if logic is there, or we might need restart?
-            // Current ModelManager implementation loads settings on `init()`. 
-            // It marks `isInitialized = true`. 
-            // We need a way to force re-init or just rely on process restart for now, 
-            // OR update `ModelManager` to reload settings on request if keys change.
-            // Let's assume user might need to restart server or we improve ModelManager later.
-            alert("Settings Saved! (Server restart may be required for new API Keys to take effect)");
+            await fetchData();
+            alert("Settings Saved!");
 
         } catch (e) {
             alert("Failed to save settings: " + e.message);

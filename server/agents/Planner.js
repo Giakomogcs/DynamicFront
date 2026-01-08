@@ -69,11 +69,15 @@ ${toolSummaries}
 INSTRUCTIONS:
 1. **Analyze** the User's request and the available tools.
 2. **Formulate a Strategy**: Create a logical pipeline of steps to fetch the necessary data.
-   - Example: "First, search for the dataset using 'search_tools'. Second, use 'get_details' to retrieve specific info."
+   - Separate the process into meaningful STAGES (e.g., "Search", "Details", "Analysis").
+   - For each stage, suggest a "display_component" (e.g. "search_results_list", "details_card", "histogram").
 3. **Select Tools**: Identify ALL tools needed for this pipeline.
 4. **Return JSON**:
    {
      "thought": "Brief explanation of the strategy/pipeline.",
+     "steps": [
+       { "name": "Step Name", "description": "What to do", "display_component": "type_of_ui_to_show" }
+     ],
      "tools": ["tool_name_1", "tool_name_2"]
    }
 5. If no tools are relevant, return { "tools": [] }.
@@ -103,14 +107,19 @@ INSTRUCTIONS:
                     toolCount: availableTools.length
                 };
 
-                return planJson.tools;
+                // RETURN FULL PLAN OBJECT
+                return { 
+                    tools: planJson.tools,
+                    thought: planJson.thought,
+                    steps: planJson.steps || []
+                };
             }
-            return [];
+            return { tools: [] };
         } catch (e) {
             console.error("[Planner] Error:", e);
             fs.writeFileSync('debug_planner.log', `[${new Date().toISOString()}] Error: ${e.message}\n${e.stack}\n`);
             // Fallback: If planning fails, maybe return empty toolset to avoid triggering random things
-            return [];
+            return { tools: [] };
         }
     }
 

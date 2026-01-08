@@ -27,7 +27,17 @@ export class XAIProvider extends AIProvider {
                 description: `Grok Model: ${m.id}`
             }));
         } catch (e) {
-            console.error("[XAIProvider] List models failed:", e);
+            let msg = e.message;
+            try {
+                // Try to parse xAI JSON error for cleaner logging
+                const jsonErr = JSON.parse(msg);
+                if (jsonErr.error) {
+                    console.warn(`[XAIProvider] Could not load models: ${jsonErr.error}`);
+                    return [];
+                }
+            } catch { }
+
+            console.warn("[XAIProvider] List models failed:", msg);
             return [];
         }
     }

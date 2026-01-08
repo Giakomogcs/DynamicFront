@@ -10,13 +10,13 @@ export class DesignerAgent {
      * @param {string} modelName 
      * @returns {Promise<{text: string, widgets: Array}>}
      */
-    async design(summaryText, data, modelName) {
-        // If no data, minimal design needed? Actually user might want just text.
-        if (!data || data.length === 0) {
-            return { text: summaryText, widgets: [] };
-        }
-
+    async design(summaryText, data, modelName, steps = []) {
         console.log("[Designer] Generating Widgets...");
+
+        // If no data check
+        if ((!data || data.length === 0) && (!steps || steps.length === 0)) {
+             return { text: summaryText, widgets: [] };
+        }
 
         const serializedData = JSON.stringify(data);
         const MAX_DESIGNER_CONTEXT = 15000;
@@ -26,21 +26,27 @@ export class DesignerAgent {
 
         const designerPrompt = `
 You are the UI DESIGNER Agent.
-Your input: A summary text and a set of raw data blocks.
-Your goal: Generate a JSON array of "Widgets" to visualize this data.
+Your input: A summary text, a set of raw data blocks, and the EXECUTION PLAN used to get this data.
+Your goal: Generate a JSON array of "Widgets" to visualize this data and the process.
 
 Input Text: "${summaryText}"
 Input Data: ${safeData}
+Execution Strategy (Steps): ${JSON.stringify(steps)}
 
-WIDGET TYPES:
-1. stat (KPIs): { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%" }] }
-2. chart: { "type": "chart", "config": { "chartType": "bar|line|pie", "dataKey": "key", "valueKey": "val", "title": "..." }, "data": [...] }
-3. table: { "type": "table", "data": [...] }
-4. insight: { "type": "insight", "title": "...", "content": ["..."] }
+WIDGET TYPES (Use these to tell a STORY):
+1. stat (KPIs): { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%", "icon": "trending_up" }] }
+2. chart: { "type": "chart", "config": { "chartType": "bar|line|pie|area", "title": "Meaningful Title", "description": "What this chart shows" }, "data": [...] }
+3. table: { "type": "table", "title": "Detailed Data", "data": [...] }
+4. insight: { "type": "insight", "title": "Analysis / Status", "content": ["Bullet point 1", "Bullet point 2"], "sentiment": "neutral|warning|success" }
+5. process: { "type": "process", "title": "Execution Pipeline", "steps": [{ "name": "Step 1", "status": "completed", "description": "..." }] }
 
 INSTRUCTIONS:
 - Return ONLY the JSON array inside \`\`\`json\`\`\` code blocks.
-- Create at least one widget if the data permits.
+- **Visual Storytelling**: Start with a 'process' widget if the task was multi-step. Show how you got the data.
+- **Contextualize**: Don't just show numbers. Use Titles and Descriptions.
+- **Analysis**: If the user asked for "most repeated" or "top", calculate it from the raw list (e.g. Top 5 Bar Chart).
+- **Empty/Error State**: If data is missing/error, use an "insight" widget to explain why (e.g. "Try removing accents") AND a "process" widget showing where it failed.
+- **Completeness**: Aim for at least 3 widgets: Process, Insight, and Data (Table/Chart).
 `;
 
         try {

@@ -20,8 +20,10 @@ export class AgentOrchestrator {
 
         // 2. PLAN
         console.log("[Orchestrator] Step 2: Planning tool usage...");
-        const selectedToolNames = await plannerAgent.plan(userMessage, allMcpTools, location, modelName);
+        const plan = await plannerAgent.plan(userMessage, allMcpTools, location, modelName);
+        const selectedToolNames = plan.tools || [];
         console.log(`[Orchestrator] Planner selected: [${selectedToolNames.join(', ')}]`);
+        console.log(`[Orchestrator] Strategy: ${plan.thought}`);
 
         // Filter Tools
         const activeTools = allGeminiTools.filter(t => selectedToolNames.includes(t.name));
@@ -32,8 +34,14 @@ export class AgentOrchestrator {
         console.log("[Orchestrator] Execution finished. Gathering result...");
 
         // 4. DESIGN
+        // Pass Plan Strategy/Steps to Designer for better visualization
         console.log("[Orchestrator] Step 4: Designing output widgets...");
-        const finalResult = await designerAgent.design(executionResult.text, executionResult.gatheredData, modelName);
+        const finalResult = await designerAgent.design(
+            executionResult.text, 
+            executionResult.gatheredData, 
+            modelName,
+            plan.steps // New arg
+        );
         console.log("=== [Orchestrator] Process Complete ===\n");
 
         return finalResult;

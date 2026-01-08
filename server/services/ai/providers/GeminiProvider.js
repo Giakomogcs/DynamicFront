@@ -31,7 +31,7 @@ export class GeminiProvider extends AIProvider {
                 }))
                 .sort((a, b) => b.name.localeCompare(a.name));
         } catch (e) {
-            console.error("[GeminiProvider] List models failed:", e);
+            console.warn("[GeminiProvider] List models failed:", e.message);
             return [];
         }
     }

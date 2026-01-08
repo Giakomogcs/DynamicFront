@@ -1,6 +1,8 @@
 
 import prisma from '../registry.js';
 
+import { modelManager } from '../services/ai/ModelManager.js';
+
 export async function getSettings(req, res) {
     try {
         const settings = await prisma.systemSetting.findMany();
@@ -32,6 +34,11 @@ export async function updateSetting(req, res) {
         // Parse back for response
         let parsed = setting.value;
         try { parsed = JSON.parse(setting.value); } catch { }
+
+        // Reload ModelManager to pick up new keys
+        if (key.includes('API_KEY') || key === 'enabledModels') {
+            await modelManager.reload();
+        }
 
         res.json({ key: setting.key, value: parsed });
     } catch (e) {
