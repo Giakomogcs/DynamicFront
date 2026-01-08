@@ -75,6 +75,9 @@ class ModelManager {
         if (!modelName) return this.providers.get('gemini');
         if (modelName.startsWith('gemini')) return this.providers.get('gemini');
         if (modelName.includes('llama') || modelName.includes('mixtral') || modelName.includes('gemma')) return this.providers.get('groq');
+        if (modelName.startsWith('gpt') || modelName.startsWith('o1')) return this.providers.get('openai');
+        if (modelName.startsWith('claude')) return this.providers.get('anthropic');
+        if (modelName.includes('grok')) return this.providers.get('xai');
         return this.providers.get('gemini');
     }
 
@@ -93,22 +96,25 @@ class ModelManager {
         let targetModel = config.model || "gemini-2.0-flash";
         let provider = this.getProviderForModel(targetModel);
 
+        console.log(`[ModelManager] Generating content with ${targetModel} (Provider: ${provider?.id})...`);
+
         try {
             return await this.executeWithRetry(provider, targetModel, input, config);
         } catch (primaryError) {
+            console.warn(`[ModelManager] Primary execution failed for ${targetModel}. Error: ${primaryError.message}`);
+            
             // Check if 429 using robust check
             if (this.isRateLimitOrQuota(primaryError)) {
-                console.warn(`[ModelManager] ⚠️ Primary (${targetModel}) 429/Quota. Initiating Failover...`);
+                console.warn(`[ModelManager] ⚠️ ${targetModel} hit Rate Limit/Quota. Initiating Failover...`);
 
                 const failoverPlan = this.getFailoverPlan(targetModel);
+                if (failoverPlan.length === 0) console.warn("[ModelManager] No failover plan found.");
+
                 for (const fallback of failoverPlan) {
                     console.log(`[ModelManager] 🔄 Failing over to: ${fallback.model} (${fallback.providerId})`);
                     try {
                         const fallbackProvider = this.providers.get(fallback.providerId);
                         if (!fallbackProvider) continue;
-
-                        // NOTE: If passing TOOLS, we might need to map them if switching provider types?
-                        // For now we assume Gemini->Gemini fallback is main use case, or Gemini->Groq (No tools)
 
                         return await this.executeWithRetry(fallbackProvider, fallback.model, input, { ...config, model: fallback.model });
                     } catch (fbError) {
@@ -116,6 +122,8 @@ class ModelManager {
                         continue;
                     }
                 }
+            } else {
+                 console.warn("[ModelManager] Error was not identified as Rate Limit/Quota. Rethrowing.");
             }
             throw primaryError;
         }
@@ -123,26 +131,43 @@ class ModelManager {
 
     getFailoverPlan(failedModel) {
         const plan = [];
+        // Gemini Failover
         if (failedModel.includes('gemini')) {
             if (failedModel !== 'gemini-2.0-flash') plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash' });
             plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash-lite' });
-            plan.push({ providerId: 'groq', model: 'llama3-70b-8192' });
+            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile' });
         }
+        // Llama/Groq Failover
         else if (['llama', 'mixtral'].some(k => failedModel.includes(k))) {
-            plan.push({ providerId: 'groq', model: 'llama3-8b-8192' });
+            plan.push({ providerId: 'groq', model: 'llama-3.1-8b-instant' });
             plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash' });
+        }
+        // OpenAI Failover (NEW)
+        else if (['gpt', 'o1'].some(k => failedModel.includes(k))) {
+            // Fallback to Gemini 2.0 Flash (Fast and Capable)
+            plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash' });
+            // Fallback to Groq Llama 3.3
+            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile' });
         }
         return plan;
     }
 
     isRateLimitOrQuota(error) {
-        const msg = (error.message || "").toLowerCase();
-        // Check for 429 in various forms including Google's specific errors
-        return msg.includes("429") ||
-            msg.includes("quota") ||
-            msg.includes("too many requests") ||
-            msg.includes("rate limit") ||
-            msg.includes("resource_exhausted");
+        try {
+            const msg = (error.message || JSON.stringify(error) || "").toLowerCase();
+            const status = error.status || error.statusCode || 0;
+            
+            // Check for 429 in various forms including Google's specific errors
+            return status === 429 ||
+                msg.includes("429") ||
+                msg.includes("quota") ||
+                msg.includes("too many requests") ||
+                msg.includes("rate limit") ||
+                msg.includes("resource_exhausted") ||
+                msg.includes("insufficient_quota"); // OpenAI usage limit
+        } catch (e) {
+            return false;
+        }
     }
 
     async executeWithRetry(provider, model, input, config) {

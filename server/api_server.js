@@ -4,6 +4,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
+dotenv.config();
 
 // Import our MCP Logic
 import { toolService } from './services/toolService.js';

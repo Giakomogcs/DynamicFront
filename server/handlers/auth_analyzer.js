@@ -211,8 +211,9 @@ export async function analyzeAuthFromDocs(docsUrl, docsContent, docsAuth = null)
     1. If there is a Login/Session Endpoint (POST) that takes credentials, set "type" to "basic" (if it returns token) or "session" (if it sets cookie/returns bool).
     2. Populate "loginParams" with ALL fields required in the login body.
     3. If there are static fields (like 'grant_type'), set "type": "hidden" and "value".
-    4. For "roles", look for enums, descriptions of user types, or permission scopes in the docs.
-    5. Return ONLY valid JSON.
+    4. For "tokenPath", return ONLY the dot-notation path (e.g. "data.token", "access_token"). DO NOT write sentences like "Assumed to be...". If unknown, use "access_token".
+    5. For "roles", look for enums, descriptions of user types, or permission scopes in the docs.
+    6. Return ONLY valid JSON.
     `;
 
     try {

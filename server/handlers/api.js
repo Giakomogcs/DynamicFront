@@ -268,14 +268,31 @@ export async function executeApiTool(toolExecConfig, args) {
 
                 if (loginRes.ok) {
                     const loginData = await loginRes.json();
-                    const tokenPath = auth.tokenPath || 'access_token';
-                    // Extract token via path (simple dot notation support)
-                    const token = tokenPath.split('.').reduce((o, k) => (o || {})[k], loginData);
+                    let tokenPath = auth.tokenPath || 'access_token';
+                    
+                    // 1. Try Configured Path
+                    let token = tokenPath.split('.').reduce((o, k) => (o || {})[k], loginData);
+
+                    // 2. Smart Fallback if not found
+                    if (!token) {
+                        console.warn(`[API Exec] Token not found at '${tokenPath}'. Attempting smart search...`);
+                        const candidateKeys = ['access_token', 'token', 'accessToken', 'jwt', 'id_token', 'key'];
+                        
+                        // BFS/Recursive search for these keys in the object? 
+                        // For safety, let's just check top level and data level
+                        for (const key of candidateKeys) {
+                            if (loginData[key]) { token = loginData[key]; break; }
+                            if (loginData.data && loginData.data[key]) { token = loginData.data[key]; break; }
+                        }
+                    }
 
                     if (token) {
+                        console.log(`[API Exec] Auth success. Token found.`);
                         fetchOptions.headers['Authorization'] = `Bearer ${token}`;
                     } else {
-                        console.warn(`[API Exec] Auth success but token not found at '${tokenPath}'`);
+                        console.error(`[API Exec] Auth success but token NOT found. Keys available: ${Object.keys(loginData).join(', ')}`);
+                        // DO NOT throw, let the request try (maybe it doesn't need auth?) 
+                        // Actually, if auth was requested, it probably needs it.
                     }
                 } else {
                     console.error(`[API Exec] Auth failed: ${loginRes.status}`);

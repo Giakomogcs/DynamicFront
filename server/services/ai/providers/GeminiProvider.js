@@ -43,7 +43,13 @@ export class GeminiProvider extends AIProvider {
             modelConfig.systemInstruction = options.systemInstruction;
         }
         if (options.tools) {
-            modelConfig.tools = options.tools; // Gemini expects [{ functionDeclarations: [...] }]
+            // Check if tools are already in Gemini format (should have functionDeclarations)
+            // If it's a flat array of tools (like OpenAI format), wrap it.
+            if (Array.isArray(options.tools) && options.tools.length > 0 && !options.tools[0].functionDeclarations) {
+                 modelConfig.tools = [{ functionDeclarations: options.tools }];
+            } else {
+                 modelConfig.tools = options.tools;
+            }
         }
         if (options.jsonMode) {
             modelConfig.generationConfig = { responseMimeType: "application/json" };

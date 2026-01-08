@@ -57,7 +57,16 @@ export async function testConnection(baseUrl, authConfig) {
 
                 const loginData = await loginRes.json();
                 const tokenPath = auth.tokenPath || 'access_token';
-                const token = tokenPath.split('.').reduce((obj, key) => obj?.[key], loginData);
+                let token = tokenPath.split('.').reduce((obj, key) => obj?.[key], loginData);
+
+                // Smart Fallback
+                if (!token) {
+                    const candidateKeys = ['access_token', 'token', 'accessToken', 'jwt', 'id_token', 'key'];
+                    for (const key of candidateKeys) {
+                        if (loginData[key]) { token = loginData[key]; break; }
+                        if (loginData.data && loginData.data[key]) { token = loginData.data[key]; break; }
+                    }
+                }
 
                 if (!token) {
                     return { profile: profileName, success: false, message: `Token not found at '${tokenPath}'`, detail: JSON.stringify(loginData).substring(0, 200) };

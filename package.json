@@ -7,7 +7,11 @@
     "server"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run api --workspace=server\" \"npm run dev --workspace=client\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,magenta\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "generate": "npx prisma generate --schema=./server/prisma/schema.prisma",
+    "migrate": "npx prisma migrate dev --schema=./server/prisma/schema.prisma",
+    "dev": "npm run db:up && npm run generate && npm run migrate && concurrently \"npm run api --workspace=server\" \"npm run dev --workspace=client\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,magenta\"",
     "prisma:studio": "npx prisma studio --schema=./server/prisma/schema.prisma",
     "install:all": "npm install"
   },

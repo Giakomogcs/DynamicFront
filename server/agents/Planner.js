@@ -30,7 +30,7 @@ export class PlannerAgent {
         // Optimize: Smart Compression for many tools
         let toolSummaries = "";
 
-        if (availableTools.length > 20) {
+        if (availableTools.length > 300) { // Only group if EXTREMELY large amount of tools
             // 1. Group by prefix to detect "Related Resources"
             const groups = {};
             availableTools.forEach(t => {
@@ -41,21 +41,20 @@ export class PlannerAgent {
 
             const lines = [];
             for (const [prefix, tools] of Object.entries(groups)) {
-                if (tools.length > 5) {
-                    // Compress this group
+                 // Even in groups, we should try to list them if possible
+                 if (tools.length > 20) {
+                    // Massive group: List names + Common Prefix Description
                     const names = tools.map(t => t.name).join(', ');
-                    // Use the description of the first tool to hint at purpose, or generic
-                    const sampleDesc = tools[0].description ? tools[0].description.split('.')[0] : 'Various tools';
-                    lines.push(`- **${prefix.toUpperCase()} Tools** (Count: ${tools.length}): [${names}]... Purpose: ${sampleDesc}`);
-                } else {
-                    // List normally
-                    tools.forEach(t => lines.push(`- ${t.name}: ${t.description?.substring(0, 100)}`));
-                }
+                    lines.push(`- **${prefix.toUpperCase()} Tools** (Count: ${tools.length}): [${names}]...`);
+                 } else {
+                     tools.forEach(t => lines.push(`- ${t.name}: ${t.description?.substring(0, 150)}`));
+                 }
             }
             toolSummaries = lines.join('\n');
         } else {
-            // Aggressive compression: Name + first 60 chars of description only
-            toolSummaries = availableTools.map(t => `- ${t.name}: ${(t.description || '').substring(0, 60).replace(/\s+/g, ' ')}`).join('\n');
+            // Standard compression: Name + first 150 chars of description
+            // Increased from 60 to 150 to ensure "DN" tools context is visible
+            toolSummaries = availableTools.map(t => `- ${t.name}: ${(t.description || '').substring(0, 150).replace(/\s+/g, ' ')}`).join('\n');
         }
         console.log(`[Planner] Tool Summaries Length: ${toolSummaries.length} chars`);
 
@@ -76,10 +75,11 @@ INSTRUCTIONS:
 
         try {
             // Use Queue with Failover
-            const finalPrompt = `SYSTEM: You are the PLANNER Agent. Output strictly JSON.\n${planningPrompt}`;
+            const finalPrompt = `SYSTEM: You are the PLANNER Agent. You MUST return valid JSON only. Do not wrap in markdown blocks.\n${planningPrompt}`;
 
             const result = await geminiManager.generateContentWithFailover(finalPrompt, {
-                model: modelName
+                model: modelName,
+                jsonMode: true // Critical for Llama 3 / Groq fallback
             });
             const text = result.response.text();
 
