@@ -239,7 +239,8 @@ export async function executeApiTool(toolExecConfig, args) {
         if (auth.type === 'basic' && auth.loginUrl) {
             try {
                 // Determine Login URL (Absolute or Relative)
-                const loginFullUrl = auth.loginUrl.startsWith('http') ? auth.loginUrl : `${baseUrl.replace(/\/$/, '')}${auth.loginUrl.startsWith('/') ? '' : '/'}${auth.loginUrl}`;
+                const cleanLoginUrl = auth.loginUrl.trim();
+                const loginFullUrl = cleanLoginUrl.startsWith('http') ? cleanLoginUrl : `${baseUrl.trim().replace(/\/$/, '')}${cleanLoginUrl.startsWith('/') ? '' : '/'}${cleanLoginUrl}`;
 
                 let loginBody = {};
                 if (auth.loginParams && Array.isArray(auth.loginParams)) {
@@ -269,7 +270,7 @@ export async function executeApiTool(toolExecConfig, args) {
                 if (loginRes.ok) {
                     const loginData = await loginRes.json();
                     let tokenPath = auth.tokenPath || 'access_token';
-                    
+
                     // 1. Try Configured Path
                     let token = tokenPath.split('.').reduce((o, k) => (o || {})[k], loginData);
 
@@ -277,7 +278,7 @@ export async function executeApiTool(toolExecConfig, args) {
                     if (!token) {
                         console.warn(`[API Exec] Token not found at '${tokenPath}'. Attempting smart search...`);
                         const candidateKeys = ['access_token', 'token', 'accessToken', 'jwt', 'id_token', 'key'];
-                        
+
                         // BFS/Recursive search for these keys in the object? 
                         // For safety, let's just check top level and data level
                         for (const key of candidateKeys) {

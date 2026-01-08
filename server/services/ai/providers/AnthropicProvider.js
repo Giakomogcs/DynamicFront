@@ -1,4 +1,5 @@
 import { AIProvider } from '../AIProvider.js';
+import { convertGeminiToolsToAnthropic, convertAnthropicToolsToGemini } from './utils/ToolMapper.js';
 
 export class AnthropicProvider extends AIProvider {
     constructor(config) {
@@ -55,6 +56,14 @@ export class AnthropicProvider extends AIProvider {
             temperature: options.temperature || 0.7
         };
 
+        // Tool Support
+        if (options.tools && options.tools.length > 0) {
+            const anthropicTools = convertGeminiToolsToAnthropic(options.tools);
+            if (anthropicTools.length > 0) {
+                body.tools = anthropicTools;
+            }
+        }
+
         const response = await fetch(`${this.baseUrl}/messages`, {
             method: "POST",
             headers: {
@@ -76,8 +85,12 @@ export class AnthropicProvider extends AIProvider {
         const data = await response.json();
         const textContent = data.content.find(c => c.type === 'text');
 
+        // Extract Tool Calls using Mapper
+        const toolCalls = convertAnthropicToolsToGemini(data.content);
+
         return {
             text: textContent ? textContent.text : "",
+            toolCalls: toolCalls,
             usage: {
                 prompt_tokens: data.usage.input_tokens,
                 completion_tokens: data.usage.output_tokens

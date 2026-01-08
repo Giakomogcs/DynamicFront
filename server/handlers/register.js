@@ -33,6 +33,8 @@ export const registerTools = [
     }
 ];
 
+import { testConnection } from './test_connection.js';
+
 export async function processApiRegistration(name, specUrl, baseUrl, authConfigString, docsContent) {
     let toolConfigString = null;
     let authConfig = {};
@@ -40,13 +42,24 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
 
     // Extract docs auth profile if it exists (for 401 Spec URLs)
     const docsAuth = authConfig.docs || null;
+    let effectiveBaseUrl = baseUrl;
 
     try {
         if (!docsContent) {
             // 1. Try Standard OpenAPI Parsing (If no raw docs provided)
             console.log(`[Register] Attempting standard OpenAPI validation for: ${specUrl}`);
-            await validateApiSpec(specUrl, docsAuth);
+            const spec = await validateApiSpec(specUrl, docsAuth);
             console.log(`[Register] OpenAPI validation successful.`);
+
+            // Extract Base URL from spec if not provided
+            if (!effectiveBaseUrl) {
+                if (spec.servers && spec.servers.length > 0) {
+                    effectiveBaseUrl = spec.servers[0].url;
+                } else if (spec.host) {
+                    const scheme = (spec.schemes && spec.schemes.length > 0) ? spec.schemes[0] : 'https';
+                    effectiveBaseUrl = `${scheme}://${spec.host}${spec.basePath || ''}`;
+                }
+            }
         } else {
             console.log(`[Register] Raw docs content provided. Skipping URL validation.`);
             throw new Error("Skip to LLM");
@@ -63,6 +76,12 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
                 generatedConfig = await generateApiToolsFromDocs(name, specUrl, authConfigString || "{}");
             }
 
+            // Extract Base URL from generated tools if not provided
+            if (!effectiveBaseUrl && generatedConfig.tools && generatedConfig.tools.length > 0) {
+                const candidate = generatedConfig.tools.find(t => t.apiConfig && t.apiConfig.baseUrl);
+                if (candidate) effectiveBaseUrl = candidate.apiConfig.baseUrl;
+            }
+
             toolConfigString = JSON.stringify(generatedConfig);
             console.log(`[Register] LLM generation successful. Config length: ${toolConfigString.length}`);
         } catch (llmError) {
@@ -73,10 +92,29 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
         }
     }
 
+    // --- CONNECTION TEST VERIFICATION ---
+    if (effectiveBaseUrl) {
+        console.log(`[Register] Verifying connection to ${effectiveBaseUrl}...`);
+        const testResult = await testConnection(effectiveBaseUrl, authConfig);
+        if (!testResult.success) {
+            const msg = testResult.results && testResult.results.length > 0
+                ? testResult.results.map(r => `${r.profile}: ${r.message}`).join(', ')
+                : testResult.message;
+
+            // Allow 404 on root (some APIs don't have root endpoint) if explicitly handled by testConnection (it returns success=true for 404 but message mentions it)
+            // But testConnection logic says: if response.ok return success, else return false (except 404 check)
+            // Wait, testConnection.js lines 95-96 handles 404 as success=true. So if success=false, it really failed (401, 500, network error).
+            throw new Error(`Connection Verification Failed: ${msg}`);
+        }
+        console.log(`[Register] Connection verified successfully.`);
+    } else {
+        console.warn(`[Register] Could not determine Base URL. Skipping connection test.`);
+    }
+
     return {
         name,
         specUrl: specUrl || "RAW_TEXT",
-        baseUrl: baseUrl || "",
+        baseUrl: effectiveBaseUrl || baseUrl || "",
         authConfig: authConfigString || "{}",
         toolConfig: toolConfigString
     };

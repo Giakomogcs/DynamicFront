@@ -57,8 +57,8 @@ export async function generateApiToolsFromDocs(name, url, authConfigString, rawC
     --- DOCUMENTATION CONTENT END ---
 
     **REQUIREMENTS:**
-    1. Identify the most useful GET/POST endpoints.
-    2. Create a JSON structure following EXACTLY this schema:
+    1. **Identify Endpoints**: Look for patterns like "GET /users", "POST /api/v1/resource". In HTML, look for tables or list items listing these.
+    2. **Create JSON Structure**: Follow this schema strictly:
     {
       "serverInfo": {
         "name": "${name.toLowerCase().replace(/\s/g, '-')}",
@@ -80,21 +80,22 @@ export async function generateApiToolsFromDocs(name, url, authConfigString, rawC
           "apiConfig": {
             "baseUrl": "The base domain (e.g. https://api.example.com)",
             "path": "/specific/path/or/{template}",
-            "method": "GET|POST",
+            "method": "GET|POST|PUT|DELETE",
             "paramLocation": "query|path|body",
             "auth": {
                "type": "apiKey|bearer|basic|none", 
-               "paramName": "if apiKey, the query param or header name", 
-               "envVar": "API_KEY"
+               "paramName": "if apiKey, the query param or header name (e.g. X-API-KEY)", 
+               "paramLocation": "if apiKey: 'header' or 'query'"
             }
           }
         }
       ]
     }
 
-    3. If authentication is required but not clear, assume standard patterns (e.g. Bearer header or api_key query param) based on the provided Auth Config.
-    4. ALWAYS add "_headers" as an optional object parameter to every tool.
-    5. Return ONLY valid JSON. No markdown fencing.
+    3. **Auth Handling**: check 'Provided Auth Config'. If it mentions an API Key, ensure 'auth' in tool config reflects it (or omit to use default).
+    4. **Headers**: ALWAYS add "_headers" as an optional object parameter.
+    5. **Path Finding**: If paths are not obvious, look for "curl" examples.
+    6. Return ONLY valid JSON.
     `;
 
   const result = await geminiManager.generateContentWithFailover(prompt);

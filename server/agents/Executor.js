@@ -20,8 +20,12 @@ export class ExecutorAgent {
         // Convert history to generic format {role, content}
         const messages = this.prepareHistory(history);
 
-        // Add current user message
-        messages.push({ role: 'user', content: userMessage });
+        // Add current user message with STRONG reinforcement if tools are present
+        let finalUserMessage = userMessage;
+        if (tools && tools.length > 0) {
+            finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available to answer this. YOU MUST USE THE TOOLS. Do not describe what you would do. CALL THE TOOLS NOW. Return only the tool calls.]`;
+        }
+        messages.push({ role: 'user', content: finalUserMessage });
 
         const systemInstruction = `You are the EXECUTOR Agent. 
             Goal: Answer the user's question using the provided tools.
@@ -42,7 +46,10 @@ export class ExecutorAgent {
             1. Call MULTIPLE tools in PARALLEL whenever possible to save time.
             2. If you need schema for multiple tables, call inspect_schema for all of them at once.
             3. If you have data, return a purely factual summary. 
-            4. Do NOT try to build complex UI widgets here. Focus on the DATA.`;
+            4. Do NOT try to build complex UI widgets here. Focus on the DATA.
+            5. **IMPORTANT**: If tools are provided, you MUST use them to answer questions about data. Do NOT reply with "I cannot access the database" if you have tools like \`inspect_schema\` or \`run_query\`. USE THEM.
+            6. **Context Awareness**: You may be running on a backup model (failover). Even so, you have full access to tools. Be confident.
+            7. **API vs Database**: NEVER hallucinate SQL queries (like \`run_query\`) if you are working with an API. If the available tools look like API endpoints (e.g., \`api_name_get_something\`), use THOSE specific tools. Openapi/Swagger IPs are NOT SQL databases. Use the HTTP tools provided.`;
 
         let gatheredData = [];
         let finalResponseText = "";
@@ -89,6 +96,16 @@ export class ExecutorAgent {
                         let toolResult;
                         try {
                             toolResult = await toolService.executeTool(call.name, call.args);
+
+                            // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
+                            if (toolResult && toolResult.isError && toolResult.content && toolResult.content[0].text.includes('not found')) {
+                                const validToolNames = tools.map(t => t.name).join(', ');
+                                console.warn(`[Executor] ⚠️ Hallucination detected: '${call.name}'. Triggering Self-Correction.`);
+
+                                // Override error with GUIDANCE
+                                toolResult.content[0].text = `[SYSTEM ERROR]: Tool '${call.name}' does not exist. You are HALLUCINATING generic tools. You MUST use one of the following available tools: [${validToolNames}]. Retry now using the correct tool name.`;
+                            }
+
                         } catch (e) {
                             console.error(`[Executor] Tool Error (${call.name}):`, e);
                             toolResult = { isError: true, content: [{ text: `Error: ${e.message}` }] };

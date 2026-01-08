@@ -41,14 +41,14 @@ export class PlannerAgent {
 
             const lines = [];
             for (const [prefix, tools] of Object.entries(groups)) {
-                 // Even in groups, we should try to list them if possible
-                 if (tools.length > 20) {
+                // Even in groups, we should try to list them if possible
+                if (tools.length > 20) {
                     // Massive group: List names + Common Prefix Description
                     const names = tools.map(t => t.name).join(', ');
                     lines.push(`- **${prefix.toUpperCase()} Tools** (Count: ${tools.length}): [${names}]...`);
-                 } else {
-                     tools.forEach(t => lines.push(`- ${t.name}: ${t.description?.substring(0, 150)}`));
-                 }
+                } else {
+                    tools.forEach(t => lines.push(`- ${t.name}: ${t.description?.substring(0, 150)}`));
+                }
             }
             toolSummaries = lines.join('\n');
         } else {
@@ -67,10 +67,16 @@ Available Tools:
 ${toolSummaries}
 
 INSTRUCTIONS:
-1. Analyze the request.
-2. Select relevant tools.
-3. Return a JSON object: { "thought": "...", "tools": ["tool_name"] }
-4. If no tools are needed, return { "tools": [] }
+1. **Analyze** the User's request and the available tools.
+2. **Formulate a Strategy**: Create a logical pipeline of steps to fetch the necessary data.
+   - Example: "First, search for the dataset using 'search_tools'. Second, use 'get_details' to retrieve specific info."
+3. **Select Tools**: Identify ALL tools needed for this pipeline.
+4. **Return JSON**:
+   {
+     "thought": "Brief explanation of the strategy/pipeline.",
+     "tools": ["tool_name_1", "tool_name_2"]
+   }
+5. If no tools are relevant, return { "tools": [] }.
 `;
 
         try {

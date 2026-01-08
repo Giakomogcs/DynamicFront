@@ -199,6 +199,8 @@ export async function analyzeAuthFromDocs(docsUrl, docsContent, docsAuth = null)
           "type": "text | password | hidden"
         }
       ],
+      "paramName": "If type is apiKey, the name of the header or query param (e.g. 'X-API-Key', 'api_key')",
+      "paramLocation": "If type is apiKey: 'header' | 'query'",
       "roles": [
         {
           "name": "Role Name (e.g. Admin)",
@@ -208,12 +210,13 @@ export async function analyzeAuthFromDocs(docsUrl, docsContent, docsAuth = null)
     }
 
     **RULES:**
-    1. If there is a Login/Session Endpoint (POST) that takes credentials, set "type" to "basic" (if it returns token) or "session" (if it sets cookie/returns bool).
-    2. Populate "loginParams" with ALL fields required in the login body.
-    3. If there are static fields (like 'grant_type'), set "type": "hidden" and "value".
-    4. For "tokenPath", return ONLY the dot-notation path (e.g. "data.token", "access_token"). DO NOT write sentences like "Assumed to be...". If unknown, use "access_token".
-    5. For "roles", look for enums, descriptions of user types, or permission scopes in the docs.
-    6. Return ONLY valid JSON.
+    1. **Login/Session Endpoint**: If there is a POST endpoint to exchange credentials for a token, set "type" to "basic" (returns token) or "session" (cookie). Populate "loginParams".
+    2. **API Key**: If the docs say "Include X-API-KEY header" or "pass api_key in query", set "type": "apiKey", and fill "paramName" (e.g. 'X-API-KEY') and "paramLocation" ('header' or 'query').
+    3. **Bearer Token (Static)**: If it just says "Use Bearer token in Authorization header" requiring a manual token (no login endpoint), set "type": "bearer".
+    4. **Smart Config**: If there are static fields (like 'grant_type'), set "type": "hidden" and "value" in loginParams.
+    5. **Token Path**: Return ONLY the dot-notation path (e.g. "data.token", "access_token").
+    6. **Roles**: Look for enums, descriptions of user types, or permission scopes.
+    7. Return ONLY valid JSON.
     `;
 
     try {

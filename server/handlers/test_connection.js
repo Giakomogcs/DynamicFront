@@ -18,14 +18,15 @@ export async function testConnection(baseUrl, authConfig) {
 
     // Helper: Test Single Auth Profile
     const testSingleProfile = async (profileName, profileId, auth) => {
-        let url = baseUrl.replace(/\/$/, '');
+        let url = baseUrl.trim().replace(/\/$/, '');
         const headers = { 'Content-Type': 'application/json' };
 
         try {
             // Login Flow Support (Token Exchange)
             if (auth.type === 'basic' && auth.loginUrl) {
-                console.log(`[TestConnection] Testing Profile '${profileName}' via Login Flow: ${auth.loginUrl}`);
-                const loginFullUrl = auth.loginUrl.startsWith('http') ? auth.loginUrl : `${baseUrl.replace(/\/$/, '')}${auth.loginUrl.startsWith('/') ? '' : '/'}${auth.loginUrl}`;
+                const cleanLoginUrl = auth.loginUrl.trim();
+                console.log(`[TestConnection] Testing Profile '${profileName}' via Login Flow: ${cleanLoginUrl}`);
+                const loginFullUrl = cleanLoginUrl.startsWith('http') ? cleanLoginUrl : `${baseUrl.trim().replace(/\/$/, '')}${cleanLoginUrl.startsWith('/') ? '' : '/'}${cleanLoginUrl}`;
 
                 let loginBody = {};
                 if (auth.loginParams && Array.isArray(auth.loginParams)) {

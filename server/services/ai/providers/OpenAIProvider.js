@@ -1,4 +1,5 @@
 import { AIProvider } from '../AIProvider.js';
+import { convertGeminiToolsToOpenAI, convertOpenAIToolsToGemini } from './utils/ToolMapper.js';
 
 export class OpenAIProvider extends AIProvider {
     constructor(config) {
@@ -44,8 +45,6 @@ export class OpenAIProvider extends AIProvider {
         }
 
         if (options.systemInstruction) {
-            // Check if system message already exists?
-            // Usually prepend
             messages = [{ role: 'system', content: options.systemInstruction }, ...messages];
         }
 
@@ -57,6 +56,15 @@ export class OpenAIProvider extends AIProvider {
 
         if (options.jsonMode) {
             body.response_format = { type: "json_object" };
+        }
+
+        // Tool Support
+        if (options.tools && options.tools.length > 0) {
+            const openAITools = convertGeminiToolsToOpenAI(options.tools);
+            if (openAITools.length > 0) {
+                body.tools = openAITools;
+                body.tool_choice = "auto";
+            }
         }
 
         const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -81,7 +89,7 @@ export class OpenAIProvider extends AIProvider {
 
         return {
             text: choice.message.content,
-            toolCalls: choice.message.tool_calls,
+            toolCalls: convertOpenAIToolsToGemini(choice.message.tool_calls),
             usage: data.usage
         };
     }

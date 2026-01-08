@@ -1,4 +1,5 @@
 import { AIProvider } from '../AIProvider.js';
+import { convertGeminiToolsToOpenAI, convertOpenAIToolsToGemini } from './utils/ToolMapper.js';
 
 export class XAIProvider extends AIProvider {
     constructor(config) {
@@ -52,6 +53,15 @@ export class XAIProvider extends AIProvider {
             stream: false
         };
 
+        // Tool Support
+        if (options.tools && options.tools.length > 0) {
+            const openAITools = convertGeminiToolsToOpenAI(options.tools);
+            if (openAITools.length > 0) {
+                body.tools = openAITools;
+                body.tool_choice = "auto";
+            }
+        }
+
         const response = await fetch(`${this.baseUrl}/chat/completions`, {
             method: "POST",
             headers: {
@@ -74,7 +84,7 @@ export class XAIProvider extends AIProvider {
 
         return {
             text: choice.message.content,
-            toolCalls: choice.message.tool_calls,
+            toolCalls: convertOpenAIToolsToGemini(choice.message.tool_calls),
             usage: data.usage
         };
     }
