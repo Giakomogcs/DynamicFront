@@ -1,0 +1,127 @@
+import { geminiManager } from '../config/gemini.js';
+
+// No manual init - usage is inside function via manager
+
+/**
+ * Fetches content from a URL (naive implementation).
+ * Ideally uses a headless browser or specialized scraper for complex sites.
+ */
+async function fetchDocsContent(url, auth = null) {
+  try {
+    const options = {};
+    if (auth && auth.type === 'basic') {
+      const creds = Buffer.from(`${auth.username}:${auth.password}`).toString('base64');
+      options.headers = { 'Authorization': `Basic ${creds}` };
+    }
+
+    const response = await fetch(url, options);
+    if (!response.ok) throw new Error(`Failed to fetch docs: ${response.statusText}`);
+    const contentType = response.headers.get("content-type");
+
+    let text = "";
+    if (contentType && contentType.includes("json")) {
+      const json = await response.json();
+      text = JSON.stringify(json, null, 2);
+    } else {
+      text = await response.text();
+      // Basic HTML cleanup to save context window (very naive)
+      text = text.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
+        .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, "")
+        .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    }
+    return text.substring(0, 100000); // Limit context
+  } catch (e) {
+    throw new Error(`Could not fetch documentation: ${e.message}`);
+  }
+}
+
+/**
+ * Generates what the User calls "MCP Tool Config" from raw text.
+ */
+export async function generateApiToolsFromDocs(name, url, authConfigString, rawContent = null) {
+  let authConfig = {};
+  try { authConfig = JSON.parse(authConfigString); } catch { }
+
+  const docsAuth = authConfig.docs || null;
+  const docsContent = rawContent || await fetchDocsContent(url, docsAuth);
+
+  const prompt = `
+    You are an expert API Developer. Your task is to analyze the following API Documentation (which might be raw HTML, Markdown, or JSON) and extract the available endpoints to create a "Tool Configuration" for an MCP Server.
+    
+    API Name: ${name}
+    Docs URL: ${url}
+    Provided Auth Config (Use this to fill 'auth' fields): ${authConfigString}
+
+    --- DOCUMENTATION CONTENT START ---
+    ${docsContent}
+    --- DOCUMENTATION CONTENT END ---
+
+    **REQUIREMENTS:**
+    1. **Identify Endpoints**: Look for patterns like "GET /users", "POST /api/v1/resource". In HTML, look for tables or list items listing these.
+    2. **Create JSON Structure**: Follow this schema strictly:
+    {
+      "serverInfo": {
+        "name": "${name.toLowerCase().replace(/\s/g, '-')}",
+        "version": "1.0.0"
+      },
+      "tools": [
+        {
+          "name": "snake_case_tool_name",
+          "description": "Clear description of what it does",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "param_name": { "type": "string|number|boolean", "description": "...", "default": "optional_default" },
+              "_headers": { "type": "object", "description": "Optional: Custom headers (e.g. { 'Authorization': 'Bearer <token>' })", "nullable": true },
+              "_authProfile": { "type": "string", "description": "Optional: Auth profile to use (e.g. 'admin', 'viewer')", "nullable": true }
+            },
+            "required": ["param_name"]
+          },
+          "apiConfig": {
+            "baseUrl": "The base domain (e.g. https://api.example.com)",
+            "path": "/specific/path/or/{template}",
+            "method": "GET|POST|PUT|DELETE",
+            "paramLocation": "query|path|body",
+            "auth": {
+               "type": "apiKey|bearer|basic|none", 
+               "paramName": "if apiKey, the query param or header name (e.g. X-API-KEY)", 
+               "paramLocation": "if apiKey: 'header' or 'query'"
+            }
+          }
+        }
+      ]
+    }
+
+    3. **Auth Handling**: check 'Provided Auth Config'. If it mentions an API Key, ensure 'auth' in tool config reflects it (or omit to use default).
+    4. **Headers**: ALWAYS add "_headers" as an optional object parameter.
+    5. **Path Finding**: If paths are not obvious, look for "curl" examples.
+    6. Return ONLY valid JSON.
+    `;
+
+  const result = await geminiManager.generateContentWithFailover(prompt);
+  const response = await result.response;
+  let text = response.text();
+
+  console.log(`[ApiGenerator] Raw LLM Response:`, text.substring(0, 500) + "...");
+
+  // Robust JSON Extraction
+  // 1. Remove markdown code blocks
+  text = text.replace(/```json/g, '').replace(/```/g, '');
+
+  // 2. Find first opening brace and last closing brace to ignore chatty pre/post text
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    text = text.substring(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    console.log(`[ApiGenerator] Successfully generated ${parsed.tools?.length || 0} tools.`);
+    return parsed;
+  } catch (e) {
+    console.error("Failed to parse LLM generated JSON", text);
+    throw new Error("LLM generated invalid JSON for tools.");
+  }
+}
