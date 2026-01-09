@@ -180,12 +180,70 @@ export async function getApiTools(api) {
 
                     // 2. Body Params?
                     // Simplified: specific keys if defined, or just 'body' object
-                    if (operation.requestBody) {
-                        // Attempt to extract top-level keys from body schema if possible for cleaner tools
-                        // For now, let's keep it simple: if complex body, use 'body' arg? 
-                        // Or try to merge them.
-                        // For MVP, letting models send 'body' JSON is safer if complex.
-                        // But if it's a simple object, merging is better.
+                    // 2. Body Params
+                    // Support parsing application/json body schema to top-level args (Flattened)
+                    if (operation.requestBody && operation.requestBody.content && operation.requestBody.content['application/json']) {
+                        let schema = operation.requestBody.content['application/json'].schema;
+                        
+                        // Resolve Reference if present
+                        if (schema && schema.$ref) {
+                            const refPath = schema.$ref.replace('#/', '').split('/');
+                            let resolved = spec;
+                            for (const part of refPath) {
+                                resolved = resolved && resolved[part];
+                            }
+                            if (resolved) schema = resolved;
+                        }
+
+                        if (schema && schema.properties) {
+                            for (const [key, prop] of Object.entries(schema.properties)) {
+                                flatProperties[key] = {
+                                    type: prop.type || "string",
+                                    description: prop.description,
+                                    nullable: prop.nullable,
+                                    enum: prop.enum
+                                };
+
+                                // Handle Array Items
+                                if (prop.type === 'array') {
+                                    let items = prop.items;
+                                    
+                                    if (!items) {
+                                        // Fallback if spec is missing items
+                                        items = { type: "string" }; 
+                                    } else if (items.$ref) {
+                                        // Resolve Ref in Items
+                                        const refPath = items.$ref.replace('#/', '').split('/');
+                                        let resolved = spec;
+                                        for (const part of refPath) {
+                                            resolved = resolved && resolved[part];
+                                        }
+                                        if (resolved) items = resolved;
+                                    }
+                                    
+                                    // Sanitize Items: Remove boolean required, internal refs
+                                    const sanitizedItems = { type: items.type || "string" };
+                                    
+                                    // CRITICAL FIX: If items is ALSO an array (nested array), Gemini often chokes if spec is weird.
+                                    // Flatten nested arrays to 'object' to allow any structure and bypass validation errors.
+                                    if (sanitizedItems.type === 'array') {
+                                        sanitizedItems.type = 'object';
+                                        sanitizedItems.description = 'List of items (Nested structure)';
+                                        delete sanitizedItems.items; // Remove recursive requirement
+                                    } else if (items.properties) {
+                                         sanitizedItems.type = "object";
+                                    }
+                                    
+                                    if (items.enum) sanitizedItems.enum = items.enum;
+
+                                    flatProperties[key].items = sanitizedItems;
+                                }
+
+                                if (schema.required && Array.isArray(schema.required) && schema.required.includes(key)) {
+                                    requiredParams.push(key);
+                                }
+                            }
+                        }
                     }
 
                     // Add reserved auth param

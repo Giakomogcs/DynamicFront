@@ -43,12 +43,29 @@ export class GeminiProvider extends AIProvider {
             modelConfig.systemInstruction = options.systemInstruction;
         }
         if (options.tools) {
+            let mappedTools = options.tools;
+            
+            // Map inputSchema -> parameters (MCP to Gemini)
+            if (Array.isArray(options.tools)) {
+                mappedTools = options.tools.map(t => {
+                    // Check if t is a tool object (not functionDeclarations wrapper)
+                    if (t.name && (t.inputSchema || t.parameters)) {
+                        return {
+                            name: t.name,
+                            description: t.description,
+                            parameters: t.inputSchema || t.parameters
+                        };
+                    }
+                    return t;
+                });
+            }
+
             // Check if tools are already in Gemini format (should have functionDeclarations)
             // If it's a flat array of tools (like OpenAI format), wrap it.
-            if (Array.isArray(options.tools) && options.tools.length > 0 && !options.tools[0].functionDeclarations) {
-                 modelConfig.tools = [{ functionDeclarations: options.tools }];
+            if (Array.isArray(mappedTools) && mappedTools.length > 0 && !mappedTools[0].functionDeclarations) {
+                 modelConfig.tools = [{ functionDeclarations: mappedTools }];
             } else {
-                 modelConfig.tools = options.tools;
+                 modelConfig.tools = mappedTools;
             }
         }
         if (options.jsonMode) {

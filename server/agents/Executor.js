@@ -22,7 +22,7 @@ export class ExecutorAgent {
 
         let finalUserMessage = userMessage;
         if (tools && tools.length > 0) {
-            finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available. You are in FUNCTION CALLING MODE. You MUST INVOKE the tools using the native function calling mechanism. Do NOT write any text, plan, or explanation. Output ONLY the function call object.]`;
+            finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available. You are in FUNCTION CALLING MODE. Please ANALYZE the user's request, DECOMPOSE complex queries (especially regions like 'ABC', 'Zona Leste') into specific sub-queries, and INVOKE the necessary tools. Use PARALLEL tool calls where appropriate.]`;
         }
         messages.push({ role: 'user', content: finalUserMessage });
 
@@ -57,7 +57,26 @@ export class ExecutorAgent {
             4. Do NOT try to build complex UI widgets here. Focus on the DATA.
             5. **IMPORTANT**: If tools are provided, you MUST use them.
             6. **API vs Database**: NEVER hallucinate SQL queries (like \`run_query\`) if you are working with an API. If the available tools look like API endpoints (e.g., \`api_name_get_something\`), use THOSE specific tools.
-            7. **Tool Usage**: Do NOT simulate the tool call in text. Generate a native Function Call object.`;
+            7. **Tool Usage**: Do NOT simulate the tool call in text. Generate a native Function Call object.
+
+            ADVANCED QUERY ANALYSIS:
+            *   **CRITICAL**: Check the 'inputSchema' of the tool before calling it. Do NOT invent parameters (e.g. do not pass 'city' to a tool that requires 'latitude'/'longitude').
+            *   **Search Strategy for Linked Resources**:
+                *   If you need to find "Items" (Courses, Products, Doctor Availability) in a "Location":
+                    1.  First, search for the **Provider/Entity** (School, Store, Clinic) in that location using available tools.
+                    2.  Then, use the IDs/Keys from those results to query the "Items" endpoint.
+                    3.  **Do not** call an "Item" search tool directly with a City name unless the tool explicitly accepts 'city'.
+            *   **Geographic Decomposition**: If the user asks for a region (e.g. "ABC Paulista", "Zona Leste", "Vale do Paraíba"), YOU MUST DECOMPOSE it into specific cities and search for EACH city individually.
+                *   Example: "ABC Paulista" -> Search "Santo André", "São Bernardo do Campo", "São Caetano do Sul", "Diadema", "Mauá", "Ribeirão Pires", "Rio Grande da Serra".
+                *   Search for schools/entities in EACH city.
+            *   **Course/Topic Search**: If the user asks for specific courses (e.g. "Excel", "Mecânica") AND a location:
+                1. Search for schools in the location first.
+                2. If available, use a course search tool *scoped to those schools* or check the school details.
+                3. If no direct text search for courses exists by city, explain this limitation and list the schools where the user can find these courses.
+            *   **Contextual Analysis**:
+                *   Do not just list raw JSON. Summarize the findings.
+                *   If searching for "ABC Paulista", aggregate the results: "Found X schools in Santo André, Y in São Bernardo...".
+                *   Highlight if a city returned no results.`;
 
         let gatheredData = [];
         let finalResponseText = "";

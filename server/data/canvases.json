@@ -5,5 +5,103 @@
     "widgets": [],
     "createdAt": "2025-12-19T13:26:11.400Z",
     "updatedAt": "2025-12-19T13:26:11.400Z"
+  },
+  "rcie0e0ht": {
+    "id": "rcie0e0ht",
+    "title": "São caetano",
+    "widgets": [
+      {
+        "type": "process",
+        "title": "Execution Pipeline for SENAI Units and Industrial Potential",
+        "steps": [
+          {
+            "name": "Search for Units",
+            "status": "completed",
+            "description": "Searched for existing SENAI units in São Caetano, São Paulo"
+          },
+          {
+            "name": "Get Location Details",
+            "status": "completed",
+            "description": "Got details about the location (São Caetano, São Paulo)"
+          },
+          {
+            "name": "Get Industrial Potential",
+            "status": "failed",
+            "description": "Failed to get industrial potential due to API error"
+          }
+        ]
+      },
+      {
+        "type": "insight",
+        "title": "Analysis and Status",
+        "content": [
+          "4 SENAI units found in São Caetano do Sul, including schools and institutes of innovation and technology",
+          "All units offer presential teaching modalities",
+          "Error occurred while calling API for industrial potential: property city should not exist"
+        ],
+        "sentiment": "warning"
+      },
+      {
+        "type": "stat",
+        "data": [
+          {
+            "label": "Total SENAI Units Found",
+            "value": "4",
+            "change": "",
+            "icon": "school"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "SENAI Units in São Caetano do Sul",
+        "data": [
+          {
+            "Name": "Escola SENAI \"Armando de Arruda Pereira\"",
+            "Address": "Rua Santo André, 680 - Boa Vista, 09572-000, São Caetano do Sul - SP",
+            "Phone": "(11)4227-7450",
+            "Email": "faleconosco@sesisenaisp.org.br"
+          },
+          {
+            "Name": "Escola SENAI \"Paulo Antonio Skaf\"",
+            "Address": "Rua Niterói, 180 - Centro, 09510-200, São Caetano do Sul - SP",
+            "Phone": "(11)4225-2000",
+            "Email": "faleconosco@sesisenaisp.org.br"
+          },
+          {
+            "Name": "Instituto SENAI de Inovação em Manufatura Avançada",
+            "Address": "Rua Santo André, 680 - Boa Vista, 09572-000, São Caetano do Sul - SP",
+            "Phone": "(11)4227-7450",
+            "Email": "faleconosco@sesisenaisp.org.br"
+          },
+          {
+            "Name": "Instituto SENAI de Tecnologia em Metal Mecânica",
+            "Address": "Rua Santo André, 680 - Boa Vista, 09572-000, São Caetano do Sul - SP",
+            "Phone": "(11)4227-7450",
+            "Email": "faleconosco@sesisenaisp.org.br"
+          }
+        ]
+      },
+      {
+        "type": "chart",
+        "config": {
+          "chartType": "bar",
+          "title": "Distribution of SENAI Units by Category",
+          "description": "Number of SENAI units by category in São Caetano do Sul"
+        },
+        "data": [
+          {
+            "label": "Schools",
+            "value": 2
+          },
+          {
+            "label": "Institutes",
+            "value": 2
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-01-09T00:05:38.940Z",
+    "updatedAt": "2026-01-09T00:07:16.181Z"
   }
 }
