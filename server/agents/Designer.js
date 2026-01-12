@@ -62,17 +62,29 @@ WIDGET TYPES (Use these to tell a STORY):
    - ALWAYS start with this to show *how* you got the data. Reflect the "Execution Strategy".
 2. **stat**: { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%", "icon": "trending_up" }] }
    - Use for Key Performance Indicators or simple counts (e.g., "Total Schools Found").
-3. **chart**: { "type": "chart", "config": { "chartType": "bar|line|pie|area", "title": "Meaningful Title", "description": "What this chart shows" }, "data": [...] }
+3. **chart**: { "type": "chart", "config": { "chartType": "bar|line|pie|area", "title": "Meaningful Title", "description": "What this chart shows", "actions": [] }, "data": [...] }
    - Use 'bar' for comparisons (e.g. Courses per Branch).
    - Use 'pie' for distribution (e.g. Schools by City).
-4. **table**: { "type": "table", "title": "Detailed Data", "data": [...] }
+4. **table**: { "type": "table", "title": "Detailed Data", "data": [...], "actions": [] }
    - Use for granular listings.
-5. **insight**: { "type": "insight", "title": "Analysis / Status", "content": ["Bullet point 1", "Bullet point 2"], "sentiment": "neutral|warning|success" }
+5. **insight**: { "type": "insight", "title": "Analysis / Status", "content": ["Bullet point 1", "Bullet point 2"], "sentiment": "neutral|warning|success", "actions": [] }
    - Use to summarize findings, give warnings (e.g. "No schools found in X"), or provide recommendations.
 6. **expandable**: { "type": "expandable", "title": "Detailed Breakdown", "sections": [{ "title": "Section 1", "content": "...", "data": [...] }] }
    - Use for hierarchical data (e.g., Courses → Units → Lessons).
 7. **comparison**: { "type": "comparison", "title": "Side-by-Side Comparison", "items": [{ "name": "Item A", "metrics": {...} }, { "name": "Item B", "metrics": {...} }] }
    - Use to compare similar entities.
+
+**INTERACTIVITY & ACTIONS (NEW)**:
+You can add an "actions" array to widgets (chart, table, insight) to make them interactive.
+Action Schema: \` { "label": "Button Text", "type": "tool_call", "tool": "tool_name", "args": { "arg1": "value" }, "style": "primary|secondary" } \`
+OR for Navigation: \` { "label": "Open Analysis", "type": "navigate_canvas", "canvasId": "new_id_or_null_to_create", "style": "link" } \`
+
+**WHEN TO USE ACTIONS:**
+1. **Drill Down**: If showing a list of entities (e.g. Schools), add an action to fetch details (e.g. "View Courses").
+   - Example: For a table of Schools, each row acts as context, but you can add a global action "Analyze All Courses".
+   - *Advanced*: You can currently only add Global Actions to the widget.
+2. **Follow-up**: If a process failed or had warnings, add an action to "Retry with X" or "Search Y instead".
+3. **New Analysis**: If the data is dense, add an action "Create Dedicated Canvas" (\`navigate_canvas\`).
 
 INTELLIGENT INSIGHTS (CRITICAL):
 When analyzing data, you MUST:

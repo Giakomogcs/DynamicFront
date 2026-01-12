@@ -242,7 +242,7 @@ function App() {
 
   const abortControllerRef = React.useRef(null);
 
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = async (text, isSystemHidden = false) => {
     // Switch to workspace mode on first message
     if (layoutMode === 'center') setLayoutMode('workspace');
 
@@ -255,9 +255,12 @@ function App() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    // 1. Add User Message
-    const userMsg = { role: 'user', text };
-    setMessages(prev => [...prev, userMsg]);
+    // 1. Add User Message (Only if NOT hidden, otherwise we already added a placeholder or don't want to show raw system prompt)
+    if (!isSystemHidden) {
+        const userMsg = { role: 'user', text };
+        setMessages(prev => [...prev, userMsg]);
+    }
+    
     setIsProcessing(true);
 
     try {
@@ -441,6 +444,40 @@ function App() {
     );
   };
 
+  // --- Widget Interaction Handler ---
+  const handleWidgetAction = async (action) => {
+    console.log("[App] Widget Action:", action);
+
+    if (action.type === 'navigate_canvas') {
+      if (action.canvasId) {
+        // Switch to existing canvas
+        await loadCanvas(action.canvasId);
+      } else {
+        // Create new canvas
+        handleCreateNewCanvas();
+        // Maybe set a title if provided? 
+        if (action.title) setCanvasTitle(action.title);
+      }
+    } else if (action.type === 'tool_call') {
+      // Trigger AI execution via "hidden" user message or explicit system prompt
+      // We want the AI to execute the tool.
+      // Best way: Send a message that forces the tool call.
+      const prompt = `[SYSTEM: User clicked "${action.label}". Execute tool '${action.tool}' with args: ${JSON.stringify(action.args)}]`;
+      
+      // We display a cleaner message to the user
+      const userDisplayMsg = { role: 'user', text: `Clicked: ${action.label}` };
+      setMessages(prev => [...prev, userDisplayMsg]);
+      
+      // But we send the System Prompt to the backend handling logic
+      // Reuse handleSendMessage but with modified 'text' payload? 
+      // handleSendMessage expects text and adds it to UI. We need to decouple.
+      
+      // Let's modify handleSendMessage to allow "hidden" prompt
+      await handleSendMessage(prompt, true); 
+    }
+  };
+
+
   return (
     <Layout
       activeTab={activeTab}
@@ -504,6 +541,7 @@ function App() {
                 loading={isProcessing}
                 canvasId={canvasId}
                 onNavigate={loadCanvas}
+                onAction={handleWidgetAction}
               />
             </div>
           )}

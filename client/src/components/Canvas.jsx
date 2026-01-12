@@ -4,7 +4,7 @@ import { Sparkles, LayoutDashboard } from 'lucide-react';
 import { CanvasNavigator } from './CanvasNavigator';
 import { ScreenSelector } from './ScreenSelector';
 
-export const Canvas = ({ widgets, loading, canvasId, onNavigate }) => {
+export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction }) => {
     // Screen State
     const [activeScreenId, setActiveScreenId] = useState('default');
     
@@ -88,6 +88,7 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate }) => {
                             `}>
                                 <DynamicWidget 
                                     {...widget} 
+                                    onAction={onAction}
                                     onNavigateScreen={(targetScreenId) => setActiveScreenId(targetScreenId)}
                                 />
                             </div>
