@@ -17,7 +17,6 @@ function App() {
   const [location, setLocation] = useState(null);
 
   // New State: Active Widgets for Canvas and Layout Mode
-  // New State: Active Widgets for Canvas and Layout Mode
   const [activeWidgets, setActiveWidgets] = useState([]);
   const [layoutMode, setLayoutMode] = useState('center'); // 'center' | 'workspace'
 
@@ -27,6 +26,8 @@ function App() {
   const [lastSaved, setLastSaved] = useState(null);
   const [savedCanvases, setSavedCanvases] = useState([]);
   const [showLoadModal, setShowLoadModal] = useState(false);
+  const [canvasMode, setCanvasMode] = useState('append'); // 'append' | 'replace'
+  const [chatCollapsed, setChatCollapsed] = useState(false);
 
 
   // Get User Location on Mount
@@ -54,12 +55,13 @@ function App() {
     }
   };
 
-  const saveCanvas = async (curTitle, curWidgets) => {
+  const saveCanvas = async (curTitle, curWidgets, curMessages) => {
     setIsProcessing(true);
     try {
       const payload = {
-        title: curTitle || canvasTitle,
-        widgets: curWidgets || activeWidgets
+        title: curTitle !== undefined ? curTitle : canvasTitle,
+        widgets: curWidgets !== undefined ? curWidgets : activeWidgets,
+        messages: curMessages !== undefined ? curMessages : messages
       };
 
       let url = 'http://localhost:3000/api/canvases';
@@ -97,9 +99,9 @@ function App() {
       setCanvasId(data.id);
       setCanvasTitle(data.title);
       setActiveWidgets(data.widgets || []);
+      setMessages(data.messages || []); // Load saved messages
       setLastSaved(data.updatedAt);
       setLayoutMode('workspace');
-      setMessages([{ role: 'model', text: `Loaded canvas: ${data.title}` }]); // Reset chat
       setShowLoadModal(false);
     } catch (e) {
       console.error("Load failed", e);
@@ -123,6 +125,32 @@ function App() {
     setLayoutMode('center');
     setLastSaved(null);
     setShowLoadModal(false);
+  };
+
+  const handleDeleteCanvas = async (id, title) => {
+    if (!confirm(`Tem certeza que deseja deletar o canvas "${title}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/canvases/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        // If deleting current canvas, reset to new canvas
+        if (canvasId === id) {
+          handleCreateNewCanvas();
+        }
+        // Refresh canvas list
+        fetchCanvases();
+      } else {
+        alert('Falha ao deletar canvas');
+      }
+    } catch (e) {
+      console.error("Delete failed", e);
+      alert('Erro ao deletar canvas');
+    }
   };
 
 
@@ -196,6 +224,13 @@ function App() {
 
     try {
       // 2. Call Backend API
+      // Build canvas context for incremental mode
+      const canvasContext = canvasMode === 'append' && canvasId ? {
+        mode: canvasMode,
+        widgets: activeWidgets,
+        messages: messages
+      } : null;
+
       const response = await fetch('http://localhost:3000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,7 +238,8 @@ function App() {
           message: text,
           history: messages,
           location, // Send location context
-          model: selectedModel
+          model: selectedModel,
+          canvasContext // Send canvas context for incremental mode
         }),
         signal: controller.signal
       });
@@ -222,9 +258,20 @@ function App() {
       };
       setMessages(prev => [...prev, botMsg]);
 
-      // 4. Update Canvas with new widgets if any
+      // 4. Update Canvas with new widgets
       if (data.widgets && data.widgets.length > 0) {
-        setActiveWidgets(data.widgets);
+        if (canvasMode === 'append') {
+          // Append mode: add new widgets to existing ones
+          setActiveWidgets(prev => [...prev, ...data.widgets]);
+        } else {
+          // Replace mode: replace all widgets
+          setActiveWidgets(data.widgets);
+        }
+      }
+
+      // Auto-save after successful response
+      if (canvasId) {
+        setTimeout(() => saveCanvas(), 1000);
       }
 
     } catch (error) {
@@ -247,6 +294,11 @@ function App() {
       abortControllerRef.current = null;
       setIsProcessing(false);
     }
+  };
+
+  const handleEditMessage = (index) => {
+    // Remove the message at index and all subsequent messages
+    setMessages(prev => prev.slice(0, index));
   };
 
   // --- Resource Management (Create / Update) ---
@@ -370,14 +422,17 @@ function App() {
         <div className="flex h-full w-full overflow-hidden">
           {/* Sidebar Chat */}
           <div className={`
-                 transition-all duration-500 ease-in-out border-r border-slate-800 bg-slate-950 flex flex-col
-                 ${layoutMode === 'center' ? 'w-full max-w-3xl mx-auto border-r-0' : 'w-[400px] shrink-0'}
+                 transition-all duration-300 ease-in-out bg-slate-950 flex flex-col
+                 ${layoutMode === 'center' ? 'w-full' : (chatCollapsed ? 'w-12 shrink-0' : 'w-[400px] shrink-0')}
              `}>
             <Chat
               messages={messages}
               onSendMessage={handleSendMessage}
               isProcessing={isProcessing}
               onStop={handleStopGeneration}
+              collapsed={chatCollapsed && layoutMode === 'workspace'}
+              onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
+              onEditMessage={handleEditMessage}
             />
           </div>
 
@@ -386,13 +441,20 @@ function App() {
             <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative">
               <CanvasHeader
                 title={canvasTitle}
-                onTitleChange={(newTitle) => { setCanvasTitle(newTitle); saveCanvas(newTitle, null); }}
+                onTitleChange={(newTitle) => { setCanvasTitle(newTitle); saveCanvas(newTitle, null, null); }}
                 onSave={() => saveCanvas()}
                 onNewChat={handleNewChat}
                 isSaving={isProcessing}
                 lastSavedAt={lastSaved}
+                canvasMode={canvasMode}
+                onModeChange={setCanvasMode}
               />
-              <Canvas widgets={activeWidgets} loading={isProcessing} />
+              <Canvas
+                widgets={activeWidgets}
+                loading={isProcessing}
+                canvasId={canvasId}
+                onNavigate={loadCanvas}
+              />
             </div>
           )}
         </div>
@@ -441,14 +503,36 @@ function App() {
           </button>
           <div className="max-h-60 overflow-y-auto space-y-2">
             {savedCanvases.map(c => (
-              <button
+              <div
                 key={c.id}
-                onClick={() => loadCanvas(c.id)}
-                className="w-full text-left p-3 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex justify-between items-center"
+                className="flex items-center gap-2 p-3 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
               >
-                <span>{c.title}</span>
-                <span className="text-xs text-slate-500">{new Date(c.updatedAt).toLocaleDateString()}</span>
-              </button>
+                <button
+                  onClick={() => loadCanvas(c.id)}
+                  className="flex-1 text-left flex justify-between items-center"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-slate-200">{c.title}</span>
+                    <span className="text-xs text-slate-500">
+                      {new Date(c.updatedAt).toLocaleDateString()} • {c.widgetCount} widgets • {c.messageCount} messages
+                    </span>
+                  </div>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCanvas(c.id, c.title);
+                  }}
+                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                  title="Delete canvas"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
             ))}
             {savedCanvases.length === 0 && <p className="text-slate-500 text-center py-4">No saved canvases</p>}
           </div>

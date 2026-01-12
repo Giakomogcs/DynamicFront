@@ -4,11 +4,12 @@ import {
     BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts';
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table';
+import { ExpandableWidget } from './ExpandableWidget';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-export const DynamicWidget = ({ type, data, config }) => {
-    if (!data) return null;
+export const DynamicWidget = ({ type, data, config, title, sections, items, steps, content, sentiment }) => {
+    if (!data && !sections && !items && !steps && !content) return null;
 
     if (type === 'chart') {
         const ChartComponent = config?.chartType === 'bar' ? BarChart :
@@ -91,19 +92,25 @@ export const DynamicWidget = ({ type, data, config }) => {
     }
 
     if (type === 'insight') {
+        const sentimentColors = {
+            success: 'from-green-900/40 to-slate-900/40 border-green-500/30',
+            warning: 'from-yellow-900/40 to-slate-900/40 border-yellow-500/30',
+            neutral: 'from-indigo-900/40 to-slate-900/40 border-indigo-500/30'
+        };
+
         return (
-            <div className="bg-gradient-to-br from-indigo-900/40 to-slate-900/40 p-6 rounded-2xl border border-indigo-500/30 backdrop-blur-sm my-4 relative overflow-hidden group">
+            <div className={`bg-gradient-to-br ${sentimentColors[sentiment] || sentimentColors.neutral} p-6 rounded-2xl border backdrop-blur-sm my-4 relative overflow-hidden group`}>
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <div className="w-24 h-24 bg-indigo-500 rounded-full blur-3xl" />
                 </div>
 
                 <h4 className="text-lg font-semibold text-indigo-300 mb-4 flex items-center gap-2">
-                    {config?.title || "Key Insights"}
+                    {title || "Key Insights"}
                 </h4>
 
                 <div className="space-y-3">
-                    {config?.content && Array.isArray(config.content) ? (
-                        config.content.map((point, idx) => (
+                    {content && Array.isArray(content) ? (
+                        content.map((point, idx) => (
                             <div key={idx} className="flex gap-3 text-slate-300">
                                 <span className="text-indigo-400 font-bold">•</span>
                                 <p className="leading-relaxed">{point}</p>
@@ -111,7 +118,7 @@ export const DynamicWidget = ({ type, data, config }) => {
                         ))
                     ) : (
                         <p className="text-slate-300 leading-relaxed">
-                            {config?.content || "No insights available."}
+                            {content || "No insights available."}
                         </p>
                     )}
                 </div>
@@ -119,6 +126,61 @@ export const DynamicWidget = ({ type, data, config }) => {
         );
     }
 
+    if (type === 'process') {
+        const statusColors = {
+            completed: 'bg-green-500',
+            running: 'bg-blue-500 animate-pulse',
+            failed: 'bg-red-500',
+            pending: 'bg-slate-600'
+        };
+
+        return (
+            <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-6 my-4">
+                <h4 className="text-lg font-semibold text-white mb-4">{title || 'Process'}</h4>
+                <div className="space-y-3">
+                    {steps && steps.map((step, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                            <div className={`w-3 h-3 rounded-full mt-1 ${statusColors[step.status] || statusColors.pending}`} />
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-slate-200">{step.name}</p>
+                                {step.description && (
+                                    <p className="text-xs text-slate-400 mt-1">{step.description}</p>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (type === 'expandable') {
+        return <ExpandableWidget title={title} sections={sections} />;
+    }
+
+    if (type === 'comparison') {
+        return (
+            <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-6 my-4">
+                <h4 className="text-lg font-semibold text-white mb-4">{title || 'Comparison'}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {items && items.map((item, i) => (
+                        <div key={i} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                            <h5 className="font-medium text-slate-200 mb-3">{item.name}</h5>
+                            <div className="space-y-2">
+                                {item.metrics && Object.entries(item.metrics).map(([key, value]) => (
+                                    <div key={key} className="flex justify-between text-sm">
+                                        <span className="text-slate-400">{key}:</span>
+                                        <span className="text-slate-200 font-medium">{value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return null;
 };
+

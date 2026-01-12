@@ -43,11 +43,14 @@ app.get('/api/models', async (req, res) => {
 // 1. Chat Endpoint
 app.post('/api/chat', async (req, res) => {
     try {
-        const { message, history, location, model } = req.body;
+        const { message, history, location, model, canvasContext } = req.body;
         console.log(`[API Server] Received chat request: "${message?.substring(0, 50)}..."`);
+        if (canvasContext) {
+            console.log(`[API Server] Canvas Context: mode=${canvasContext.mode}, widgets=${canvasContext.widgets?.length || 0}`);
+        }
 
         // Delegate entire process to the Multi-Agent Orchestrator
-        const result = await orchestrator.processRequest(message, history, model, location);
+        const result = await orchestrator.processRequest(message, history, model, location, canvasContext);
 
         res.json(result);
 
@@ -263,10 +266,10 @@ app.get('/api/canvases/:id', async (req, res) => {
 
 app.post('/api/canvases', async (req, res) => {
     try {
-        const { id, title, widgets } = req.body;
-        // Generate random ID if not provided (though client should ideally provide one or we generate)
+        const { id, title, widgets, messages, groupId } = req.body;
+        // Generate random ID if not provided
         const canvasId = id || Math.random().toString(36).substr(2, 9);
-        const canvas = await storageService.saveCanvas(canvasId, title, widgets);
+        const canvas = await storageService.saveCanvas(canvasId, title, widgets, messages, groupId);
         res.json(canvas);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -275,9 +278,57 @@ app.post('/api/canvases', async (req, res) => {
 
 app.put('/api/canvases/:id', async (req, res) => {
     try {
-        const { title, widgets } = req.body;
-        const canvas = await storageService.saveCanvas(req.params.id, title, widgets);
+        const { title, widgets, messages, groupId } = req.body;
+        const canvas = await storageService.saveCanvas(req.params.id, title, widgets, messages, groupId);
         res.json(canvas);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// New: Append widgets to existing canvas (incremental mode)
+app.post('/api/canvases/:id/append', async (req, res) => {
+    try {
+        const { widgets } = req.body;
+        if (!widgets || !Array.isArray(widgets)) {
+            return res.status(400).json({ error: 'Widgets array required' });
+        }
+        const canvas = await storageService.appendWidgets(req.params.id, widgets);
+        res.json(canvas);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// New: Link two canvases together
+app.post('/api/canvases/:id/link/:targetId', async (req, res) => {
+    try {
+        const { label } = req.body;
+        const result = await storageService.linkCanvases(req.params.id, req.params.targetId, label);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// New: Get related canvases (linked + same group)
+app.get('/api/canvases/:id/related', async (req, res) => {
+    try {
+        const related = await storageService.getRelatedCanvases(req.params.id);
+        res.json(related);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/canvases/:id', async (req, res) => {
+    try {
+        const success = await storageService.deleteCanvas(req.params.id);
+        if (success) {
+            res.json({ success: true });
+        } else {
+            res.status(404).json({ error: 'Canvas not found' });
+        }
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

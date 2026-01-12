@@ -1,4 +1,5 @@
-import { geminiManager } from '../config/gemini.js';
+import { modelManager } from '../services/ai/ModelManager.js';
+
 
 export class DesignerAgent {
     constructor() { }
@@ -8,10 +9,13 @@ export class DesignerAgent {
      * @param {string} summaryText 
      * @param {Array} data 
      * @param {string} modelName 
+     * @param {Array} steps - Execution steps
+     * @param {Object} canvasContext - Existing canvas context { widgets, messages, mode }
      * @returns {Promise<{text: string, widgets: Array}>}
      */
-    async design(summaryText, data, modelName, steps = []) {
+    async design(summaryText, data, modelName, steps = [], canvasContext = null) {
         console.log("[Designer] Generating Widgets...");
+        console.log("[Designer] Canvas Context:", canvasContext ? `Mode: ${canvasContext.mode}, Existing Widgets: ${canvasContext.widgets?.length || 0}` : 'None');
 
         // If no data check
         if ((!data || data.length === 0) && (!steps || steps.length === 0)) {
@@ -24,6 +28,26 @@ export class DesignerAgent {
             ? serializedData.substring(0, MAX_DESIGNER_CONTEXT) + "... [DATA TRUNCATED]"
             : serializedData;
 
+        // Build context information
+        let contextInfo = '';
+        if (canvasContext) {
+            const { mode, widgets, messages } = canvasContext;
+
+            if (mode === 'append' && widgets && widgets.length > 0) {
+                contextInfo = `\n\nEXISTING CANVAS CONTEXT (APPEND MODE):
+- Current widgets on canvas: ${widgets.length}
+- Widget types: ${widgets.map(w => w.type).join(', ')}
+- Recent chat: ${messages?.slice(-3).map(m => m.text).join(' | ') || 'None'}
+
+IMPORTANT: You are in APPEND mode. The user wants to ADD to existing content, not replace it.
+- Build upon existing data
+- Reference previous widgets when relevant
+- Detect relationships with existing information
+- Avoid duplicating information already shown
+- Create complementary visualizations`;
+            }
+        }
+
         const designerPrompt = `
 You are the UI DESIGNER Agent.
 Your input: A summary text, a set of raw data blocks, and the EXECUTION PLAN used to get this data.
@@ -31,7 +55,7 @@ Your goal: Generate a JSON array of "Widgets" to visualize this data and the pro
 
 Input Text: "${summaryText}"
 Input Data: ${safeData}
-Execution Strategy (Steps): ${JSON.stringify(steps)}
+Execution Strategy (Steps): ${JSON.stringify(steps)}${contextInfo}
 
 WIDGET TYPES (Use these to tell a STORY):
 1. **process**: { "type": "process", "title": "Execution Pipeline", "steps": [{ "name": "Step 1", "status": "completed", "description": "..." }] }
@@ -45,6 +69,29 @@ WIDGET TYPES (Use these to tell a STORY):
    - Use for granular listings.
 5. **insight**: { "type": "insight", "title": "Analysis / Status", "content": ["Bullet point 1", "Bullet point 2"], "sentiment": "neutral|warning|success" }
    - Use to summarize findings, give warnings (e.g. "No schools found in X"), or provide recommendations.
+6. **expandable**: { "type": "expandable", "title": "Detailed Breakdown", "sections": [{ "title": "Section 1", "content": "...", "data": [...] }] }
+   - Use for hierarchical data (e.g., Courses → Units → Lessons).
+7. **comparison**: { "type": "comparison", "title": "Side-by-Side Comparison", "items": [{ "name": "Item A", "metrics": {...} }, { "name": "Item B", "metrics": {...} }] }
+   - Use to compare similar entities.
+
+INTELLIGENT INSIGHTS (CRITICAL):
+When analyzing data, you MUST:
+1. **Detect Relationships**: Identify duplicate or similar items across different locations/categories
+2. **Proximity Grouping**: When dealing with location data, group by:
+   - Nearest/closest items (top 3-5)
+   - Regional grouping (same city/state)
+   - Overall distribution
+3. **Complete Details**: For courses, schools, or services, include:
+   - Full descriptions
+   - Units/modules/components breakdown
+   - Prerequisites, duration, certification
+   - Contact information
+   - Availability and schedules
+4. **Cross-References**: Link related information
+   - "This course is also available in 3 other locations"
+   - "Similar to Course X but with focus on Y"
+5. **Professional Structure**: Create nested, expandable views for complex data
+   - Main overview → Detailed breakdown → Specific items
 
 INSTRUCTIONS:
 - Return ONLY the JSON array inside \`\`\`json\`\`\` code blocks.
@@ -69,8 +116,11 @@ CRITICAL DATA FORMATTING RULES:
 `;
 
         try {
-            // Use Queue with Failover
-            const result = await geminiManager.generateContentWithFailover(designerPrompt, { model: modelName });
+            // Use ModelManager with Failover
+            const result = await modelManager.generateContent(designerPrompt, {
+                model: modelName,
+                jsonMode: true // Force JSON response
+            });
             const designText = result.response.text();
             const widgets = this.extractJsonArray(designText) || [];
 
@@ -78,9 +128,24 @@ CRITICAL DATA FORMATTING RULES:
 
         } catch (e) {
             console.error("[Designer] Failed:", e);
-            // Fallback
-            return { text: summaryText, widgets: [] };
+
+            // Better fallback: Return text with empty widgets
+            return {
+                text: this._createFallbackText(summaryText, data),
+                widgets: []
+            };
         }
+    }
+
+    _createFallbackText(summaryText, data) {
+        // Create a simple text summary if Designer fails
+        let text = summaryText || "Processamento concluído.";
+
+        if (data && data.length > 0) {
+            text += `\n\nDados coletados: ${data.length} registro(s).`;
+        }
+
+        return text;
     }
 
     extractJsonArray(text) {

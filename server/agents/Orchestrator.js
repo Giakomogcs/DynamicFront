@@ -9,8 +9,11 @@ import { designerAgent } from './Designer.js';
 export class AgentOrchestrator {
     constructor() { }
 
-    async processRequest(userMessage, history, modelName = null, location = null) {
+    async processRequest(userMessage, history, modelName = null, location = null, canvasContext = null) {
         console.log(`\n=== [Orchestrator] New Request: "${userMessage?.substring(0, 50)}..." ===`);
+        if (canvasContext) {
+            console.log(`[Orchestrator] Canvas Context: Mode=${canvasContext.mode}, Widgets=${canvasContext.widgets?.length || 0}`);
+        }
 
         // 1. Fetch All Tools
         console.log("[Orchestrator] Step 1: Fetching available tools...");
@@ -65,15 +68,49 @@ export class AgentOrchestrator {
         // 4. DESIGN
         // Pass Plan Strategy/Steps to Designer for better visualization
         console.log("[Orchestrator] Step 4: Designing output widgets...");
-        const finalResult = await designerAgent.design(
-            executionResult.text,
-            executionResult.gatheredData,
-            modelName,
-            plan.steps // New arg
-        );
-        console.log("=== [Orchestrator] Process Complete ===\n");
 
-        return finalResult;
+        try {
+            const finalResult = await designerAgent.design(
+                executionResult.text,
+                executionResult.gatheredData,
+                modelName,
+                plan.steps, // Execution steps
+                canvasContext // Canvas context for incremental mode
+            );
+            console.log("=== [Orchestrator] Process Complete ===\n");
+
+            return finalResult;
+        } catch (designError) {
+            console.error("[Orchestrator] Designer failed:", designError.message);
+
+            // FALLBACK: Return sanitized text response
+            console.log("=== [Orchestrator] Process Complete (with fallback) ===\n");
+            return {
+                text: this._sanitizeResponse(executionResult.text),
+                widgets: []
+            };
+        }
+    }
+
+    _sanitizeResponse(text) {
+        if (!text) return "Desculpe, não consegui processar sua solicitação.";
+
+        // Remove function call syntax
+        text = text.replace(/<function=.*?<\/function>/g, '');
+        text = text.replace(/<function=.*?>/g, '');
+
+        // Remove HTML-like tags
+        text = text.replace(/<[^>]+>/g, '');
+
+        // Remove JSON-like function calls
+        text = text.replace(/\{"name":\s*"[^"]+",\s*"args":\s*\{[^}]+\}\}/g, '');
+
+        // If text is empty after sanitization, provide friendly message
+        if (!text.trim()) {
+            return "Processamento concluído. Os dados foram coletados mas não há informações para exibir no momento.";
+        }
+
+        return text.trim();
     }
 }
 
