@@ -119,8 +119,9 @@ export class ExecutorAgent {
 
                     // Strategy B: XML-style
                     if (toolCalls.length === 0) {
-                        const xmlRegex1 = /<function>([^<]+)<\/function>\s*\(([^)]*)\)/i;
-                        const xmlRegex2 = /<function=([^>]+)>([^<]+)<\/function>/i;
+                        // Regex 1: <function>name</function>(args) OR just <function>name</function>
+                        const xmlRegex1 = /<function>([^<]+)<\/function>(\s*\(([^)]*)\))?/i;
+                        const xmlRegex2 = /<function=([^>]+)>([\s\S]*?)<\/function>/i; // Adjusted to capture multiline content
                         const match1 = text.match(xmlRegex1);
                         const match2 = text.match(xmlRegex2);
 
@@ -128,8 +129,12 @@ export class ExecutorAgent {
                             const tName = match1[1];
                             if (knownToolNames.includes(tName)) {
                                 let args = {};
-                                try { args = JSON.parse(match1[2]); } catch (e) { args = { value: match1[2] }; }
+                                if (match1[3]) {
+                                     try { args = JSON.parse(match1[3]); } catch (e) { args = { value: match1[3] }; }
+                                }
                                 toolCalls.push({ name: tName, args });
+                                // Remove from visible text
+                                finalResponseText = finalResponseText.replace(match1[0], '').trim();
                             }
                         } else if (match2) {
                             const tName = match2[1];
@@ -138,6 +143,8 @@ export class ExecutorAgent {
                                 let args = {};
                                 try { args = JSON.parse(argsString); } catch (e) { args = { value: argsString }; }
                                 toolCalls.push({ name: tName, args });
+                                // Remove from visible text
+                                finalResponseText = finalResponseText.replace(match2[0], '').trim();
                             }
                         }
                     }
@@ -206,6 +213,8 @@ export class ExecutorAgent {
                                         name: toolName,
                                         args: args
                                     });
+                                    // Remove from visible text
+                                    finalResponseText = finalResponseText.replace(match[0], '').trim();
                                 }
                             }
                         }
@@ -276,10 +285,8 @@ export class ExecutorAgent {
                                                     if (!cnpj) return null;
 
                                                     return {
-                                                        cnpj: String(cnpj).trim(),
-                                                        latitude: lat ? Number(lat) : 0,
-                                                        longtude: lng ? Number(lng) : 0, // Note: API uses "longtude" (typo)
-                                                        name: name ? String(name) : 'Unidade SENAI'
+                                                        cnpj: String(cnpj).trim()
+                                                        // Removed metadata (latitude, longtude, name) as API rejects them
                                                     };
                                                 })
                                                 .filter(Boolean)

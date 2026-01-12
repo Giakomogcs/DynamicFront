@@ -17,7 +17,17 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
 
         return (
             <div className="w-full h-72 bg-slate-900/50 rounded-xl border border-slate-800 p-4 my-4">
-                <h4 className="text-sm font-medium text-slate-400 mb-4">{config?.title || 'Data Visualization'}</h4>
+                <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-medium text-slate-400">{config?.title || 'Data Visualization'}</h4>
+                    {config?.navigationTarget && (
+                        <button
+                            onClick={() => onNavigateScreen && onNavigateScreen(config.navigationTarget)}
+                            className="text-xs bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-2 py-1 rounded border border-indigo-500/20 transition-colors"
+                        >
+                            View Details →
+                        </button>
+                    )}
+                </div>
                 <ResponsiveContainer width="100%" height="100%">
                     <ChartComponent data={data}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />

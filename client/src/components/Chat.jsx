@@ -8,7 +8,7 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed, onToggleCollapse, onEditMessage }) => {
+export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed, onToggleCollapse, onEditMessage, showControls = true }) => {
     const [input, setInput] = useState('');
     const [editingIndex, setEditingIndex] = useState(null);
     const bottomRef = useRef(null);
@@ -59,13 +59,15 @@ export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed,
     return (
         <div className="flex flex-col h-full w-full bg-slate-900/30 border-r border-slate-800 relative">
             {/* Minimize Button */}
-            <button
-                onClick={onToggleCollapse}
-                className="absolute -right-3 top-4 z-50 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-1 transition-colors"
-                title="Minimize chat"
-            >
-                <ChevronLeft size={14} className="text-slate-400" />
-            </button>
+            {showControls && (
+                <button
+                    onClick={onToggleCollapse}
+                    className="absolute -right-3 top-4 z-50 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-1 transition-colors"
+                    title="Minimize chat"
+                >
+                    <ChevronLeft size={14} className="text-slate-400" />
+                </button>
+            )}
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 {(!messages || messages.length === 0) && (
@@ -86,7 +88,10 @@ export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed,
 
                             <div className={`flex-1 max-w-[85%] space-y-2`}>
                                 <div className={`relative p-3 rounded-2xl ${msg.role === 'user' ? 'bg-slate-800 text-white rounded-tr-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none'}`}>
-                                    <div className="prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                                    <div className={cn(
+                                        "prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed whitespace-pre-wrap overflow-x-auto",
+                                        (msg.text.startsWith('Error:') || msg.text.includes('System Limit')) && "p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-200"
+                                    )}>
                                         {msg.text}
                                     </div>
 

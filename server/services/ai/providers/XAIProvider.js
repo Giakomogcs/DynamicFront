@@ -49,7 +49,10 @@ export class XAIProvider extends AIProvider {
         if (typeof input === 'string') {
             messages = [{ role: 'user', content: input }];
         } else if (Array.isArray(input)) {
-            messages = input;
+            messages = input.map(msg => ({
+                ...msg,
+                role: msg.role === 'model' ? 'assistant' : msg.role
+            }));
         }
 
         if (options.systemInstruction) {

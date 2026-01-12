@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Database, MessageSquare, Plus, Settings, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Layers, Database, MessageSquareText, Plus, Settings2, Menu, X, ChevronLeft, ChevronRight, LayoutGrid, Cloud, CloudLightning } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -9,6 +9,7 @@ function cn(...inputs) {
 
 const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
 
     return (
         <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden font-sans">
@@ -22,17 +23,24 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
 
             {/* Sidebar - Overlay on mobile, fixed width on desktop */}
             <div className={cn(
-                "bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 z-50",
-                "fixed md:relative h-full w-64",
-                sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                "bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 ease-in-out z-50",
+                "fixed md:relative h-full",
+                sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+                collapsed ? "md:w-20" : "md:w-64"
             )}>
                 {/* Header with logo */}
-                <div className="p-4 flex items-center justify-between border-b border-slate-800 h-16">
-                    <div className="flex items-center gap-3">
+                <div className={cn(
+                    "flex items-center border-b border-slate-800 h-16 transition-all duration-300",
+                    collapsed ? "justify-center px-0" : "justify-between px-4"
+                )}>
+                    <div className="flex items-center gap-3 overflow-hidden">
                         <div className="size-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
                             <Layers className="text-white size-6" />
                         </div>
-                        <span className="font-bold text-xl tracking-tight text-white">
+                        <span className={cn(
+                            "font-bold text-xl tracking-tight text-white whitespace-nowrap transition-all duration-300",
+                            collapsed ? "opacity-0 w-0 translate-x-[-20px]" : "opacity-100 w-auto translate-x-0"
+                        )}>
                             DynamicFront
                         </span>
                     </div>
@@ -46,20 +54,22 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                     </button>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden">
                     <SidebarItem
-                        icon={<MessageSquare size={20} />}
+                        icon={<MessageSquareText size={20} />}
                         label="Chat Canvas"
                         isActive={activeTab === 'chat'}
+                        collapsed={collapsed}
                         onClick={() => {
                             setActiveTab('chat');
                             setSidebarOpen(false);
                         }}
                     />
                     <SidebarItem
-                        icon={<Database size={20} />}
+                        icon={<LayoutGrid size={20} />}
                         label="My Resources"
                         isActive={activeTab === 'resources'}
+                        collapsed={collapsed}
                         onClick={() => {
                             setActiveTab('resources');
                             setSidebarOpen(false);
@@ -68,27 +78,33 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                     <SidebarItem
                         icon={<Database size={20} />}
                         label="Load Analysis"
+                        collapsed={collapsed}
                         onClick={() => {
                             onOpenLoadModal();
                             setSidebarOpen(false);
                         }}
                     />
 
-                    <div className="pt-6 pb-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <div className={cn(
+                        "pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider transition-all duration-300 whitespace-nowrap overflow-hidden",
+                        collapsed ? "opacity-0 h-0 p-0" : "opacity-100 px-3"
+                    )}>
                         Resources
                     </div>
 
                     <SidebarItem
-                        icon={<Plus size={20} />}
+                        icon={<CloudLightning size={20} />}
                         label="Register API"
+                        collapsed={collapsed}
                         onClick={() => {
                             onRegisterApi();
                             setSidebarOpen(false);
                         }}
                     />
                     <SidebarItem
-                        icon={<Database size={20} />}
+                        icon={<Plus size={20} />} // Database + Plus implies "Add Database"
                         label="Register Database"
+                        collapsed={collapsed}
                         onClick={() => {
                             onRegisterDb();
                             setSidebarOpen(false);
@@ -96,16 +112,26 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                     />
                 </nav>
 
-                <div className="p-4 border-t border-slate-800">
+                <div className="p-3 border-t border-slate-800 flex flex-col gap-2">
                     <SidebarItem
-                        icon={<Settings size={20} />}
+                        icon={<Settings2 size={20} />}
                         label="Settings"
                         isActive={activeTab === 'settings'}
+                        collapsed={collapsed}
                         onClick={() => {
                             setActiveTab('settings');
                             setSidebarOpen(false);
                         }}
                     />
+                    
+                    {/* Collapse Toggle (Desktop only) */}
+                    <button
+                        onClick={() => setCollapsed(!collapsed)}
+                        className="hidden md:flex items-center justify-center p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors mt-2"
+                        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                    </button>
                 </div>
             </div>
 
@@ -142,21 +168,30 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
     );
 };
 
-const SidebarItem = ({ icon, label, isActive, onClick }) => (
+const SidebarItem = ({ icon, label, isActive, collapsed, onClick }) => (
     <button
         onClick={onClick}
         className={cn(
-            "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group relative",
+            "w-full flex items-center transition-all duration-200 group relative rounded-xl",
+            collapsed ? "justify-center p-3" : "px-3 py-3 gap-3",
             isActive
                 ? "bg-indigo-600/10 text-indigo-400 border border-indigo-600/20"
-                : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                : "text-slate-400 hover:bg-slate-800 hover:text-slate-100 border border-transparent"
         )}
+        title={collapsed ? label : undefined}
     >
         <span className={cn("transition-colors shrink-0", isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300")}>
             {icon}
         </span>
-        <span className="font-medium text-sm">{label}</span>
-        {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-r" />}
+        
+        {!collapsed && (
+             <span className="font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis animate-fade-in origin-left">
+                {label}
+            </span>
+        )}
+
+        {isActive && !collapsed && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-500 rounded-r shadow shadow-indigo-500/50" />}
+        {isActive && collapsed && <div className="absolute inset-0 rounded-xl bg-indigo-500/10 ring-1 ring-indigo-500/20" />}
     </button>
 );
 

@@ -1,5 +1,5 @@
-[2026-01-12T17:26:58.311Z] Error: [Groq] 429: Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01kedecntkffw9qp7np1jrws15` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5476, Requested 3014. Please try again in 24.9s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing
-Error: [Groq] 429: Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01kedecntkffw9qp7np1jrws15` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5476, Requested 3014. Please try again in 24.9s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing
-    at GroqProvider.generateContent (file:///C:/Github/DynamicFront/server/services/ai/providers/GroqProvider.js:88:19)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:234:29)
+[2026-01-12T22:31:51.576Z] Error: [Groq] 429: Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01kedecntkffw9qp7np1jrws15` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 3553, Requested 2680. Please try again in 2.33s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing
+Error: [Groq] 429: Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01kedecntkffw9qp7np1jrws15` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 3553, Requested 2680. Please try again in 2.33s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing
+    at GroqProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/providers/GroqProvider.js:88:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/ModelManager.js:459:29)

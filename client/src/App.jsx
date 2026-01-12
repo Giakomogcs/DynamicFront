@@ -28,6 +28,44 @@ function App() {
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [canvasMode, setCanvasMode] = useState('append'); // 'append' | 'replace'
   const [chatCollapsed, setChatCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Resize Handlers
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      // Limit width between 300px and 1200px
+      const newWidth = Math.min(Math.max(e.clientX - 64, 300), 1200);
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none'; // Prevent text selection
+    } else {
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
 
 
   // Get User Location on Mount
@@ -421,10 +459,13 @@ function App() {
       {activeTab === 'chat' && (
         <div className="flex h-full w-full overflow-hidden">
           {/* Sidebar Chat */}
-          <div className={`
-                 transition-all duration-300 ease-in-out bg-slate-950 flex flex-col
-                 ${layoutMode === 'center' ? 'w-full' : (chatCollapsed ? 'w-12 shrink-0' : 'w-[400px] shrink-0')}
-             `}>
+          <div
+            className={`
+                 transition-all duration-75 ease-out bg-slate-950 flex flex-col relative
+                 ${layoutMode === 'center' ? 'w-full transition-all duration-300 ease-in-out' : (chatCollapsed ? 'w-12 shrink-0 transition-all duration-300 ease-in-out' : 'shrink-0')}
+             `}
+            style={{ width: layoutMode === 'workspace' && !chatCollapsed ? sidebarWidth : undefined }}
+          >
             <Chat
               messages={messages}
               onSendMessage={handleSendMessage}
@@ -433,7 +474,16 @@ function App() {
               collapsed={chatCollapsed && layoutMode === 'workspace'}
               onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
               onEditMessage={handleEditMessage}
+              showControls={layoutMode === 'workspace'}
             />
+
+            {/* Drag Handle - Only in Workspace mode and not collapsed */}
+            {layoutMode === 'workspace' && !chatCollapsed && (
+              <div
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-500/50 z-50 transition-colors"
+                onMouseDown={handleMouseDown}
+              />
+            )}
           </div>
 
           {/* Main Canvas Area - Hidden in Center Mode */}
