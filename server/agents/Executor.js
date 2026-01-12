@@ -13,16 +13,18 @@ export class ExecutorAgent {
      * @param {Array} tools - Gemini formatted tools (TODO: standard format?)
      * @returns {Promise<{text: string, gatheredData: Array}>}
      */
-    async execute(userMessage, history, modelName, tools = []) {
+    async execute(userMessage, history, modelName, tools = [], planContext = "") {
         console.log(`[Executor] Starting execution with ${tools.length} tools. Model: ${modelName}`);
 
         // 1. Prepare Initial Messages (Stateless)
-        // Convert history to generic format {role, content}
         const messages = this.prepareHistory(history);
 
         let finalUserMessage = userMessage;
+        if (planContext) {
+            finalUserMessage += `\n\n${planContext}`;
+        }
         if (tools && tools.length > 0) {
-            finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available. You are in FUNCTION CALLING MODE. Please ANALYZE the user's request, DECOMPOSE complex queries (especially regions like 'ABC', 'Zona Leste') into specific sub-queries, and INVOKE the necessary tools. Use PARALLEL tool calls where appropriate.]`;
+            finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available. You are in FUNCTION CALLING MODE. Follow the [PLANNED STEPS] above strictly. ANALYZE the user's request, DECOMPOSE complex queries, and INVOKE the necessary tools. Use PARALLEL tool calls where appropriate.]`;
         }
         messages.push({ role: 'user', content: finalUserMessage });
 
@@ -30,7 +32,7 @@ export class ExecutorAgent {
         const systemInstruction = `You are the EXECUTOR Agent. 
             Goal: Answer the user's question using the provided tools.
             AVAILABLE TOOLS: [${safeToolNames}]
-
+            
             CRITICAL WORKFLOW:
             1. **Analyze Capabilities**: Use ONLY the tools listed above.
             2. **Exploration**: If you are unsure where the data is, use 'inspect_schema' or equivalent tools to find the right resource.
@@ -40,15 +42,12 @@ export class ExecutorAgent {
             1. **Filter Early**: ALWAYS use 'WHERE' clauses to filter data.
             2. **Robustness**: When filtering text columns (e.g. names, cities), ALWAYS use 'ILIKE' (Postgres) or equivalent for case-insensitive matching.
             3. **Fuzzy Matching**: If unsure of exact spelling, use wildcard '%' (e.g. WHERE city ILIKE '%paulo%').
-
-            4. **Aggregate**: Use 'COUNT', 'SUM', 'AVG', 'GROUP BY' instead of fetching raw rows.
-            5. **Limit**: ALWAYS use 'LIMIT 10' (or similar) unless specifically asked for all.
             
             CRITICAL: DATA FORMATTING & ROBUSTNESS:
-            1. **Strict Types**: If a tool asks for an Integer, do NOT send a String. If it asks for "YYYY-MM-DD", do NOT send "01/01/2025".
-            2. **Read Descriptions**: Pay extreme attention to tool descriptions. They often contain hidden constraints (e.g. "Input must be 6 digits", "Use uppercase codes").
-            3. **Normalize Input**: If the user says "são paulo" but the API/DB is likely to use normalized data or if previous attempts failed, try variations (e.g. "Sao Paulo", "SAO PAULO").
-            4. **Retry Logic**: If a tool fails with a formatting error (e.g. "Invalid date"), RETRY immediately with the corrected format. Do NOT give up.
+            1. **Strict Types**: If a tool asks for an Integer, do NOT send a String.
+            2. **Read Descriptions**: Pay extreme attention to tool descriptions.
+            3. **Normalize Input**: Try variations (e.g. "Sao Paulo", "SAO PAULO") if needed.
+            4. **Retry Logic**: If a tool fails with formatting error, RETRY immediately.
 
             General Rules:
             1. Call MULTIPLE tools in PARALLEL whenever possible.
@@ -56,32 +55,25 @@ export class ExecutorAgent {
             3. If you have data, return a purely factual summary. 
             4. Do NOT try to build complex UI widgets here. Focus on the DATA.
             5. **IMPORTANT**: If tools are provided, you MUST use them.
-            6. **API vs Database**: NEVER hallucinate SQL queries (like \`run_query\`) if you are working with an API. If the available tools look like API endpoints (e.g., \`api_name_get_something\`), use THOSE specific tools.
-            7. **Tool Usage**: Do NOT simulate the tool call in text. Generate a native Function Call object.
-
-            ADVANCED QUERY ANALYSIS:
-            *   **CRITICAL**: Check the 'inputSchema' of the tool before calling it. Do NOT invent parameters (e.g. do not pass 'city' to a tool that requires 'latitude'/'longitude').
-            *   **Search Strategy for Linked Resources**:
-                *   If you need to find "Items" (Courses, Products, Doctor Availability) in a "Location":
-                    1.  First, search for the **Provider/Entity** (School, Store, Clinic) in that location using available tools.
-                    2.  Then, use the IDs/Keys from those results to query the "Items" endpoint.
-                    3.  **Do not** call an "Item" search tool directly with a City name unless the tool explicitly accepts 'city'.
-            *   **Geographic Decomposition**: If the user asks for a region (e.g. "ABC Paulista", "Zona Leste", "Vale do Paraíba"), YOU MUST DECOMPOSE it into specific cities and search for EACH city individually.
-                *   Example: "ABC Paulista" -> Search "Santo André", "São Bernardo do Campo", "São Caetano do Sul", "Diadema", "Mauá", "Ribeirão Pires", "Rio Grande da Serra".
-                *   Search for schools/entities in EACH city.
-            *   **Course/Topic Search**: If the user asks for specific courses (e.g. "Excel", "Mecânica") AND a location:
-                1. Search for schools in the location first.
-                2. If available, use a course search tool *scoped to those schools* or check the school details.
-                3. If no direct text search for courses exists by city, explain this limitation and list the schools where the user can find these courses.
-            *   **Contextual Analysis**:
-                *   Do not just list raw JSON. Summarize the findings.
-                *   If searching for "ABC Paulista", aggregate the results: "Found X schools in Santo André, Y in São Bernardo...".
-                *   Highlight if a city returned no results.`;
+            6. **API vs Database**: NEVER hallucinate SQL queries.
+            7. **Tool Usage**: Generate a native Function Call object.
+            
+            **CRITICAL INSTRUCTION FOR LLAMA 3 / GROQ:**
+            If you cannot generate a native JSON Function Call, you MUST use this specific XML format:
+            <function=tool_name>{"argument_name": "value"}</function>
+            
+            **FORBIDDEN:**
+            - DO NOT write Python code.
+            - DO NOT write "Here is how you would do it".
+            - DO NOT output a tutorial.
+            - JUST CALL THE FUNCTION.
+        `;
 
         let gatheredData = [];
         let finalResponseText = "";
         let turn = 0;
         const maxTurns = 5;
+        let effectiveModel = modelName;
 
         try {
             while (turn < maxTurns) {
@@ -90,85 +82,70 @@ export class ExecutorAgent {
                 // CALL AI
                 const result = await modelManager.generateContentWithFailover(messages, {
                     model: modelName,
-                    tools: tools, // Provider knows how to map these
+                    tools: tools,
                     systemInstruction
                 });
 
-                // Parse Result (Universal Response Wrapper)
+                // Update effective model if failover occurred
+                if (result.usedModel) {
+                    effectiveModel = result.usedModel;
+                    modelName = result.usedModel;
+                }
+
+                // Parse Result
                 const response = result.response;
-                const text = response.text() || ""; // Sometimes empty if just tool calls
+                const text = response.text() || "";
                 const toolCalls = response.functionCalls ? response.functionCalls() : [];
+                const knownToolNames = tools.map(t => t.name);
 
                 finalResponseText = text;
 
-                // Append Assistant Response to History
-                if (toolCalls.length > 0) {
-                     // Native call found
-                }
-
-                // FALLBACK: If no native tool calls, check if model wrote them in text (Common with Llama/Backup models)
+                // FALLBACK: Manual Parsing (Llama/XML/Json/Text)
                 if (toolCalls.length === 0 && text) {
-                    const knownToolNames = tools.map(t => t.name);
-
                     // Strategy A: Try parsing the whole text as a JSON Tool Call
                     try {
                         const json = JSON.parse(text);
-                        // Check if it matches { name: "...", parameters/args: ... }
                         if (json.name && knownToolNames.includes(json.name)) {
-                             console.log(`[Executor] 🛠️ Detected JSON-based tool call for '${json.name}'.`);
-                             toolCalls.push({
-                                 name: json.name,
-                                 args: json.parameters || json.args || {}
-                             });
-                        } else if (json.type === 'function' && json.name) { // OpenAI style sometimes leaked
-                             toolCalls.push({
-                                 name: json.name,
-                                 args: json.parameters || json.arguments || {}
-                             });
+                            toolCalls.push({ name: json.name, args: json.parameters || json.args || {} });
                         } else if (Array.isArray(json) && json.length >= 1 && knownToolNames.includes(json[0])) {
-                             // Handle [ "tool_name", "arg_string_or_obj" ]
-                             console.log(`[Executor] 🛠️ Detected Array-based tool call for '${json[0]}'.`);
-                             let args = json[1] || {};
-                             // specific fix for ["run_query", "SELECT..."] where args is just the SQL string
-                             if (typeof args === 'string') {
-                                 if (json[0].includes('query')) args = { sql: args };
-                                 else if (json[0].includes('inspect')) args = { search: args };
-                             }
-                             toolCalls.push({
-                                 name: json[0],
-                                 args: args
-                             });
+                            let args = json[1] || {};
+                            if (typeof args === 'string') {
+                                if (json[0].includes('query')) args = { sql: args };
+                                else if (json[0].includes('inspect')) args = { search: args };
+                            }
+                            toolCalls.push({ name: json[0], args: args });
                         }
-                    } catch (e) {
-                         // Not a pure JSON response
-                    }
+                    } catch (e) { }
 
-                    // Strategy B: XML-style <function>name</function>(args)
+                    // Strategy B: XML-style
                     if (toolCalls.length === 0) {
-                        const xmlRegex = /<function>([^<]+)<\/function>\s*\(([^)]*)\)/i;
-                        const match = text.match(xmlRegex);
-                        if (match) {
-                             const tName = match[1];
-                             if (knownToolNames.includes(tName)) {
-                                 console.log(`[Executor] 🛠️ Detected XML-based tool call for '${tName}'.`);
-                                 let argsString = match[2];
-                                 let args = {};
-                                 try { args = JSON.parse(argsString); } catch(e) { 
-                                     // fallback for strings
-                                     if (tName.includes('query')) args = { sql: argsString.replace(/^["']|["']$/g, '') };
-                                     else args = { search: argsString.replace(/^["']|["']$/g, '') };
-                                 } 
-                                 toolCalls.push({ name: tName, args: args || {} });
-                             }
+                        const xmlRegex1 = /<function>([^<]+)<\/function>\s*\(([^)]*)\)/i;
+                        const xmlRegex2 = /<function=([^>]+)>([^<]+)<\/function>/i;
+                        const match1 = text.match(xmlRegex1);
+                        const match2 = text.match(xmlRegex2);
+
+                        if (match1) {
+                            const tName = match1[1];
+                            if (knownToolNames.includes(tName)) {
+                                let args = {};
+                                try { args = JSON.parse(match1[2]); } catch (e) { args = { value: match1[2] }; }
+                                toolCalls.push({ name: tName, args });
+                            }
+                        } else if (match2) {
+                            const tName = match2[1];
+                            if (knownToolNames.includes(tName)) {
+                                let argsString = match2[2];
+                                let args = {};
+                                try { args = JSON.parse(argsString); } catch (e) { args = { value: argsString }; }
+                                toolCalls.push({ name: tName, args });
+                            }
                         }
                     }
 
                     // Strategy C: Regex Match tool_name(args)
-                    // We look for known tool names followed by parenthesis
                     if (toolCalls.length === 0) {
                         for (const toolName of knownToolNames) {
                             if (text.includes(toolName)) {
-                                // Simple regex to capture arguments: toolName( ... )
                                 const regex = new RegExp(`${toolName}\\s*\\(([^)]*)\\)`, 'i');
                                 const match = text.match(regex);
                                 if (match) {
@@ -176,48 +153,55 @@ export class ExecutorAgent {
                                     let argsString = match[1].trim();
                                     let args = {};
                                     try {
-                                        // Try strict JSON first
-                                        args = JSON.parse(argsString);
-                                    } catch (e) {
-                                        try {
-                                            // Heuristic A: Key-Value pairs (param="value")
-                                            // Matches: key="value" or key='value' or key=value (simple)
-                                            const kvRegex = /(\w+)=["']?([^"'\s]+)["']?/g; // Simple non-spaced values
-                                            // Better Regex for quoted string support: (\w+)=(["'])(.*?)\2
+                                        // 1. Try strict JSON first
+                                        if (argsString.startsWith('{')) {
+                                            args = JSON.parse(argsString);
+                                        } else {
+                                            // 2. Python-style / Text-style Args
+                                            // Heuristic A: Key-Value pairs
                                             const kvRegexComplex = /(\w+)=(["'])(.*?)\2/g;
-                                            
-                                            let kvMatch;
+                                            const kvRegexUnquoted = /(\w+)=([-]?\w+\.?\w*)/g;
+
                                             let hasKv = false;
-                                            
-                                            // Try capturing all key="val" matches
+                                            let kvMatch;
+
                                             while ((kvMatch = kvRegexComplex.exec(argsString)) !== null) {
                                                 args[kvMatch[1]] = kvMatch[3];
                                                 hasKv = true;
                                             }
-                                            
-                                            if (!hasKv) {
-                                                // Heuristic B: SQL/Search single string fallback
-                                                if (toolName.includes('query') && !argsString.trim().startsWith('{')) {
-                                                     const sql = argsString.replace(/^["']|["']$/g, '');
-                                                     args = { sql };
-                                                } else if (toolName.includes('inspect') && !argsString.trim().startsWith('{')) {
-                                                     const table = argsString.replace(/^["']|["']$/g, '');
-                                                     args = { search: table };
-                                                     if (tools.find(t=>t.name === toolName).parameters?.properties?.table_name) {
-                                                        args = { table_name: table };
-                                                     }
-                                                } else {
-                                                    // Warning but don't crash loop
-                                                    console.warn(`[Executor] Could not parse args for ${toolName}: ${argsString}`);
-                                                    continue; 
+
+                                            const unquotedMatches = [...argsString.matchAll(kvRegexUnquoted)];
+                                            for (const m of unquotedMatches) {
+                                                const key = m[1];
+                                                let val = m[2];
+                                                if (!isNaN(Number(val))) val = Number(val);
+                                                else if (val.toLowerCase() === 'true') val = true;
+                                                else if (val.toLowerCase() === 'false') val = false;
+                                                else if (val.toLowerCase() === 'null') val = null;
+
+                                                if (!args[key]) {
+                                                    args[key] = val;
+                                                    hasKv = true;
                                                 }
                                             }
-                                        } catch (e2) {
-                                            console.warn(`[Executor] Parsing failed for ${toolName}`);
-                                            continue;
+
+                                            if (!hasKv) {
+                                                // Heuristic B: Single Argument Fallback
+                                                // If the tool call is tool_name(value) with no kv, map it to the first likely parameter
+                                                // TODO: Retrieve actual schema key. For now, we fix specific known issues.
+                                                const rawVal = argsString.replace(/^["']|["']$/g, '');
+                                                if (toolName.includes('query')) args = { sql: rawVal };
+                                                else if (toolName.includes('search')) args = { schoolsCnpj: [rawVal] }; // Specific fix for current issue!
+                                                else if (toolName.includes('getsenaiunits')) args = { city: rawVal };
+                                                else args = { search: rawVal, value: rawVal };
+
+                                                console.log(`[Executor] ⚠️ Mapping single arg '${rawVal}' for '${toolName}' via Heuristic.`);
+                                            }
                                         }
+                                    } catch (e2) {
+                                        console.warn(`[Executor] Parsing failed for ${toolName}. Error: ${e2.message}`);
+                                        continue;
                                     }
-                                    
                                     toolCalls.push({
                                         name: toolName,
                                         args: args
@@ -243,28 +227,90 @@ export class ExecutorAgent {
                         try {
                             toolResult = await toolService.executeTool(call.name, call.args);
 
-                        // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
+                            // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
                             if (toolResult && toolResult.isError && toolResult.content && toolResult.content[0].text.includes('not found')) {
                                 const validToolNames = tools.map(t => t.name).join(', ');
                                 console.warn(`[Executor] ⚠️ Hallucination detected: '${call.name}'. Triggering Self-Correction.`);
 
                                 // Override error with GUIDANCE
                                 toolResult.content[0].text = `[SYSTEM ERROR]: Tool '${call.name}' does not exist. You are HALLUCINATING generic tools. You MUST use one of the following available tools: [${validToolNames}]. Retry now using the correct tool name.`;
-                            } 
+                            }
                             // DATA ROBUSTNESS: Check for empty results and suggest retries
                             else if (toolResult && !toolResult.isError) {
                                 const resultStr = JSON.stringify(toolResult.content);
                                 // Simple heuristic: length of result is small or explicit "empty"/"no results"
-                                // If args contained a string value, try to suggest normalization
                                 if (resultStr.length < 50 || resultStr.includes('"length":0') || resultStr.includes('[]')) {
                                     const argValues = Object.values(call.args).filter(v => typeof v === 'string');
                                     if (argValues.length > 0) {
                                         console.log(`[Executor] 🔄 Empty result detected. Suggesting normalization retry for: ${argValues.join(', ')}`);
-                                        // We append a "system hint" to the result for the NEXT turn
                                         toolResult.content.push({
                                             type: "text",
                                             text: `\n[SYSTEM HINT]: The search returned NO results for "${argValues.join(', ')}". \n1. Try REMOVING accents (e.g. "São Paulo" -> "Sao Paulo").\n2. Try UPPERCASE or lowercase.\n3. Try a broader search term.\nRETRY IMMEDIATELY with a modified argument.`
                                         });
+                                    }
+                                } else {
+                                    // 3. Smart Multi-Step Execution (Auto-chaining)
+                                    // If we found SENAI units, automatically trigger course search
+                                    if (call.name.toLowerCase().includes('getsenaiunits')) {
+                                        let data = toolResult.content || toolResult;
+
+                                        // Try to parse if it's a JSON string
+                                        if (typeof data === 'string') {
+                                            try { data = JSON.parse(data); } catch (e) { }
+                                        }
+
+                                        // Extract from wrapper if needed
+                                        if (data && data[0] && data[0].text) {
+                                            try { data = JSON.parse(data[0].text); } catch (e) { }
+                                        }
+
+                                        if (Array.isArray(data) && data.length > 0) {
+                                            // Build schoolsCnpj as array of OBJECTS with coordinates
+                                            const schoolsCnpj = data
+                                                .map(unit => {
+                                                    const cnpj = unit.cnpj || unit.CNPJ;
+                                                    const lat = unit.latitude || unit.lat;
+                                                    const lng = unit.longitude || unit.lng || unit.longtude;
+                                                    const name = unit.name || unit.nome || unit.nome_escola;
+
+                                                    if (!cnpj) return null;
+
+                                                    return {
+                                                        cnpj: String(cnpj).trim(),
+                                                        latitude: lat ? Number(lat) : 0,
+                                                        longtude: lng ? Number(lng) : 0, // Note: API uses "longtude" (typo)
+                                                        name: name ? String(name) : 'Unidade SENAI'
+                                                    };
+                                                })
+                                                .filter(Boolean)
+                                                .slice(0, 10);
+
+                                            if (schoolsCnpj.length > 0) {
+                                                console.log(`[Executor] 🔗 Auto-chaining: Found ${schoolsCnpj.length} units. Triggering course search...`);
+                                                console.log(`[Executor] 📋 Schools:`, JSON.stringify(schoolsCnpj.slice(0, 2), null, 2));
+
+                                                // Check if course search tool is available
+                                                const courseSearchTool = tools.find(t => t.name.toLowerCase().includes('searchorderrecommendedcourses'));
+                                                if (courseSearchTool) {
+                                                    // Get company location from first unit as fallback
+                                                    const firstUnit = schoolsCnpj[0];
+
+                                                    // Force execution of course search
+                                                    toolCalls.push({
+                                                        name: courseSearchTool.name,
+                                                        args: {
+                                                            cnpj: firstUnit.cnpj,
+                                                            companyLat: firstUnit.latitude,
+                                                            companyLng: firstUnit.longtude,
+                                                            isRecommended: true,
+                                                            schoolsCnpj: schoolsCnpj,
+                                                            areas: ['Todas as áreas']
+                                                        }
+                                                    });
+                                                    console.log(`[Executor] ✅ Queued ${courseSearchTool.name} with ${schoolsCnpj.length} schools`);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -285,10 +331,9 @@ export class ExecutorAgent {
                         });
                     }
                 } else {
-                    // No tools, just text response. We are done.
                     break;
                 }
-            }
+            } // end while
         } catch (error) {
             console.error("[Executor] Error in execution loop:", error);
             fs.writeFileSync('debug_executor.log', `[${new Date().toISOString()}] Error: ${error.message}\n${error.stack}\n`);
@@ -300,8 +345,15 @@ export class ExecutorAgent {
             }
         }
 
-        return { text: finalResponseText, gatheredData };
+        return { text: finalResponseText, gatheredData, usedModel: effectiveModel };
     }
+
+    /**
+     * Prepares the history for the AI model.
+     * @param {Array} history
+     * @returns {Array}
+     */
+
 
     prepareHistory(history) {
         // Map frontend history to generic {role, content}

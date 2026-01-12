@@ -103,5 +103,150 @@
     ],
     "createdAt": "2026-01-09T00:05:38.940Z",
     "updatedAt": "2026-01-09T00:07:16.181Z"
+  },
+  "0j0zkqwja": {
+    "id": "0j0zkqwja",
+    "title": "New Analysis",
+    "widgets": [
+      {
+        "type": "process",
+        "title": "Execution Pipeline",
+        "steps": [
+          {
+            "name": "Step 1: Get Companies",
+            "status": "completed",
+            "description": "List all companies and filter by location using the provided latitude and longitude."
+          },
+          {
+            "name": "Step 2: Filter Companies by Location",
+            "status": "completed",
+            "description": "Use the latitude (-23.7138634) and longitude (-46.5771589) to filter companies that are near the user's location."
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "data": [
+          {
+            "label": "Total Companies Found",
+            "value": "135",
+            "change": "",
+            "icon": ""
+          },
+          {
+            "label": "Companies Shown",
+            "value": "10",
+            "change": "",
+            "icon": ""
+          }
+        ]
+      },
+      {
+        "type": "chart",
+        "config": {
+          "chartType": "bar",
+          "title": "Top 10 Companies by Name",
+          "description": "Bar chart showing the top 10 companies found"
+        },
+        "data": [
+          {
+            "name": "Abaac Gestao De Empresas Ltda",
+            "value": 1
+          },
+          {
+            "name": "Adf - Empresas Reunidas Ltda",
+            "value": 3
+          },
+          {
+            "name": "Advanservice Servicos Administrativos Para Empresas, Montagem E Comercio De Equipamentos Eletroeletronicos Ltda",
+            "value": 2
+          },
+          {
+            "name": "Andre De Moura De Oliveira",
+            "value": 1
+          },
+          {
+            "name": "Associacao Das Empresas Do Mercado Imobiliario Do Estado Do Maranhao - Ademi-ma",
+            "value": 1
+          },
+          {
+            "name": "ASSOCIACAO DE EMPRESAS DE ROCHAS DO FRADE - ASERFRA",
+            "value": 1
+          },
+          {
+            "name": "ASSOCIACAO DE EMPRESAS PRESTADORA DE SERVICOS DE COLETA DE ENTULHO NA CIDADE DE SALVADOR ( APRESCES )",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Detailed Company Data",
+        "data": [
+          {
+            "Company Name": "Abaac Gestao De Empresas Ltda",
+            "Fantasia": "ABAAC GESTAO DE NEGOCIOS",
+            "CNPJ": "16.569.453/0001-73"
+          },
+          {
+            "Company Name": "Adf - Empresas Reunidas Ltda",
+            "Fantasia": "nan",
+            "CNPJ": "10.508.274/0001-40"
+          },
+          {
+            "Company Name": "Adf - Empresas Reunidas Ltda",
+            "Fantasia": "ADF LOG",
+            "CNPJ": "10.508.274/0002-20"
+          },
+          {
+            "Company Name": "Adf - Empresas Reunidas Ltda",
+            "Fantasia": "ADFLOG",
+            "CNPJ": "10.508.274/0006-54"
+          },
+          {
+            "Company Name": "Advanservice Servicos Administrativos Para Empresas, Montagem E Comercio De Equipamentos Eletroeletronicos Ltda",
+            "Fantasia": "nan",
+            "CNPJ": "26.956.163/0001-36"
+          },
+          {
+            "Company Name": "Advanservice Servicos Administrativos Para Empresas, Montagem E Comercio De Equipamentos Eletroeletronicos Ltda",
+            "Fantasia": "nan",
+            "CNPJ": "26.956.163/0002-17"
+          },
+          {
+            "Company Name": "Andre De Moura De Oliveira",
+            "Fantasia": "EMPRESAS ELLO",
+            "CNPJ": "09.662.176/0001-83"
+          },
+          {
+            "Company Name": "Associacao Das Empresas Do Mercado Imobiliario Do Estado Do Maranhao - Ademi-ma",
+            "Fantasia": "ADEMI - MA",
+            "CNPJ": "13.093.932/0001-78"
+          },
+          {
+            "Company Name": "ASSOCIACAO DE EMPRESAS DE ROCHAS DO FRADE - ASERFRA",
+            "Fantasia": "nan",
+            "CNPJ": "08.513.339/0001-01"
+          },
+          {
+            "Company Name": "ASSOCIACAO DE EMPRESAS PRESTADORA DE SERVICOS DE COLETA DE ENTULHO NA CIDADE DE SALVADOR ( APRESCES )",
+            "Fantasia": "APRESCES",
+            "CNPJ": "13.698.011/0001-39"
+          }
+        ]
+      },
+      {
+        "type": "insight",
+        "title": "Analysis",
+        "content": [
+          "There are 135 companies found in total.",
+          "10 companies are shown in the table.",
+          "The top 5 companies are shown in the bar chart."
+        ],
+        "sentiment": "neutral"
+      }
+    ],
+    "createdAt": "2026-01-12T17:25:37.839Z",
+    "updatedAt": "2026-01-12T17:25:37.839Z"
   }
 }

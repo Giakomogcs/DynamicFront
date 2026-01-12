@@ -18,14 +18,13 @@ export class PlannerAgent {
         // Heuristic: If no tools, return empty.
         if (!availableTools || availableTools.length === 0) return [];
 
-        // CACHE CHECK: Simple in-memory cache for identical queries
-        // This is "economical and viable" for testing/debugging
-        if (this.lastPlan &&
-            this.lastPlan.query === userMessage.trim().toLowerCase() &&
-            this.lastPlan.toolCount === availableTools.length) {
-            console.log(`[Planner] ⚡ Using Cached Plan for: "${userMessage.substring(0, 20)}..."`);
-            return this.lastPlan.tools;
-        }
+        // CACHE CHECK: Disabled for stability
+        // if (this.lastPlan &&
+        //     this.lastPlan.query === userMessage.trim().toLowerCase() &&
+        //     this.lastPlan.toolCount === availableTools.length) {
+        //     console.log(`[Planner] ⚡ Using Cached Plan for: "${userMessage.substring(0, 20)}..."`);
+        //     return this.lastPlan.tools;
+        // }
 
         // Optimize: Smart Compression for many tools
         let toolSummaries = "";
@@ -66,19 +65,38 @@ Context: ${location ? `Lat ${location.lat}, Lon ${location.lon}` : 'No location'
 Available Tools:
 ${toolSummaries}
 
+CONCEPTS & RECIPES (CRITICAL KNOWLEDGE):
+1. **Search Courses (SENAI)**:
+   - You CANNOT search courses directly with just a city name.
+   - **Recipe**: 
+     1. Call \`dn_companiescontroller_getsenaiunits(city="CityName")\` to find Units.
+     2. Extract the \`cnpj\` of the found units. (Process Step).
+     3. Call \`dn_coursescontroller_searchorderrecommendedcourses(schoolsCnpj=[list_of_cnpjs])\` etc.
+   - **Note**: If the user asks for "Courses in Diadema", you MUST Plan step 1 (Get Units) before Step 2 (Get Courses).
+
+2. **Enterprise Context**:
+   - Many tools require a \`cnpj\`. If the user represents a company, try to infer or ask for it. If generic search, use the "Search Courses" recipe above which uses *School* CNPJs.
+
 INSTRUCTIONS:
-1. **Analyze** the User's request and the available tools.
-2. **Formulate a Strategy**: Create a logical pipeline of steps to fetch the necessary data.
-   - Separate the process into meaningful STAGES (e.g., "Search", "Details", "Analysis").
-   - For each stage, suggest a "display_component" (e.g. "search_results_list", "details_card", "histogram").
+1. **Analyze** the User's request. Identify the Core Intent (e.g., "Comparison", "Search", "Aggregation").
+2. **Formulate a Strategy**: Create a logical pipeline of steps.
+   - **Step 1**: Data Retrieval (What tools to call?)
+   - **Step 2**: Data Processing/Filtering (How to refine the data?)
+   - **Step 3**: Visualization (What is the best way to show this?)
 3. **Select Tools**: Identify ALL tools needed for this pipeline.
+   - If the user asks for "Cursos SENAI", you MUST select tools related to "courses" AND "branches" (if location is needed).
+   - If the user asks for "Maps", ensure you select a tool that returns Geocoordinates.
 4. **Return JSON**:
    {
-     "thought": "Brief explanation of the strategy/pipeline.",
+     "thought": "Brief explanation of the strategy.",
+     "tools": ["tool_name_1", "tool_name_2"],
      "steps": [
-       { "name": "Step Name", "description": "What to do", "display_component": "type_of_ui_to_show" }
-     ],
-     "tools": ["tool_name_1", "tool_name_2"]
+       { 
+         "name": "Step Name", 
+         "description": "What to do in this step", 
+         "expected_tools": ["tool_name_1"] 
+       }
+     ]
    }
 5. If no tools are relevant, return { "tools": [] }.
 `;
@@ -108,10 +126,11 @@ INSTRUCTIONS:
                 };
 
                 // RETURN FULL PLAN OBJECT
-                return { 
+                return {
                     tools: planJson.tools,
                     thought: planJson.thought,
-                    steps: planJson.steps || []
+                    steps: planJson.steps || [],
+                    usedModel: result.usedModel // <--- Pass back the model useful for Orchestrator
                 };
             }
             return { tools: [] };

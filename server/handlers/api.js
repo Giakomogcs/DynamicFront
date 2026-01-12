@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { validateAndCoerceParams, generateAIErrorMessage } from '../utils/paramValidator.js';
+import { enrichParameterSchema, enrichBodySchema } from '../utils/openapiEnricher.js';
 
 /**
  * Validates and fetches an OpenAPI spec from a URL
@@ -159,89 +161,30 @@ export async function getApiTools(api) {
                     const operationId = operation.operationId || `${method}_${pathSuffix}`;
                     const toolName = `${api.name.toLowerCase().replace(/\s+/g, '_')}_${operationId}`.toLowerCase();
 
-// ... Inside getApiTools loop ...
-                    
+                    // ... Inside getApiTools loop ...
+
                     // Flatten Parameters for Better LLM Compatibility
                     const flatProperties = {};
                     const requiredParams = [];
 
-                    // 1. Path Params
+                    // 1. Path and Query Params (Enriched with examples)
                     if (operation.parameters) {
                         operation.parameters.forEach(p => {
                             if (p.in === 'path' || p.in === 'query') {
-                                flatProperties[p.name] = {
-                                    type: p.schema?.type || "string",
-                                    description: p.description
-                                };
+                                flatProperties[p.name] = enrichParameterSchema(p, spec);
                                 if (p.required) requiredParams.push(p.name);
                             }
                         });
                     }
 
-                    // 2. Body Params?
-                    // Simplified: specific keys if defined, or just 'body' object
-                    // 2. Body Params
-                    // Support parsing application/json body schema to top-level args (Flattened)
-                    if (operation.requestBody && operation.requestBody.content && operation.requestBody.content['application/json']) {
-                        let schema = operation.requestBody.content['application/json'].schema;
-                        
-                        // Resolve Reference if present
-                        if (schema && schema.$ref) {
-                            const refPath = schema.$ref.replace('#/', '').split('/');
-                            let resolved = spec;
-                            for (const part of refPath) {
-                                resolved = resolved && resolved[part];
-                            }
-                            if (resolved) schema = resolved;
-                        }
+                    // 2. Body Params (Enriched with examples and nested structures)
+                    if (operation.requestBody) {
+                        const enrichedBody = enrichBodySchema(operation.requestBody, spec);
 
-                        if (schema && schema.properties) {
-                            for (const [key, prop] of Object.entries(schema.properties)) {
-                                flatProperties[key] = {
-                                    type: prop.type || "string",
-                                    description: prop.description,
-                                    nullable: prop.nullable,
-                                    enum: prop.enum
-                                };
-
-                                // Handle Array Items
-                                if (prop.type === 'array') {
-                                    let items = prop.items;
-                                    
-                                    if (!items) {
-                                        // Fallback if spec is missing items
-                                        items = { type: "string" }; 
-                                    } else if (items.$ref) {
-                                        // Resolve Ref in Items
-                                        const refPath = items.$ref.replace('#/', '').split('/');
-                                        let resolved = spec;
-                                        for (const part of refPath) {
-                                            resolved = resolved && resolved[part];
-                                        }
-                                        if (resolved) items = resolved;
-                                    }
-                                    
-                                    // Sanitize Items: Remove boolean required, internal refs
-                                    const sanitizedItems = { type: items.type || "string" };
-                                    
-                                    // CRITICAL FIX: If items is ALSO an array (nested array), Gemini often chokes if spec is weird.
-                                    // Flatten nested arrays to 'object' to allow any structure and bypass validation errors.
-                                    if (sanitizedItems.type === 'array') {
-                                        sanitizedItems.type = 'object';
-                                        sanitizedItems.description = 'List of items (Nested structure)';
-                                        delete sanitizedItems.items; // Remove recursive requirement
-                                    } else if (items.properties) {
-                                         sanitizedItems.type = "object";
-                                    }
-                                    
-                                    if (items.enum) sanitizedItems.enum = items.enum;
-
-                                    flatProperties[key].items = sanitizedItems;
-                                }
-
-                                if (schema.required && Array.isArray(schema.required) && schema.required.includes(key)) {
-                                    requiredParams.push(key);
-                                }
+                        for (const [key, prop] of Object.entries(enrichedBody)) {
+                            flatProperties[key] = prop;
+                            if (prop.required) {
+                                requiredParams.push(key);
                             }
                         }
                     }
@@ -271,7 +214,7 @@ export async function getApiTools(api) {
                             auth: globalAuth,
                             profiles: profiles,
                             // Flag to tell executor to re-pack params? No, executor needs to handle flat params.
-                            flatParams: true 
+                            flatParams: true
                         }
                     });
                 }
@@ -287,7 +230,7 @@ export async function getApiTools(api) {
 /**
  * Executes an API Tool Call
  */
-export async function executeApiTool(toolExecConfig, args) {
+export async function executeApiTool(toolExecConfig, args, toolSchema = null) {
     const { method, path, baseUrl, profiles, flatParams } = toolExecConfig;
     let auth = toolExecConfig.auth;
 
@@ -297,19 +240,35 @@ export async function executeApiTool(toolExecConfig, args) {
 
     let url = baseUrl ? baseUrl.replace(/\/$/, '') + path : path;
 
+    // UNIVERSAL PARAMETER VALIDATION & TYPE COERCION
+    let validatedArgs = args;
+    if (toolSchema && toolSchema.inputSchema) {
+        try {
+            validatedArgs = validateAndCoerceParams(args, toolSchema.inputSchema);
+            console.log(`[API Exec] ✅ Parameters validated and coerced`);
+        } catch (error) {
+            console.error(`[API Exec] ❌ Parameter validation failed:`, error.message);
+            const aiErrorMsg = generateAIErrorMessage(error, toolSchema.inputSchema);
+            return {
+                content: [{ type: "text", text: aiErrorMsg }],
+                isError: true
+            };
+        }
+    }
+
     // Handle Params (Flat or Legacy)
     let params = {};
-    const dynamicHeaders = args._headers || {};
+    const dynamicHeaders = validatedArgs._headers || {};
 
     if (flatParams) {
         // Exclude internal keys
-        for (const [k, v] of Object.entries(args)) {
+        for (const [k, v] of Object.entries(validatedArgs)) {
             if (k !== '_authProfile' && k !== '_headers') {
                 params[k] = v;
             }
         }
     } else {
-        params = args.params || {};
+        params = validatedArgs.params || {};
     }
 
     let finalUrl = url;

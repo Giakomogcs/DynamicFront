@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import prisma from './registry.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -110,6 +111,38 @@ app.post('/api/tools/analyze-auth', async (req, res) => {
     }
 });
 
+// Get tools for a specific resource
+app.get('/api/resources/:type/:id/tools', async (req, res) => {
+    const { type, id } = req.params;
+    console.log(`[API] Get tools request: type=${type}, id=${id}`);
+
+    try {
+        // Get all tools from toolService
+        const allTools = await toolService.getAllTools();
+
+        // Filter tools for this specific resource
+        const resourceTools = allTools.filter(tool => {
+            const execInfo = toolService.executionMap.get(tool.name);
+
+            if (type === 'api') {
+                // Check if tool belongs to this API
+                return execInfo?.type === 'mcp' && tool.name.includes(`api_${id}`);
+            } else if (type === 'db') {
+                // Check if tool belongs to this DB
+                return execInfo?.type === 'mcp' && tool.name.includes(`db_${id}`);
+            }
+
+            return false;
+        });
+
+        console.log(`[API] Found ${resourceTools.length} tools for ${type} ${id}`);
+        res.json(resourceTools);
+    } catch (e) {
+        console.error(`[API] Get tools error:`, e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // 3. Resource Management (List/Delete)
 app.get('/api/resources', async (req, res) => {
     const resources = await toolService.getRegisteredResources();
@@ -134,6 +167,54 @@ app.put('/api/resources/:type/:id', async (req, res) => {
         await toolService.getAllTools(); // Refresh cache
         res.json(result);
     } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.patch('/api/resources/:type/:id/toggle', async (req, res) => {
+    const { type, id } = req.params;
+    console.log(`[API] Toggle request: type=${type}, id=${id}`);
+
+    try {
+        let resource;
+        if (type === 'api') {
+            const current = await prisma.verifiedApi.findUnique({ where: { idString: id } });
+            if (!current) {
+                console.error(`[API] API resource not found: ${id}`);
+                return res.status(404).json({ error: "Resource not found" });
+            }
+
+            resource = await prisma.verifiedApi.update({
+                where: { idString: id },
+                data: { isEnabled: !current.isEnabled }
+            });
+            console.log(`[API] Toggled API '${resource.name}' to ${resource.isEnabled}`);
+        } else if (type === 'db') {
+            const current = await prisma.verifiedDb.findUnique({ where: { idString: id } });
+            if (!current) {
+                console.error(`[API] DB resource not found: ${id}`);
+                return res.status(404).json({ error: "Resource not found" });
+            }
+
+            resource = await prisma.verifiedDb.update({
+                where: { idString: id },
+                data: { isEnabled: !current.isEnabled }
+            });
+            console.log(`[API] Toggled DB '${resource.name}' to ${resource.isEnabled}`);
+        } else {
+            console.error(`[API] Invalid resource type: ${type}`);
+            return res.status(400).json({ error: "Invalid resource type" });
+        }
+
+        // Reload MCP Client to reflect changes
+        console.log(`[API] Reloading MCP Client...`);
+        const { mcpClientService } = await import('./services/mcpClientService.js');
+        await mcpClientService.reload();
+        console.log(`[API] MCP Client reloaded successfully`);
+
+        res.json(resource);
+    } catch (e) {
+        console.error(`[API] Toggle error:`, e);
         res.status(500).json({ error: e.message });
     }
 });

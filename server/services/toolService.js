@@ -1,7 +1,6 @@
 import prisma from '../registry.js';
 import { registerTools, handleRegisterTool, processApiRegistration } from '../handlers/register.js';
-import { getApiTools, executeApiTool } from '../handlers/api.js';
-import { getDbTools, executeDbTool } from '../handlers/db.js';
+import { mcpClientService } from './mcpClientService.js';
 
 export class ToolService {
     constructor() {
@@ -23,36 +22,17 @@ export class ToolService {
             this.executionMap.set(t.name, { type: 'static', handler: handleRegisterTool });
         });
 
-        // 2. Dynamic API Tools
+        // 1.5 MCP Client Tools (Filesystem, DBs, APIs - ALL via MCP now)
         try {
-            const apis = await prisma.verifiedApi.findMany();
-            for (const api of apis) {
-                const apiTools = await getApiTools(api);
-                apiTools.forEach(t => {
-                    const { _exec, ...clean } = t;
-                    // _exec contains { type: 'api', apiId, ... }
-                    this.executionMap.set(t.name, { type: 'api', config: _exec });
-                    tools.push(clean);
-                });
-            }
+            await mcpClientService.initialize();
+            const mcpTools = mcpClientService.getAllTools();
+            mcpTools.forEach(t => {
+                const { _exec, ...clean } = t;
+                this.executionMap.set(t.name, { type: 'mcp', config: _exec });
+                tools.push(clean);
+            });
         } catch (e) {
-            console.error("[ToolService] Error fetching APIs:", e.message);
-        }
-
-        // 3. Dynamic DB Tools
-        try {
-            const dbs = await prisma.verifiedDb.findMany();
-            for (const db of dbs) {
-                const dbTools = getDbTools(db);
-                dbTools.forEach(t => {
-                    const { _exec, ...clean } = t;
-                    // _exec contains { type: 'db', connectionString, ... }
-                    this.executionMap.set(t.name, { type: 'db', config: _exec });
-                    tools.push(clean);
-                });
-            }
-        } catch (e) {
-            console.error("[ToolService] Error fetching DBs (Check connection):", e.message);
+            console.error("[ToolService] Error fetching MCP Tools:", e);
         }
 
         return tools;
@@ -76,10 +56,8 @@ export class ToolService {
         try {
             if (execInfo.type === 'static') {
                 return await execInfo.handler(name, args);
-            } else if (execInfo.type === 'api') {
-                return await executeApiTool(execInfo.config, args);
-            } else if (execInfo.type === 'db') {
-                return await executeDbTool(execInfo.config, args);
+            } else if (execInfo.type === 'mcp') {
+                return await mcpClientService.executeTool(execInfo.config.serverName, execInfo.config.originalName, args);
             }
         } catch (error) {
             return { isError: true, content: [{ type: "text", text: `Execution Error: ${error.message}` }] };

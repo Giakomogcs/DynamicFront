@@ -15,7 +15,7 @@ export class DesignerAgent {
 
         // If no data check
         if ((!data || data.length === 0) && (!steps || steps.length === 0)) {
-             return { text: summaryText, widgets: [] };
+            return { text: summaryText, widgets: [] };
         }
 
         const serializedData = JSON.stringify(data);
@@ -34,19 +34,38 @@ Input Data: ${safeData}
 Execution Strategy (Steps): ${JSON.stringify(steps)}
 
 WIDGET TYPES (Use these to tell a STORY):
-1. stat (KPIs): { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%", "icon": "trending_up" }] }
-2. chart: { "type": "chart", "config": { "chartType": "bar|line|pie|area", "title": "Meaningful Title", "description": "What this chart shows" }, "data": [...] }
-3. table: { "type": "table", "title": "Detailed Data", "data": [...] }
-4. insight: { "type": "insight", "title": "Analysis / Status", "content": ["Bullet point 1", "Bullet point 2"], "sentiment": "neutral|warning|success" }
-5. process: { "type": "process", "title": "Execution Pipeline", "steps": [{ "name": "Step 1", "status": "completed", "description": "..." }] }
+1. **process**: { "type": "process", "title": "Execution Pipeline", "steps": [{ "name": "Step 1", "status": "completed", "description": "..." }] }
+   - ALWAYS start with this to show *how* you got the data. Reflect the "Execution Strategy".
+2. **stat**: { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%", "icon": "trending_up" }] }
+   - Use for Key Performance Indicators or simple counts (e.g., "Total Schools Found").
+3. **chart**: { "type": "chart", "config": { "chartType": "bar|line|pie|area", "title": "Meaningful Title", "description": "What this chart shows" }, "data": [...] }
+   - Use 'bar' for comparisons (e.g. Courses per Branch).
+   - Use 'pie' for distribution (e.g. Schools by City).
+4. **table**: { "type": "table", "title": "Detailed Data", "data": [...] }
+   - Use for granular listings.
+5. **insight**: { "type": "insight", "title": "Analysis / Status", "content": ["Bullet point 1", "Bullet point 2"], "sentiment": "neutral|warning|success" }
+   - Use to summarize findings, give warnings (e.g. "No schools found in X"), or provide recommendations.
 
 INSTRUCTIONS:
 - Return ONLY the JSON array inside \`\`\`json\`\`\` code blocks.
-- **Visual Storytelling**: Start with a 'process' widget if the task was multi-step. Show how you got the data.
+- **Visual Storytelling**: The widgets should flow logically: Process -> Stats -> Charts -> Details.
 - **Contextualize**: Don't just show numbers. Use Titles and Descriptions.
 - **Analysis**: If the user asked for "most repeated" or "top", calculate it from the raw list (e.g. Top 5 Bar Chart).
 - **Empty/Error State**: If data is missing/error, use an "insight" widget to explain why (e.g. "Try removing accents") AND a "process" widget showing where it failed.
 - **Completeness**: Aim for at least 3 widgets: Process, Insight, and Data (Table/Chart).
+
+CRITICAL DATA FORMATTING RULES:
+1. **Chart Data Structure**: EVERY chart data item MUST have exactly these keys: { "name": "Label", "value": 123 }
+   - ❌ WRONG: { "city": "São Paulo", "count": 5 }
+   - ✅ CORRECT: { "name": "São Paulo", "value": 5 }
+2. **Table Data Completeness**: Include ALL rows from the input data. DO NOT truncate or sample.
+   - If input has 18 items, table MUST show all 18 items.
+   - Only limit if explicitly asked (e.g., "top 5").
+3. **Data Transformation**: Extract and transform raw API responses into clean, user-friendly formats.
+   - Remove internal IDs, technical fields, null values.
+   - Format dates, numbers, and text for readability.
+4. **Multi-Tool Results**: If multiple tools were called, create separate widgets for each result set.
+   - Example: One table for "SENAI Units", another table for "Courses".
 `;
 
         try {

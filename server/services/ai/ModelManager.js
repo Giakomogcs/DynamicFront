@@ -113,7 +113,7 @@ class ModelManager {
             return await this.executeWithRetry(provider, targetModel, input, config);
         } catch (primaryError) {
             console.warn(`[ModelManager] Primary execution failed for ${targetModel}. Error: ${primaryError.message}`);
-            
+
             // Check if 429 using robust check
             if (this.isRateLimitOrQuota(primaryError)) {
                 console.warn(`[ModelManager] ⚠️ ${targetModel} hit Rate Limit/Quota. Initiating Failover...`);
@@ -134,7 +134,7 @@ class ModelManager {
                     }
                 }
             } else {
-                 console.warn("[ModelManager] Error was not identified as Rate Limit/Quota. Rethrowing.");
+                console.warn("[ModelManager] Error was not identified as Rate Limit/Quota. Rethrowing.");
             }
             throw primaryError;
         }
@@ -167,15 +167,20 @@ class ModelManager {
         try {
             const msg = (error.message || JSON.stringify(error) || "").toLowerCase();
             const status = error.status || error.statusCode || 0;
-            
+
             // Check for 429 in various forms including Google's specific errors
+            // ALSO check for Network/Connection errors (fetch failed) to trigger failover
             return status === 429 ||
                 msg.includes("429") ||
                 msg.includes("quota") ||
                 msg.includes("too many requests") ||
                 msg.includes("rate limit") ||
                 msg.includes("resource_exhausted") ||
-                msg.includes("insufficient_quota"); // OpenAI usage limit
+                msg.includes("insufficient_quota") || // OpenAI usage limit
+                msg.includes("fetch failed") ||        // Node/Undici network error
+                msg.includes("econnrefused") ||        // Connection refused
+                msg.includes("etimedout") ||           // Timeout
+                msg.includes("network error");         // Generic
         } catch (e) {
             return false;
         }
@@ -188,6 +193,7 @@ class ModelManager {
 
         // Let's return a "UniversalResponse" object that has getters to match Gemini behavior for backward compat
         return {
+            usedModel: model,
             response: {
                 text: () => result.text,
                 functionCalls: () => result.toolCalls || []
