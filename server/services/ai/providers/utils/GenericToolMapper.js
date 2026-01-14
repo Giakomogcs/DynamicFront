@@ -1,4 +1,3 @@
-
 /**
  * Sanitizes JSON Schema for OpenAI/Anthropic compatibility.
  * Recursively lowercases types and removes unsupported fields.
@@ -27,33 +26,29 @@ function sanitizeSchema(schema) {
 }
 
 /**
- * Converts Gemini/Google AI Tool format to OpenAI/Groq Tool format.
+ * Converts Standard AI Model Tool format to OpenAI/Groq Tool format.
  */
-export function convertGeminiToolsToOpenAI(geminiTools) {
-    if (!geminiTools || !Array.isArray(geminiTools)) return [];
+export function convertStandardToolsToOpenAI(standardTools) {
+    if (!standardTools || !Array.isArray(standardTools)) return [];
 
     const openAITools = [];
 
-    for (const toolGroup of geminiTools) {
-        if (toolGroup.functionDeclarations) {
-            for (const func of toolGroup.functionDeclarations) {
-                openAITools.push({
-                    type: "function",
-                    function: {
-                        name: func.name,
-                        description: func.description,
-                        parameters: sanitizeSchema(func.parameters || { type: "object", properties: {} })
-                    }
-                });
+    for (const tool of standardTools) {
+        openAITools.push({
+            type: "function",
+            function: {
+                name: tool.name,
+                description: (tool.description || "").substring(0, 1024), // Truncate to avoid context limit / safety triggers
+                parameters: sanitizeSchema(tool.parameters || { type: "object", properties: {} })
             }
-        }
+        });
     }
 
     return openAITools;
 }
 
 /**
- * Converts OpenAI/Groq Tool Calls to Gemini/Google AI Function Call format.
+ * Converts OpenAI/Groq Tool Calls to Standard Function Call format.
  * 
  * OpenAI Format:
  * [
@@ -64,7 +59,7 @@ export function convertGeminiToolsToOpenAI(geminiTools) {
  *   }
  * ]
  * 
- * Gemini Format:
+ * Standard Format:
  * [
  *   {
  *     name: "func_name",
@@ -72,17 +67,18 @@ export function convertGeminiToolsToOpenAI(geminiTools) {
  *   }
  * ]
  */
-export function convertOpenAIToolsToGemini(openAIToolCalls) {
+export function convertOpenAIToolsToStandard(openAIToolCalls) {
     if (!openAIToolCalls || !Array.isArray(openAIToolCalls)) return [];
 
     return openAIToolCalls.map(call => {
         try {
             return {
+                id: call.id, // Preserve ID if available for history patching
                 name: call.function.name,
                 args: JSON.parse(call.function.arguments || "{}")
             };
         } catch (e) {
-            console.error(`[ToolMapper] Failed to parse arguments for tool ${call.function?.name}:`, e);
+            console.error(`[GenericToolMapper] Failed to parse arguments for tool ${call.function?.name}:`, e);
             return {
                 name: call.function?.name || "unknown",
                 args: {}
@@ -92,31 +88,27 @@ export function convertOpenAIToolsToGemini(openAIToolCalls) {
 }
 
 /**
- * Converts Gemini Tools to Anthropic Format (Claude 3).
+ * Converts Standard Tools to Anthropic Format (Claude 3).
  */
-export function convertGeminiToolsToAnthropic(geminiTools) {
-    if (!geminiTools || !Array.isArray(geminiTools)) return [];
+export function convertStandardToolsToAnthropic(standardTools) {
+    if (!standardTools || !Array.isArray(standardTools)) return [];
 
     const anthropicTools = [];
-    for (const toolGroup of geminiTools) {
-        if (toolGroup.functionDeclarations) {
-            for (const func of toolGroup.functionDeclarations) {
-                anthropicTools.push({
-                    name: func.name,
-                    description: func.description,
-                    input_schema: sanitizeSchema(func.parameters || { type: "object", properties: {} })
-                });
-            }
-        }
+    for (const tool of standardTools) {
+        anthropicTools.push({
+            name: tool.name,
+            description: tool.description,
+            input_schema: sanitizeSchema(tool.parameters || { type: "object", properties: {} })
+        });
     }
     return anthropicTools;
 }
 
 /**
- * Converts Anthropic Tool Use Response to Gemini Function Call format.
- * Anthropic Content Array -> Gemini Function Calls
+ * Converts Anthropic Tool Use Response to Standard Function Call format.
+ * Anthropic Content Array -> Standard Function Calls
  */
-export function convertAnthropicToolsToGemini(anthropicContent) {
+export function convertAnthropicToolsToStandard(anthropicContent) {
     if (!anthropicContent || !Array.isArray(anthropicContent)) return [];
 
     return anthropicContent

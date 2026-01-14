@@ -1,4 +1,4 @@
-import { geminiManager } from '../config/gemini.js';
+import { modelManager } from '../services/ai/ModelManager.js';
 
 /**
  * Fetches content from a URL (helper copied from api_generator to avoid circular deps for now)
@@ -220,7 +220,7 @@ export async function analyzeAuthFromDocs(docsUrl, docsContent, docsAuth = null)
     `;
 
     try {
-        const result = await geminiManager.generateContentWithFailover(prompt);
+        const result = await modelManager.generateContentWithFailover(prompt);
         const responseText = await result.response.text();
 
         // Clean and Parse JSON

@@ -1,5 +1,5 @@
 import { toolService } from '../services/toolService.js';
-import { mapMcpToolsToGemini } from '../gemini_adapter.js';
+import { mapMcpToolsToAiModels } from '../ToolAdapter.js';
 
 // Agents
 import { plannerAgent } from './Planner.js';
@@ -18,7 +18,7 @@ export class AgentOrchestrator {
         // 1. Fetch All Tools
         console.log("[Orchestrator] Step 1: Fetching available tools...");
         const allMcpTools = await toolService.getAllTools();
-        const allGeminiTools = mapMcpToolsToGemini(allMcpTools);
+        const allCompatibleTools = mapMcpToolsToAiModels(allMcpTools);
         console.log(`[Orchestrator] Found ${allMcpTools.length} total tools.`);
 
         // 2. PLAN
@@ -41,13 +41,13 @@ export class AgentOrchestrator {
 
         for (const name of selectedToolNames) {
             // 1. Exact Match
-            let match = allGeminiTools.find(t => t.name === name);
+            let match = allCompatibleTools.find(t => t.name === name);
 
             // 2. Fuzzy Match (if exact not found)
             if (!match) {
                 // Try to find by partial inclusion (ignoring case) or edit distance logic (simple version here)
                 const lowerName = name.toLowerCase();
-                match = allGeminiTools.find(t => {
+                match = allCompatibleTools.find(t => {
                     const tLower = t.name.toLowerCase();
                     // Check for significant overlap (e.g. 80% similarity or containment of core part)
                     // Heuristic: If one is substring of another and length diff is small
@@ -81,13 +81,14 @@ export class AgentOrchestrator {
             }
         }
 
-        // FALLBACK: If we still have NO tools and Planner asked for something, UNLEASH THE BEAST
-        if (activeTools.length === 0 && allGeminiTools.length > 0) {
-            console.warn(`[Orchestrator] ⚠️ Planner selected tools [${missingTools.join(', ')}] which were NOT found. Falling back to ALL ${allGeminiTools.length} tools.`);
+        // FALLBACK: Only fallback to ALL tools if the planner tried to select tools but we couldn't find ANY of them.
+        // If the planner returned an empty list intentionally, we respect that and send NO tools (preventing token overflow).
+        if (activeTools.length === 0 && selectedToolNames.length > 0 && allCompatibleTools.length > 0) {
+            console.warn(`[Orchestrator] ⚠️ Planner selected tools [${missingTools.join(', ')}] which were NOT found. Falling back to ALL ${allCompatibleTools.length} tools.`);
 
             // Safety: If we have > 100 tools, maybe we should be careful? 
             // For now, Gemini 1.5/2.0 context is huge, so we just pass them all.
-            activeTools = allGeminiTools;
+            activeTools = allCompatibleTools;
         }
 
         // 3. EXECUTE

@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import { convertStandardToolsToOpenAI, convertOpenAIToolsToStandard } from './utils/GenericToolMapper.js';
 
 export class CopilotProvider {
     constructor(config) {
@@ -20,15 +21,16 @@ export class CopilotProvider {
             });
 
             if (Array.isArray(res.data)) {
-                return res.data.map(m => ({
-                    // Model names from GitHub are often like "gpt-4", "mistral-large"
-                    // We prefix them to avoid collison or just use them as is if unique enough
-                    // But ModelManager uses prefix in detection map.
-                    name: `copilot/${m.name || m.id}`,
-                    displayName: `(Copilot) ${m.name || m.id}`,
-                    provider: 'copilot',
-                    description: m.description || "GitHub Copilot Model"
-                }));
+                return res.data.map(m => {
+                    // Use the id as the source of truth, fall back to name
+                    const modelId = m.id || m.name;
+                    return {
+                        name: `copilot/${modelId}`,
+                        displayName: `(Copilot) ${m.name || modelId}`,
+                        provider: 'copilot',
+                        description: m.description || "GitHub Copilot Model"
+                    };
+                });
             }
             return [];
         } catch (e) {
@@ -41,7 +43,11 @@ export class CopilotProvider {
         // Input: "User message"
         // Config: { model: 'copilot/gpt-4', history: [...], ... }
 
-        let modelName = config.model.replace('copilot/', ''); // Remove prefix
+        // Remove prefix, but handle cases where model name might contain slashes naturally if needed (though unlikely for copilot catalog)
+        let modelName = config.model;
+        if (modelName.startsWith('copilot/')) {
+            modelName = modelName.replace('copilot/', '');
+        }
 
         // Prepare messages
         const messages = [];
@@ -54,24 +60,55 @@ export class CopilotProvider {
             config.history.forEach(h => {
                 const role = h.role === 'model' ? 'assistant' : 'user';
                 // Copilot (OpenAI format) expects string content usually
-                messages.push({ role, content: h.parts[0].text });
+                messages.push({ role, content: h.parts ? h.parts[0].text : (h.content || "") });
             });
         }
 
         // Add current user message
-        messages.push({ role: 'user', content: input });
+        // Add current user message
+        if (typeof input === 'string') {
+            messages.push({ role: 'user', content: input });
+        } else if (Array.isArray(input)) {
+             // 2024-05-23: FIX for Copilot/OpenAI "Missing required parameter: 'messages[1].content[0].type'."
+             // If input is an array (e.g. from Executor or multimodal context), we must map it to OpenAI Content Parts.
+             const contentParts = input.map(part => {
+                 // If the part is already a string, wrap it
+                 if (typeof part === 'string') return { type: 'text', text: part };
+                 
+                 // If it's an object with 'text', ensure it has 'type: text'
+                 if (part.text && !part.type) return { type: 'text', text: part.text };
+
+                 // Using standard 'image_url' or other valid types if present
+                 if (part.type) return part;
+
+                 // Fallback: stringify unknown objects
+                 return { type: 'text', text: JSON.stringify(part) };
+             });
+             messages.push({ role: 'user', content: contentParts });
+        }
+
+        const body = {
+            messages: messages,
+            model: modelName,
+            stream: false,
+            temperature: config.temperature || 0.7,
+            max_tokens: config.maxOutputTokens || 4096
+        };
+
+        // Tool Support
+        if (config.tools && config.tools.length > 0) {
+            const openAITools = convertStandardToolsToOpenAI(config.tools);
+            if (openAITools.length > 0) {
+                body.tools = openAITools;
+                body.tool_choice = "auto";
+            }
+        }
 
         try {
             console.log(`[CopilotProvider] Calling model ${modelName}...`);
             const res = await axios.post(
                 this.url,
-                {
-                    messages: messages,
-                    model: modelName,
-                    stream: false,
-                    temperature: config.temperature || 0.7,
-                    max_tokens: config.maxOutputTokens || 4096
-                },
+                body,
                 {
                     headers: {
                         "Authorization": `Bearer ${this.apiKey}`,
@@ -83,10 +120,10 @@ export class CopilotProvider {
             );
 
             if (res.data && res.data.choices && res.data.choices.length > 0) {
-                const message = res.data.choices[0].message;
+                const choice = res.data.choices[0];
                 return {
-                    text: message.content,
-                    toolCalls: [] // Copilot tool calling support? For now assume none or basic text
+                    text: choice.message.content,
+                    toolCalls: convertOpenAIToolsToStandard(choice.message.tool_calls) // Standardize
                 };
             }
 

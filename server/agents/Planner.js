@@ -1,4 +1,4 @@
-import { geminiManager } from '../config/gemini.js';
+import { modelManager } from '../services/ai/ModelManager.js';
 import fs from 'fs';
 
 export class PlannerAgent {
@@ -113,7 +113,7 @@ INSTRUCTIONS:
             // Use Queue with Failover
             const finalPrompt = `SYSTEM: You are the PLANNER Agent. You MUST return valid JSON only. Do not wrap in markdown blocks.\n${planningPrompt}`;
 
-            const result = await geminiManager.generateContentWithFailover(finalPrompt, {
+            const result = await modelManager.generateContentWithFailover(finalPrompt, {
                 model: modelName,
                 jsonMode: true // Critical for Llama 3 / Groq fallback
             });

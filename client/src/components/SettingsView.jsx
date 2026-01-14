@@ -23,6 +23,10 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
     const [availableModels, setAvailableModels] = useState([]);
     const [enabledModels, setEnabledModels] = useState([]);
     const [userSettings, setUserSettings] = useState({});
+    const [generalSettings, setGeneralSettings] = useState({
+        FAILOVER_ENABLED: true
+    });
+    const [providerSettings, setProviderSettings] = useState({});
 
     // UI State for "Show More"
     const [expandedProviders, setExpandedProviders] = useState({});
@@ -60,6 +64,17 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
             const settingsRes = await fetch('http://localhost:3000/api/settings');
             const settings = await settingsRes.json();
             setUserSettings(settings);
+
+            setGeneralSettings({
+                FAILOVER_ENABLED: settings.FAILOVER_ENABLED !== false // Default true
+            });
+            
+            // Extract provider enabled states
+            const provSettings = {};
+            ['gemini', 'groq', 'openai', 'anthropic', 'xai', 'copilot', 'lmstudio', 'ollama'].forEach(p => {
+                provSettings[p] = settings[`PROVIDER_ENABLED_${p.toUpperCase()}`] !== false; // Default true
+            });
+            setProviderSettings(provSettings);
 
             // Load Enabled Models
             if (settings.enabledModels && settings.enabledModels.length > 0) {
@@ -138,6 +153,14 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
         setApiKeys(prev => ({ ...prev, [provider]: value }));
     };
 
+    const handleProviderToggle = (providerId, isEnabled) => {
+        setProviderSettings(prev => ({ ...prev, [providerId]: isEnabled }));
+    };
+
+    const handleGeneralChange = (key, value) => {
+        setGeneralSettings(prev => ({ ...prev, [key]: value }));
+    };
+
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -147,6 +170,24 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key: 'enabledModels', value: enabledModels })
             });
+
+            // Save General Settings
+            for (const [key, val] of Object.entries(generalSettings)) {
+                await fetch('http://localhost:3000/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, value: val })
+                });
+            }
+
+            // Save Provider Enable States
+            for (const [id, isEnabled] of Object.entries(providerSettings)) {
+                await fetch('http://localhost:3000/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: `PROVIDER_ENABLED_${id.toUpperCase()}`, value: isEnabled })
+                });
+            }
 
             // Save API Keys
             for (const [key, val] of Object.entries(apiKeys)) {
@@ -323,6 +364,7 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
     if (loading) return <div className="flex h-full items-center justify-center text-slate-500"><Loader2 className="animate-spin mr-2" /> Loading settings...</div>;
 
     const tabs = [
+        { id: 'general', label: 'General', icon: Settings },
         { id: 'keys', label: 'Providers', icon: Key },
         { id: 'models', label: 'Models', icon: Cpu },
     ];
@@ -374,6 +416,21 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
             {/* CONTENT AREA */}
             <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
 
+                {/* GENERAL TAB */}
+                {activeTab === 'general' && (
+                    <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="space-y-4">
+                             <h3 className="text-lg font-semibold text-white">System Preferences</h3>
+                             <Toggle 
+                                label="Automatic Model Failover"
+                                description="If a model fails or hits a rate limit, automatically try other configured providers."
+                                check={generalSettings.FAILOVER_ENABLED}
+                                onChange={(val) => handleGeneralChange('FAILOVER_ENABLED', val)}
+                             />
+                        </div>
+                    </div>
+                )}
+
                 {/* KEYS TAB */}
                 {activeTab === 'keys' && (
                     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2">
@@ -385,14 +442,17 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     <div className="p-1.5 bg-slate-800 rounded-lg text-white"><Settings className="size-4" /></div>
                                     <span className="font-medium text-white">GitHub Copilot</span>
                                 </div>
-                                {copilotStatus === 'connected' ? (
-                                    <div className="flex items-center gap-2">
-                                        <span className="px-2 py-0.5 bg-green-500/10 text-green-400 text-xs rounded-full border border-green-500/20 flex items-center gap-1">
-                                            <div className="size-1.5 rounded-full bg-green-500" />
-                                            {copilotUser || 'Connected'}
-                                        </span>
-                                    </div>
-                                ) : <span className="text-xs text-slate-500">Not Connected</span>}
+                                <div className="flex items-center gap-2">
+                                     {copilotStatus === 'connected' && (
+                                        <div 
+                                            onClick={() => handleProviderToggle('copilot', !providerSettings.copilot)}
+                                            className={`cursor-pointer px-2 py-0.5 text-xs rounded-full border flex items-center gap-1 opacity-80 hover:opacity-100 ${providerSettings.copilot !== false ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-slate-700 text-slate-400'}`}
+                                        >
+                                            <div className={`size-1.5 rounded-full ${providerSettings.copilot !== false ? 'bg-green-500' : 'bg-slate-500'}`} />
+                                            {providerSettings.copilot !== false ? 'Active' : 'Disabled'}
+                                        </div>
+                                     )}
+                                </div>
                             </div>
 
                             <div className="p-6 space-y-4">
@@ -400,8 +460,10 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
 
                                 {copilotStatus === 'connected' ? (
                                     <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-lg border border-slate-800">
-                                        <span className="text-sm text-slate-300">Account linked successfully.</span>
-                                        <button onClick={disconnectCopilot} className="text-xs text-red-400 hover:bg-red-500/10 px-2 py-1 rounded transition-colors">Disconnect</button>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-slate-300">Logged in as <strong>{copilotUser}</strong></span>
+                                        </div>
+                                        <button onClick={disconnectCopilot} className="text-xs text-red-400 hover:bg-red-500/10 px-2 py-1 rounded transition-colors">Disconnect Account</button>
                                     </div>
                                 ) : (
                                     <>
@@ -442,12 +504,16 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     value={apiKeys.GEMINI_API_KEY}
                                     onChange={(v) => handleKeyChange('GEMINI_API_KEY', v)}
                                     placeholder="AIzaSy..."
+                                    isEnabled={providerSettings.gemini}
+                                    onToggle={(v) => handleProviderToggle('gemini', v)}
                                 />
                                 <ApiKeyInput
                                     label="OpenAI"
                                     value={apiKeys.OPENAI_API_KEY}
                                     onChange={(v) => handleKeyChange('OPENAI_API_KEY', v)}
                                     placeholder="sk-..."
+                                    isEnabled={providerSettings.openai}
+                                    onToggle={(v) => handleProviderToggle('openai', v)}
                                 />
                                 <ApiKeyInput
                                     label="Groq"
@@ -455,18 +521,24 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     onChange={(v) => handleKeyChange('GROQ_API_KEY', v)}
                                     desc="Required for Llama 3 & Mixtral (Fast)"
                                     placeholder="gsk_..."
+                                    isEnabled={providerSettings.groq}
+                                    onToggle={(v) => handleProviderToggle('groq', v)}
                                 />
                                 <ApiKeyInput
                                     label="Anthropic"
                                     value={apiKeys.ANTHROPIC_API_KEY}
                                     onChange={(v) => handleKeyChange('ANTHROPIC_API_KEY', v)}
                                     placeholder="sk-ant-..."
+                                    isEnabled={providerSettings.anthropic}
+                                    onToggle={(v) => handleProviderToggle('anthropic', v)}
                                 />
                                 <ApiKeyInput
                                     label="xAI (Grok)"
                                     value={apiKeys.XAI_API_KEY}
                                     onChange={(v) => handleKeyChange('XAI_API_KEY', v)}
                                     placeholder="key..."
+                                    isEnabled={providerSettings.xai}
+                                    onToggle={(v) => handleProviderToggle('xai', v)}
                                 />
                             </div>
                         </div>
@@ -483,6 +555,8 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     placeholder="http://localhost:1234/v1"
                                     type="text"
                                     desc="Requires CORS enabled in LM Studio."
+                                    isEnabled={providerSettings.lmstudio}
+                                    onToggle={(v) => handleProviderToggle('lmstudio', v)}
                                 />
                                 <ApiKeyInput
                                     label="Ollama URL"
@@ -490,6 +564,8 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     onChange={(v) => handleKeyChange('OLLAMA_URL', v)}
                                     placeholder="http://localhost:11434/v1"
                                     type="text"
+                                    isEnabled={providerSettings.ollama}
+                                    onToggle={(v) => handleProviderToggle('ollama', v)}
                                 />
                             </div>
                         </div>
@@ -625,26 +701,20 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
 };
 
 
-const ApiKeyInput = ({ label, value, onChange, placeholder, type = 'password', desc }) => (
-    <div className="space-y-1.5 group">
-        <div className="flex justify-between">
-            <label className="text-xs font-medium text-slate-400 group-focus-within:text-indigo-400 transition-colors">{label}</label>
+const Toggle = ({ check, onChange, label, description }) => (
+    <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-lg">
+        <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium text-slate-200">{label}</span>
+            {description && <span className="text-[10px] text-slate-500">{description}</span>}
         </div>
-        <div className="relative">
-            <input
-                type={type}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={placeholder}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-700 hover:border-slate-700"
+        <button
+            onClick={() => onChange(!check)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${check ? 'bg-indigo-600' : 'bg-slate-700'}`}
+        >
+            <span
+                className={`${check ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
             />
-            {value && value.length > 5 && (
-                <div className="absolute right-2.5 top-2.5">
-                    <div className="size-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
-                </div>
-            )}
-        </div>
-        {desc && <p className="text-[10px] text-slate-600">{desc}</p>}
+        </button>
     </div>
 );
 
@@ -655,4 +725,39 @@ const Cloud = ({ className }) => (
         <circle cx="12" cy="10" r="3" />
         <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z" opacity="0.0" />
     </svg>
+);
+
+const ApiKeyInput = ({ label, value, onChange, placeholder, type = 'password', desc, onToggle, isEnabled }) => (
+    <div className="space-y-1.5 group">
+        <div className="flex justify-between items-center">
+            <label className="text-xs font-medium text-slate-400 group-focus-within:text-indigo-400 transition-colors flex items-center gap-2">
+                {label}
+                {onToggle && (
+                    <span 
+                        onClick={() => onToggle(!isEnabled)}
+                        className={`text-[9px] px-1.5 py-0.5 rounded cursor-pointer border transition-colors ${isEnabled 
+                            ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20' 
+                            : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'}`}
+                    >
+                        {isEnabled ? 'ENABLED' : 'DISABLED'}
+                    </span>
+                )}
+            </label>
+        </div>
+        <div className={`relative ${!isEnabled && onToggle ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+            <input
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-700 hover:border-slate-700"
+            />
+            {value && value.length > 5 && isEnabled !== false && (
+                <div className="absolute right-2.5 top-2.5">
+                    <div className="size-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
+                </div>
+            )}
+        </div>
+        {desc && <p className="text-[10px] text-slate-600">{desc}</p>}
+    </div>
 );

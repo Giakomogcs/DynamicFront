@@ -1,6 +1,6 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 import { toolService } from '../services/toolService.js';
-import { getOriginalToolName } from '../gemini_adapter.js';
+import { getOriginalToolName } from '../ToolAdapter.js';
 import fs from 'fs';
 
 export class ExecutorAgent {
@@ -24,50 +24,21 @@ export class ExecutorAgent {
         if (planContext) {
             finalUserMessage += `\n\n${planContext}`;
         }
-        if (tools && tools.length > 0) {
-            finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available. You are in FUNCTION CALLING MODE. Follow the [PLANNED STEPS] above strictly. ANALYZE the user's request, DECOMPOSE complex queries, and INVOKE the necessary tools. Use PARALLEL tool calls where appropriate.]`;
-        }
+        // REMOVED SAFEGUARDS: Do not inject "SYSTEM INSTRUCTION" into User Message to avoid Azure Content Filter "Jailbreak" detection.
+        // if (tools && tools.length > 0) {
+        //     finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available...]`;
+        // }
         messages.push({ role: 'user', content: finalUserMessage });
 
         const safeToolNames = tools.map(t => t.name).join(', ');
-        const systemInstruction = `You are the EXECUTOR Agent. 
-            Goal: Answer the user's question using the provided tools.
-            AVAILABLE TOOLS: [${safeToolNames}]
+        const systemInstruction = `You are a helpful assistant.
+            Your goal is to answer the user's question using the provided tools.
+            TOOLS: [${safeToolNames}]
             
-            CRITICAL WORKFLOW:
-            1. **Analyze Capabilities**: Use ONLY the tools listed above.
-            2. **Exploration**: If you are unsure where the data is, use 'inspect_schema' or equivalent tools to find the right resource.
-            3. **Execution**: Run the query or API call.
-            
-            CRITICAL SQL RULES:
-            1. **Filter Early**: ALWAYS use 'WHERE' clauses to filter data.
-            2. **Robustness**: When filtering text columns (e.g. names, cities), ALWAYS use 'ILIKE' (Postgres) or equivalent for case-insensitive matching.
-            3. **Fuzzy Matching**: If unsure of exact spelling, use wildcard '%' (e.g. WHERE city ILIKE '%paulo%').
-            
-            CRITICAL: DATA FORMATTING & ROBUSTNESS:
-            1. **Strict Types**: If a tool asks for an Integer, do NOT send a String.
-            2. **Read Descriptions**: Pay extreme attention to tool descriptions.
-            3. **Normalize Input**: Try variations (e.g. "Sao Paulo", "SAO PAULO") if needed.
-            4. **Retry Logic**: If a tool fails with formatting error, RETRY immediately.
-
-            General Rules:
-            1. Call MULTIPLE tools in PARALLEL whenever possible.
-            2. If you need schema for multiple tables, call inspect_schema for all of them at once.
-            3. If you have data, return a purely factual summary. 
-            4. Do NOT try to build complex UI widgets here. Focus on the DATA.
-            5. **IMPORTANT**: If tools are provided, you MUST use them.
-            6. **API vs Database**: NEVER hallucinate SQL queries.
-            7. **Tool Usage**: Generate a native Function Call object.
-            
-            **CRITICAL INSTRUCTION FOR LLAMA 3 / GROQ:**
-            If you cannot generate a native JSON Function Call, you MUST use this specific XML format:
-            <function=tool_name>{"argument_name": "value"}</function>
-            
-            **FORBIDDEN:**
-            - DO NOT write Python code.
-            - DO NOT write "Here is how you would do it".
-            - DO NOT output a tutorial.
-            - JUST CALL THE FUNCTION.
+            Instructions:
+            1. Use the provided tools to answer the request.
+            2. Return a Function Call object to invoke a tool.
+            3. Answer factually based on tool results.
         `;
 
         let gatheredData = [];

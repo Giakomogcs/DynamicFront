@@ -21,7 +21,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Initialize Gemini
-import { geminiManager } from './config/gemini.js';
+import { modelManager } from './services/ai/ModelManager.js';
 
 // --- Endpoints ---
 
@@ -29,11 +29,11 @@ import { geminiManager } from './config/gemini.js';
 // 1.5 Chat Endpoint (Models)
 app.get('/api/models', async (req, res) => {
     try {
-        const models = await geminiManager.listAvailableModels();
+        const models = await modelManager.getAvailableModels();
         // Return both list and the currently configured default (from .env or server fallback)
         res.json({
             models,
-            defaultModel: geminiManager.primaryModelName
+            defaultModel: "gemini-2.0-flash" // Safe fallback if frontend needs one, or use first model
         });
     } catch (e) {
         res.status(500).json({ error: e.message });

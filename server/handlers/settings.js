@@ -35,8 +35,8 @@ export async function updateSetting(req, res) {
         let parsed = setting.value;
         try { parsed = JSON.parse(setting.value); } catch { }
 
-        // Reload ModelManager to pick up new keys
-        if (key.includes('API_KEY') || key.includes('TOKEN') || key.includes('URL') || key === 'enabledModels') {
+        // Reload ModelManager to pick up new keys or toggles
+        if (key.includes('API_KEY') || key.includes('TOKEN') || key.includes('URL') || key === 'enabledModels' || key.includes('PROVIDER_ENABLED') || key === 'FAILOVER_ENABLED') {
             await modelManager.reload();
         }
 

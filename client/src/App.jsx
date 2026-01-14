@@ -412,6 +412,17 @@ function AppContent() {
     const [isOpen, setIsOpen] = useState(false);
     const selectedModelObj = models.find(m => m.name === selected) || { displayName: 'Select Model', name: '' };
 
+    // Group models by provider
+    const groupedModels = React.useMemo(() => {
+      const groups = {};
+      models.forEach(m => {
+        const provider = m.provider || 'Other';
+        if (!groups[provider]) groups[provider] = [];
+        groups[provider].push(m);
+      });
+      return groups;
+    }, [models]);
+
     return (
       <div className="relative z-50">
         <button
@@ -426,22 +437,31 @@ function AppContent() {
         {isOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-            <div className="absolute top-full left-0 mt-2 w-64 max-h-80 overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl shadow-xl shadow-black/50 z-50 p-1">
-              <div className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Available Models</div>
-              {models.map(m => (
-                <button
-                  key={m.name}
-                  onClick={() => { onSelect(m.name); setIsOpen(false); }}
-                  className={`
-                    w-full text-left px-3 py-2 rounded-lg text-sm mb-1 flex flex-col
-                    ${selected === m.name ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-300 hover:bg-slate-800'}
-                  `}
-                >
-                  <span className="font-medium">{m.displayName?.replace('models/', '')}</span>
-                  <span className="text-[10px] text-slate-500 truncate">{m.name}</span>
-                </button>
+            <div className="absolute top-full left-0 mt-2 w-72 max-h-[500px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl shadow-xl shadow-black/50 z-50 p-2 custom-scrollbar">
+              {Object.keys(groupedModels).length === 0 && <div className="p-3 text-slate-500 text-xs text-center">Loading models...</div>}
+              
+              {Object.entries(groupedModels).map(([provider, providerModels]) => (
+                <div key={provider} className="mb-2 last:mb-0">
+                  <div className="px-2 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-900/50 sticky top-0 backdrop-blur-sm">
+                    {provider}
+                  </div>
+                  <div className="space-y-0.5">
+                    {providerModels.map(m => (
+                      <button
+                        key={m.name}
+                        onClick={() => { onSelect(m.name); setIsOpen(false); }}
+                        className={`
+                          w-full text-left px-3 py-2 rounded-lg text-sm flex flex-col transition-colors
+                          ${selected === m.name ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-300 hover:bg-slate-800 border border-transparent'}
+                        `}
+                      >
+                        <span className="font-medium truncate">{m.displayName?.replace(new RegExp(`${provider}[/\\s]*`, 'i'), '')}</span>
+                        <span className="text-[10px] text-slate-500 truncate opacity-60">{m.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
-              {models.length === 0 && <div className="p-3 text-slate-500 text-xs text-center">Loading models...</div>}
             </div>
           </>
         )}

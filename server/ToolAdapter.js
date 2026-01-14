@@ -1,14 +1,15 @@
 /**
- * Adapter to convert MCP Tools to Gemini Function Declarations
+ * Adapter to convert MCP Tools to Schema-Compliant Function Declarations
+ * (Works for Gemini, OpenAI, Copilot, etc.)
  */
 
 // Global map to track sanitized names → original names
 const toolNameMap = new Map();
 
 /**
- * Sanitize tool name to comply with Gemini's strict naming rules:
+ * Sanitize tool name to comply with strict naming rules common across providers:
  * - Must start with a letter or underscore
- * - Can only contain: a-z, A-Z, 0-9, _, ., :, -
+ * - Can only contain: a-z, A-Z, 0-9, _, - (some providers dislike dashes, but mostly ok)
  * - Maximum length: 64 characters
  * 
  * @param {string} name - Original tool name
@@ -19,7 +20,17 @@ function sanitizeToolName(name) {
 
     let sanitized = name;
 
-    // Replace any invalid characters with underscores (Stricter for Gemini: No dashes/dots)
+    // STRATEGY: Strip UUID Prefix if present (commonly formatted as "api_UUID__toolname")
+    if (sanitized.includes('__')) {
+        const parts = sanitized.split('__');
+        // Take the last part (the actual tool name)
+        // Example: "api_5d19...__dn_usercontroller_list" -> "dn_usercontroller_list"
+        if (parts.length > 1) {
+            sanitized = parts[parts.length - 1];
+        }
+    }
+
+    // Replace any invalid characters with underscores
     // Valid chars: a-z, A-Z, 0-9, _
     sanitized = sanitized.replace(/[^a-zA-Z0-9_]/g, '_');
 
@@ -43,30 +54,32 @@ function sanitizeToolName(name) {
 }
 
 /**
- * Fix schema issues for Gemini compatibility
- * - Remove nested 'items.items' which Gemini doesn't support
+ * Fix schema issues for Provider compatibility (Gemini/OpenAI)
+ * - Remove nested 'items.items' which some providers fail on
  * - Ensure all required fields are present
- * - Handle $ref by removing it (Gemini doesn't support references)
+ * - Handle $ref by removing it (Not supported in function calling schemas)
  * 
  * @param {object} schema - JSON Schema object
  * @returns {object} - Fixed schema
  */
-function fixSchemaForGemini(schema) {
+function fixSchema(schema) {
     if (!schema || typeof schema !== 'object') return schema;
 
     const fixed = { ...schema };
 
-    // Remove JSON Schema metadata fields that Gemini doesn't support
+    // Remove JSON Schema metadata fields not supported in tool definitions
     delete fixed.$schema;
     delete fixed.$id;
-    delete fixed.$ref;  // Gemini doesn't support $ref
+    delete fixed.$ref;
     delete fixed.$defs;
     delete fixed.definitions;
     delete fixed.$comment;
-    // fixed.description and fixed.example are SUPPORTED and USEFUL for Gemini/OpenAI
+    
+    // Valid fields: description, example, type, properties, required, items, enum
+    
     delete fixed.minItems;     // Remove validation constraints
     delete fixed.maxItems;
-    delete fixed.nullable;     // Gemini doesn't support nullable
+    delete fixed.nullable;     // Not strictly supported in all OpenAI-likes
 
     // Handle array types
     if (fixed.type === 'array') {
@@ -77,14 +90,14 @@ function fixSchemaForGemini(schema) {
 
         // Fix tuple validation (array of schemas) -> single schema
         if (Array.isArray(fixed.items)) {
-            console.warn(`[GeminiAdapter] Converting tuple items to single schema`);
+            console.warn(`[ToolAdapter] Converting tuple items to single schema`);
             fixed.items = fixed.items.length > 0 ? fixed.items[0] : { type: 'string' };
         }
 
         // Check for double-nested arrays (array of arrays)
         // Keep flattening until we reach a non-array type
         while (fixed.items && typeof fixed.items === 'object' && fixed.items.type === 'array' && fixed.items.items) {
-            console.warn(`[GeminiAdapter] Flattening double-nested array`);
+            console.warn(`[ToolAdapter] Flattening double-nested array`);
             fixed.items = { ...fixed.items.items }; // Clone to avoid mutation issues
         }
 
@@ -94,16 +107,16 @@ function fixSchemaForGemini(schema) {
             fixed.items = { ...fixed.items };
 
             if (fixed.items.items && fixed.items.type !== 'array') {
-                console.warn(`[GeminiAdapter] removing residual 'items' from non-array items schema (type: ${fixed.items.type})`);
+                console.warn(`[ToolAdapter] removing residual 'items' from non-array items schema (type: ${fixed.items.type})`);
                 delete fixed.items.items;
             }
         }
 
         // If items is still an object, process it
         if (fixed.items && typeof fixed.items === 'object') {
-            // Remove $ref from items if present (Gemini doesn't support it)
+            // Remove $ref from items if present
             if (fixed.items.$ref) {
-                console.warn(`[GeminiAdapter] Removing $ref from array items: ${fixed.items.$ref}`);
+                console.warn(`[ToolAdapter] Removing $ref from array items: ${fixed.items.$ref}`);
                 // Replace with a generic object type
                 fixed.items = { type: 'object' };
             }
@@ -114,7 +127,7 @@ function fixSchemaForGemini(schema) {
             }
 
             // Recursively fix the items schema
-            fixed.items = fixSchemaForGemini(fixed.items);
+            fixed.items = fixSchema(fixed.items);
         }
     }
 
@@ -127,14 +140,14 @@ function fixSchemaForGemini(schema) {
     if (fixed.properties) {
         fixed.properties = Object.fromEntries(
             Object.entries(fixed.properties).map(([key, value]) => {
-                return [key, fixSchemaForGemini(value)];
+                return [key, fixSchema(value)];
             })
         );
     }
 
     // Recursively fix additionalProperties if it's an object
     if (fixed.additionalProperties && typeof fixed.additionalProperties === 'object') {
-        fixed.additionalProperties = fixSchemaForGemini(fixed.additionalProperties);
+        fixed.additionalProperties = fixSchema(fixed.additionalProperties);
     }
 
     // Clean up 'required' field if it references properties that don't exist
@@ -145,38 +158,38 @@ function fixSchemaForGemini(schema) {
     return fixed;
 }
 
-export function mapMcpToolsToGemini(mcpTools) {
+export function mapMcpToolsToAiModels(mcpTools) {
     if (!mcpTools || mcpTools.length === 0) return [];
 
     // Clear the map for fresh mapping - DISABLED to prevent concurrency issues with global map
     // toolNameMap.clear();
 
     return mcpTools.map(tool => {
-        // Sanitize tool name for Gemini compatibility
+        // Sanitize tool name for compatibility
         const sanitizedName = sanitizeToolName(tool.name);
 
         // Store the mapping: sanitized → original
         toolNameMap.set(sanitizedName, tool.name);
 
         if (sanitizedName !== tool.name) {
-            console.log(`[GeminiAdapter] Sanitized tool name: "${tool.name}" → "${sanitizedName}"`);
+            console.log(`[ToolAdapter] Sanitized tool name: "${tool.name}" → "${sanitizedName}"`);
         }
 
-        // Fix schema for Gemini compatibility
+        // Fix schema for compatibility
         let parameters = { ...tool.inputSchema };
         if (!parameters.type) parameters.type = 'object';
 
         // DEBUG: Log problematic tool schemas
         if (tool.name.includes('searchorderrecommendedcourses')) {
-            console.log(`[GeminiAdapter] 🔍 BEFORE fix - ${tool.name}:`, JSON.stringify(parameters, null, 2));
+            console.log(`[ToolAdapter] 🔍 BEFORE fix - ${tool.name}:`, JSON.stringify(parameters, null, 2));
         }
 
         // Fix nested schema issues
-        parameters = fixSchemaForGemini(parameters);
+        parameters = fixSchema(parameters);
 
         // DEBUG: Log after fix
         if (tool.name.includes('searchorderrecommendedcourses')) {
-            console.log(`[GeminiAdapter] ✅ AFTER fix - ${tool.name}:`, JSON.stringify(parameters, null, 2));
+            console.log(`[ToolAdapter] ✅ AFTER fix - ${tool.name}:`, JSON.stringify(parameters, null, 2));
         }
 
         return {
@@ -187,14 +200,14 @@ export function mapMcpToolsToGemini(mcpTools) {
     });
 }
 
-export function mapGeminiCallsToMcp(functionCalls) {
+export function mapAiModelCallsToMcp(functionCalls) {
     if (!functionCalls) return [];
     return functionCalls.map(call => {
         // Reverse the mapping: sanitized → original
         const originalName = toolNameMap.get(call.name) || call.name;
 
         if (originalName !== call.name) {
-            console.log(`[GeminiAdapter] Mapped call back: "${call.name}" → "${originalName}"`);
+            console.log(`[ToolAdapter] Mapped call back: "${call.name}" → "${originalName}"`);
         }
 
         return {

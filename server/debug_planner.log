@@ -1,0 +1,5 @@
+[2026-01-14T22:01:49.543Z] Error: Unknown model: /OpenAI GPT-4o
+Error: Unknown model: /OpenAI GPT-4o
+    at CopilotProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/providers/CopilotProvider.js:100:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/ModelManager.js:517:29)

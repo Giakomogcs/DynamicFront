@@ -31,20 +31,28 @@ class ModelManager {
 
         const settings = await this.loadSettings();
 
+        this.settings = settings; // Store for runtime access (e.g. failover check)
+
         // DYNAMIC PROVIDER REGISTRATION
         const providerConfigs = [
-            { Provider: GeminiProvider, key: 'GEMINI_API_KEY', name: 'Gemini' },
-            { Provider: GroqProvider, key: 'GROQ_API_KEY', name: 'Groq' },
-            { Provider: OpenAIProvider, key: 'OPENAI_API_KEY', name: 'OpenAI' },
-            { Provider: AnthropicProvider, key: 'ANTHROPIC_API_KEY', name: 'Anthropic' },
-            { Provider: XAIProvider, key: 'XAI_API_KEY', name: 'xAI' },
-            { Provider: CopilotProvider, key: 'GITHUB_COPILOT_TOKEN', name: 'Copilot' }
+            { Provider: GeminiProvider, key: 'GEMINI_API_KEY', name: 'Gemini', id: 'gemini' },
+            { Provider: GroqProvider, key: 'GROQ_API_KEY', name: 'Groq', id: 'groq' },
+            { Provider: OpenAIProvider, key: 'OPENAI_API_KEY', name: 'OpenAI', id: 'openai' },
+            { Provider: AnthropicProvider, key: 'ANTHROPIC_API_KEY', name: 'Anthropic', id: 'anthropic' },
+            { Provider: XAIProvider, key: 'XAI_API_KEY', name: 'xAI', id: 'xai' },
+            { Provider: CopilotProvider, key: 'GITHUB_COPILOT_TOKEN', name: 'Copilot', id: 'copilot' }
         ];
 
         let availableCount = 0;
 
+        // Helper to check if provider is globally enabled (default true)
+        const isProviderEnabled = (id) => {
+            const settingKey = `PROVIDER_ENABLED_${id.toUpperCase()}`;
+            return settings[settingKey] !== false; // Default true if undefined
+        };
+
         // LOCAL LLM REGISTRATION
-        if (settings.LM_STUDIO_URL) {
+        if (settings.LM_STUDIO_URL && isProviderEnabled('lmstudio')) {
             this.registerProvider(new GenericOpenAIProvider({
                 id: 'lmstudio',
                 name: 'LM Studio',
@@ -55,7 +63,7 @@ class ModelManager {
             availableCount++;
         }
 
-        if (settings.OLLAMA_URL) {
+        if (settings.OLLAMA_URL && isProviderEnabled('ollama')) {
             this.registerProvider(new GenericOpenAIProvider({
                 id: 'ollama',
                 name: 'Ollama',
@@ -66,15 +74,25 @@ class ModelManager {
             availableCount++;
         }
 
-        for (const { Provider, key, name } of providerConfigs) {
-            const apiKey = settings[key] || process.env[key];
+        for (const { Provider, key, name, id } of providerConfigs) {
+            // PRIORITIZE DB SETTINGS: If setting exists (even if empty), use it. Only fallback to ENV if setting is undefined.
+            let apiKey = settings[key];
+            if (apiKey === undefined || apiKey === null) {
+                apiKey = process.env[key];
+            } else if (apiKey.trim() === "") {
+                // If user deliberately saved empty string, treat it as disabled/missing, do not fallback to ENV.
+                apiKey = undefined; 
+            }
 
-            if (apiKey && apiKey.length > 10) { // Basic validation
+            const enabled = isProviderEnabled(id);
+
+            if (apiKey && apiKey.length > 10 && enabled) { // Basic validation + Enabled Check
                 this.registerProvider(new Provider({ apiKey }));
                 console.log(`[ModelManager] ✅ ${name} provider registered`);
                 availableCount++;
             } else {
-                console.warn(`[ModelManager] ⚠️ ${name} provider skipped (no API key)`);
+                if (!enabled) console.log(`[ModelManager] 🚫 ${name} provider disabled by user setting.`);
+                else console.warn(`[ModelManager] ⚠️ ${name} provider skipped (no API key)`);
             }
         }
 
@@ -248,6 +266,12 @@ class ModelManager {
     }
 
     getFailoverPlan(failedModel, errorType = 'rate_limit') {
+        // CHECK IF FAILOVER IS GLOBALLY ENABLED
+        if (this.settings?.FAILOVER_ENABLED === false) {
+            console.warn("[ModelManager] Failover is disabled in settings.");
+            return [];
+        }
+
         const plan = [];
 
         // STRATEGY: Diversify across providers to avoid hitting same quota
