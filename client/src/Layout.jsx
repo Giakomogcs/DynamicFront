@@ -7,7 +7,7 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent }) => {
+const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent, onToggleSettings }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
 
@@ -116,14 +116,13 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                     <SidebarItem
                         icon={<Settings2 size={20} />}
                         label="Settings"
-                        isActive={activeTab === 'settings'}
                         collapsed={collapsed}
                         onClick={() => {
-                            setActiveTab('settings');
+                            if (onToggleSettings) onToggleSettings();
                             setSidebarOpen(false);
                         }}
                     />
-                    
+
                     {/* Collapse Toggle (Desktop only) */}
                     <button
                         onClick={() => setCollapsed(!collapsed)}
@@ -183,9 +182,9 @@ const SidebarItem = ({ icon, label, isActive, collapsed, onClick }) => (
         <span className={cn("transition-colors shrink-0", isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300")}>
             {icon}
         </span>
-        
+
         {!collapsed && (
-             <span className="font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis animate-fade-in origin-left">
+            <span className="font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis animate-fade-in origin-left">
                 {label}
             </span>
         )}

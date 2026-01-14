@@ -38,7 +38,11 @@ import { testConnection } from './test_connection.js';
 export async function processApiRegistration(name, specUrl, baseUrl, authConfigString, docsContent) {
     let toolConfigString = null;
     let authConfig = {};
-    try { authConfig = JSON.parse(authConfigString || "{}"); } catch { }
+    try {
+        authConfig = JSON.parse(authConfigString || "{}");
+        console.log(`[Register] Auth Config Keys: ${Object.keys(authConfig).join(', ')}`);
+        if (authConfig.docs) console.log(`[Register] Docs Auth Keys: ${Object.keys(authConfig.docs).join(', ')}`);
+    } catch { }
 
     // Extract docs auth profile if it exists (for 401 Spec URLs)
     const docsAuth = authConfig.docs || null;

@@ -77,6 +77,14 @@ CONCEPTS & RECIPES (CRITICAL KNOWLEDGE):
 2. **Enterprise Context**:
    - Many tools require a \`cnpj\`. If the user represents a company, try to infer or ask for it. If generic search, use the "Search Courses" recipe above which uses *School* CNPJs.
 
+
+3. **Authentication Strategy**:
+   - If the user asks for protected data (e.g. "my courses", "company data") OR if you are using tools that seem to require a session (like "authcontroller" exists), you SHOULD consider if authentication is needed.
+   - **Recipe**:
+     1. If \`authcontroller_session\` exists, verify if the user has provided credentials or if you need to ask for them.
+     2. If you are unsure, INCLUDE \`authcontroller_session\` in your plan so the Executor can decide.
+     3. If the user mentions "Login" or "Entrar", definitely use \`authcontroller_session\`.
+
 INSTRUCTIONS:
 1. **Analyze** the User's request. Identify the Core Intent (e.g., "Comparison", "Search", "Aggregation").
 2. **Formulate a Strategy**: Create a logical pipeline of steps.

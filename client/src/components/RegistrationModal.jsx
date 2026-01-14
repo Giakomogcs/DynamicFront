@@ -50,12 +50,33 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
     const [testResult, setTestResult] = useState(null);
 
     // Initial State Logic
-    const [basicInfo, setBasicInfo] = useState({
-        name: initialData?.name || '',
-        baseUrl: initialData?.baseUrl || '',
-        docsMode: 'url', // 'url' | 'text'
-        specUrl: initialData?.specUrl || '',
-        docsContent: initialData?.docsContent || ''
+    // Initial State Logic
+    const [basicInfo, setBasicInfo] = useState(() => {
+        const base = {
+            name: initialData?.name || '',
+            baseUrl: initialData?.baseUrl || '',
+            docsMode: 'url', // 'url' | 'text'
+            specUrl: initialData?.specUrl || '',
+            docsContent: initialData?.docsContent || '',
+            docsAuthEnabled: false,
+            docsUsername: '',
+            docsPassword: ''
+        };
+
+        if (initialData && initialData.authConfig) {
+            try {
+                const ac = JSON.parse(initialData.authConfig);
+                // Populate Docs Auth if present
+                if (ac.docs && ac.docs.type === 'basic') {
+                    base.docsAuthEnabled = true;
+                    base.docsUsername = ac.docs.username || '';
+                    base.docsPassword = ac.docs.password || '';
+                }
+            } catch (e) {
+                console.error("Failed to parse authConfig for Docs Auth initialization", e);
+            }
+        }
+        return base;
     });
 
     const [authConfig, setAuthConfig] = useState(() => {
@@ -313,7 +334,8 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
                                         placeholder="Username"
                                         value={basicInfo.docsUsername || ''}
                                         onChange={e => setBasicInfo({ ...basicInfo, docsUsername: e.target.value })} />
-                                    <input type="password" className="bg-slate-900 border border-slate-800 rounded px-2.5 py-2 text-white text-xs outline-none"
+                                    <RevealableInput
+                                        className="bg-slate-900 border border-slate-800 rounded px-2.5 py-2 text-white text-xs outline-none focus:border-indigo-500"
                                         placeholder="Password"
                                         value={basicInfo.docsPassword || ''}
                                         onChange={e => setBasicInfo({ ...basicInfo, docsPassword: e.target.value })} />

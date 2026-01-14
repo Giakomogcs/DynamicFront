@@ -1,5 +1,6 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 import { toolService } from '../services/toolService.js';
+import { getOriginalToolName } from '../gemini_adapter.js';
 import fs from 'fs';
 
 export class ExecutorAgent {
@@ -102,6 +103,8 @@ export class ExecutorAgent {
 
                 // FALLBACK: Manual Parsing (Llama/XML/Json/Text)
                 if (toolCalls.length === 0 && text) {
+                    console.log(`[Executor] ℹ️ No native function calls. Attempting manual parsing of raw text: "${text.substring(0, 100)}..."`);
+
                     // Strategy A: Try parsing the whole text as a JSON Tool Call
                     try {
                         const json = JSON.parse(text);
@@ -130,7 +133,7 @@ export class ExecutorAgent {
                             if (knownToolNames.includes(tName)) {
                                 let args = {};
                                 if (match1[3]) {
-                                     try { args = JSON.parse(match1[3]); } catch (e) { args = { value: match1[3] }; }
+                                    try { args = JSON.parse(match1[3]); } catch (e) { args = { value: match1[3] }; }
                                 }
                                 toolCalls.push({ name: tName, args });
                                 // Remove from visible text
@@ -231,10 +234,21 @@ export class ExecutorAgent {
 
                     // Execute Tools
                     for (const call of toolCalls) {
+                        // FIX: Map sanitized name back to original MCP name
+                        const originalName = getOriginalToolName(call.name);
+                        if (originalName !== call.name) {
+                            console.log(`[Executor] 🔄 Mapping sanitized name '${call.name}' back to '${originalName}'`);
+                            call.name = originalName;
+                        }
+
                         console.log(`[Executor] >>> Calling Tool: ${call.name}`);
+
+                        // Apply intelligent filtering BEFORE execution
+                        const filteredArgs = this.applyIntelligentFilters(call.name, call.args, userMessage, tools);
+
                         let toolResult;
                         try {
-                            toolResult = await toolService.executeTool(call.name, call.args);
+                            toolResult = await toolService.executeTool(call.name, filteredArgs);
 
                             // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
                             if (toolResult && toolResult.isError && toolResult.content && toolResult.content[0].text.includes('not found')) {
@@ -254,71 +268,10 @@ export class ExecutorAgent {
                                         console.log(`[Executor] 🔄 Empty result detected. Suggesting normalization retry for: ${argValues.join(', ')}`);
                                         toolResult.content.push({
                                             type: "text",
-                                            text: `\n[SYSTEM HINT]: The search returned NO results for "${argValues.join(', ')}". \n1. Try REMOVING accents (e.g. "São Paulo" -> "Sao Paulo").\n2. Try UPPERCASE or lowercase.\n3. Try a broader search term.\nRETRY IMMEDIATELY with a modified argument.`
+                                            text: `\n[SYSTEM HINT]: The search returned NO results for "${argValues.join(', ')}". \n1. Try REMOVING accents (e.g. "São Paulo" -> "Sao Paulo").\n2. Try UPPERCASE or lowercase.\n3. Try a broader search term.\n\n[AUTH HINT]: If this tool requires login, ensure you have called the authentication tool first. If you suspect missing privileges, report this to the user.`
                                         });
                                     }
                                 } else {
-                                    // 3. Smart Multi-Step Execution (Auto-chaining)
-                                    // If we found SENAI units, automatically trigger course search
-                                    if (call.name.toLowerCase().includes('getsenaiunits')) {
-                                        let data = toolResult.content || toolResult;
-
-                                        // Try to parse if it's a JSON string
-                                        if (typeof data === 'string') {
-                                            try { data = JSON.parse(data); } catch (e) { }
-                                        }
-
-                                        // Extract from wrapper if needed
-                                        if (data && data[0] && data[0].text) {
-                                            try { data = JSON.parse(data[0].text); } catch (e) { }
-                                        }
-
-                                        if (Array.isArray(data) && data.length > 0) {
-                                            // Build schoolsCnpj as array of OBJECTS with coordinates
-                                            const schoolsCnpj = data
-                                                .map(unit => {
-                                                    const cnpj = unit.cnpj || unit.CNPJ;
-                                                    const lat = unit.latitude || unit.lat;
-                                                    const lng = unit.longitude || unit.lng || unit.longtude;
-                                                    const name = unit.name || unit.nome || unit.nome_escola;
-
-                                                    if (!cnpj) return null;
-
-                                                    return {
-                                                        cnpj: String(cnpj).trim()
-                                                        // Removed metadata (latitude, longtude, name) as API rejects them
-                                                    };
-                                                })
-                                                .filter(Boolean)
-                                                .slice(0, 10);
-
-                                            if (schoolsCnpj.length > 0) {
-                                                console.log(`[Executor] 🔗 Auto-chaining: Found ${schoolsCnpj.length} units. Triggering course search...`);
-                                                console.log(`[Executor] 📋 Schools:`, JSON.stringify(schoolsCnpj.slice(0, 2), null, 2));
-
-                                                // Check if course search tool is available
-                                                const courseSearchTool = tools.find(t => t.name.toLowerCase().includes('searchorderrecommendedcourses'));
-                                                if (courseSearchTool) {
-                                                    // Get company location from first unit as fallback
-                                                    const firstUnit = schoolsCnpj[0];
-
-                                                    // Force execution of course search
-                                                    toolCalls.push({
-                                                        name: courseSearchTool.name,
-                                                        args: {
-                                                            cnpj: firstUnit.cnpj,
-                                                            companyLat: firstUnit.latitude,
-                                                            companyLng: firstUnit.longtude,
-                                                            isRecommended: true,
-                                                            schoolsCnpj: schoolsCnpj,
-                                                            areas: ['Todas as áreas']
-                                                        }
-                                                    });
-                                                    console.log(`[Executor] ✅ Queued ${courseSearchTool.name} with ${schoolsCnpj.length} schools`);
-                                                }
-                                            }
-                                        }
-                                    }
                                 }
                             }
 
@@ -327,14 +280,17 @@ export class ExecutorAgent {
                             toolResult = { isError: true, content: [{ text: `Error: ${e.message}` }] };
                         }
 
-                        gatheredData.push({ tool: call.name, result: toolResult });
-                        const compressedContent = this.compressResult(toolResult);
+
+                        const uiResult = this.compressResult(toolResult, 50); // Generous limit for UI
+                        gatheredData.push({ tool: call.name, result: uiResult });
+
+                        const historyContent = this.compressResult(toolResult, 5); // Strict limit for Context
 
                         // Append Tool Output to History
                         messages.push({
                             role: 'tool',
                             name: call.name,
-                            content: compressedContent
+                            content: historyContent
                         });
                     }
                 } else {
@@ -374,15 +330,140 @@ export class ExecutorAgent {
         return validHistory;
     }
 
-    compressResult(toolResult) {
+    /**
+     * Apply intelligent filters to tool arguments to prevent data overload
+     * @param {string} toolName - Name of the tool being called
+     * @param {object} args - Original arguments
+     * @param {string} userMessage - User's message for context
+     * @param {Array} tools - Available tools with schemas
+     * @returns {object} - Filtered arguments
+     */
+    applyIntelligentFilters(toolName, args, userMessage, tools) {
+        const filtered = { ...args };
+        const tool = tools.find(t => t.name === toolName);
+
+        if (!tool || !tool.parameters || !tool.parameters.properties) {
+            return filtered;
+        }
+
+        const params = tool.parameters.properties;
+
+        // 1. AUTO-PAGINATION: Apply default limits to prevent massive data pulls
+        if (params.limit && !filtered.limit) {
+            filtered.limit = 10;
+            console.log(`[Executor] 📊 Auto-applied limit: 10`);
+        }
+
+        if (params.page && !filtered.page) {
+            filtered.page = 1;
+            console.log(`[Executor] 📄 Auto-applied page: 1`);
+        }
+
+        // 2. CONTEXT-BASED FILTERS: Extract filters from user message
+        const lowerMessage = userMessage.toLowerCase();
+
+        // Extract city names
+        if (params.city && !filtered.city) {
+            const cityPatterns = [
+                /em\s+([\wÀ-ÿ\s]+?)(?:\s|$|\?|,)/i,
+                /de\s+([\wÀ-ÿ\s]+?)(?:\s|$|\?|,)/i,
+                /cidade\s+de\s+([\wÀ-ÿ\s]+?)(?:\s|$|\?|,)/i
+            ];
+
+            for (const pattern of cityPatterns) {
+                const match = userMessage.match(pattern);
+                if (match && match[1]) {
+                    const city = match[1].trim();
+                    // Common city names
+                    if (city.length > 3 && city.length < 30) {
+                        filtered.city = city;
+                        console.log(`[Executor] 🏙️ Auto-detected city filter: "${city}"`);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Extract state (UF)
+        if (params.state && !filtered.state) {
+            const statePattern = /\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/i;
+            const match = userMessage.match(statePattern);
+            if (match) {
+                filtered.state = match[1].toUpperCase();
+                console.log(`[Executor] 🗺️ Auto-detected state filter: "${filtered.state}"`);
+            }
+        }
+
+        // 3. SMART DEFAULTS: Set reasonable defaults for optional filters
+        if (params.isRecommended !== undefined && filtered.isRecommended === undefined) {
+            filtered.isRecommended = true;
+            console.log(`[Executor] ⭐ Auto-applied isRecommended: true`);
+        }
+
+        // 4. SPECIFIC FIX: dn_schoolscontroller_getshools - Clear generic 'search_bar'
+        if (toolName.includes('schoolscontroller_getshools') && filtered.search_bar) {
+            const genericTerms = ['escola', 'escolas', 'school', 'schools', 'unidade', 'senai'];
+            if (genericTerms.includes(filtered.search_bar.toLowerCase().trim())) {
+                console.log(`[Executor] 🧹 Clearing generic search_bar term: "${filtered.search_bar}" to allow broad search.`);
+                filtered.search_bar = "";
+            }
+        }
+
+        return filtered;
+    }
+
+    /**
+     * Compress and truncate tool results to prevent token overflow
+     * @param {object} toolResult - Raw tool result
+     * @returns {object} - Compressed result
+     */
+    compressResult(toolResult, limit = 5) {
         const copy = JSON.parse(JSON.stringify(toolResult));
+
         if (copy.content && Array.isArray(copy.content)) {
             copy.content.forEach(c => {
-                if (c.text && c.text.length > 2000) {
-                    c.text = c.text.substring(0, 2000) + "\n... [DATA TRUNCATED FOR CONTEXT EFFICIENCY]";
+                if (c.text) {
+                    // Try to parse as JSON for smart truncation
+                    try {
+                        const data = JSON.parse(c.text);
+
+                        // If it's an array, limit to first N items
+                        if (Array.isArray(data) && data.length > limit) {
+                            const truncated = data.slice(0, limit);
+                            c.text = JSON.stringify({
+                                items: truncated,
+                                _truncated: true,
+                                _totalItems: data.length,
+                                _message: `Showing ${limit} of ${data.length} items to prevent data overload`
+                            });
+                            console.log(`[Executor] ✂️ Truncated array from ${data.length} to ${limit} items`);
+                            return;
+                        }
+
+                        // If it's an object with a data array, limit that
+                        if (data.data && Array.isArray(data.data) && data.data.length > limit) {
+                            const truncated = { ...data };
+                            truncated.data = data.data.slice(0, limit);
+                            truncated._truncated = true;
+                            truncated._originalCount = data.data.length;
+                            c.text = JSON.stringify(truncated);
+                            console.log(`[Executor] ✂️ Truncated data array from ${data.data.length} to ${limit} items`);
+                            return;
+                        }
+                    } catch (e) {
+                        // Not JSON, fall through to text truncation
+                    }
+
+                    // Fallback: Simple text truncation (Scaling with item limit approximation)
+                    const charLimit = limit * 600;
+                    if (c.text.length > charLimit) {
+                        c.text = c.text.substring(0, charLimit) + `\n\n... [DATA TRUNCATED - Showing first ${charLimit} chars]`;
+                        console.log(`[Executor] ✂️ Truncated text from ${c.text.length} to ${charLimit} chars`);
+                    }
                 }
             });
         }
+
         return copy;
     }
 }

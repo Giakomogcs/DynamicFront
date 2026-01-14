@@ -1,5 +1,11 @@
-[2026-01-12T22:31:51.576Z] Error: [Groq] 429: Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01kedecntkffw9qp7np1jrws15` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 3553, Requested 2680. Please try again in 2.33s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing
-Error: [Groq] 429: Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01kedecntkffw9qp7np1jrws15` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 3553, Requested 2680. Please try again in 2.33s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing
-    at GroqProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/providers/GroqProvider.js:88:19)
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/ModelManager.js:459:29)
+[2026-01-14T16:25:39.799Z] Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [400 Bad Request] * GenerateContentRequest.tools[0].function_declarations[30].parameters.properties[schoolsCnpj].items.items: missing field.
+
+Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [400 Bad Request] * GenerateContentRequest.tools[0].function_declarations[30].parameters.properties[schoolsCnpj].items.items: missing field.
+
+    at handleResponseNotOk (file:///C:/Github/DynamicFront/node_modules/@google/generative-ai/dist/index.mjs:432:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (file:///C:/Github/DynamicFront/node_modules/@google/generative-ai/dist/index.mjs:401:9)
+    at async generateContent (file:///C:/Github/DynamicFront/node_modules/@google/generative-ai/dist/index.mjs:865:22)
+    at async ChatSession.sendMessage (file:///C:/Github/DynamicFront/node_modules/@google/generative-ai/dist/index.mjs:1208:9)
+    at async GeminiProvider.generateContent (file:///C:/Github/DynamicFront/server/services/ai/providers/GeminiProvider.js:116:26)
+    at async RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:459:29)

@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './Layout';
 import { Chat } from './components/Chat';
 import { ResourcesView } from './components/ResourcesView';
 import { SettingsView } from './components/SettingsView';
 import { Modal, RegisterApiForm, RegisterDbForm } from './components/RegistrationModal';
+import { ToastProvider } from './components/ui/Toast';
 
 import { Canvas } from './components/Canvas';
 import { CanvasHeader } from './components/CanvasHeader';
 
 
-function App() {
+function AppContent() {
   const [messages, setMessages] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [modalType, setModalType] = useState(null); // 'api' | 'db' | null
@@ -197,12 +199,13 @@ function App() {
   const [enabledModels, setEnabledModels] = useState(null); // null = load yet
   const [selectedModel, setSelectedModel] = useState("");
 
-  useEffect(() => {
-    // Parallel fetch
-    Promise.all([
-      fetch('http://localhost:3000/api/models').then(r => r.json()),
-      fetch('http://localhost:3000/api/settings').then(r => r.json())
-    ]).then(([modelsData, settingsData]) => {
+  const refreshModels = useCallback(async () => {
+    try {
+      const [modelsData, settingsData] = await Promise.all([
+        fetch('http://localhost:3000/api/models').then(r => r.json()),
+        fetch('http://localhost:3000/api/settings').then(r => r.json())
+      ]);
+
       const models = Array.isArray(modelsData) ? modelsData : (modelsData.models || []);
       const defaultModel = modelsData.defaultModel;
 
@@ -217,25 +220,27 @@ function App() {
       setEnabledModels(enabled);
       setAvailableModels(models);
 
-      // Determine selection
-      // Filter first
+      // Determine selection logic
       const visibleModels = models.filter(m => enabled.includes(m.name));
 
-      if (defaultModel && visibleModels.find(m => m.name === defaultModel)) {
-        setSelectedModel(defaultModel);
-      } else if (visibleModels.length > 0) {
-        setSelectedModel(visibleModels[0].name);
-      } else if (models.length > 0) {
-        // Fallback if user disabled everything (shouldn't happen ideally)
-        setSelectedModel(models[0].name);
+      // If currently selected model is still valid, keep it.
+      // Otherwise, switch to default or first available.
+      if (!selectedModel || !visibleModels.find(m => m.name === selectedModel)) {
+        if (defaultModel && visibleModels.find(m => m.name === defaultModel)) {
+          setSelectedModel(defaultModel);
+        } else if (visibleModels.length > 0) {
+          setSelectedModel(visibleModels[0].name); // Fallback to first
+        }
       }
-    }).catch(err => console.error("Failed to fetch initial data", err));
+    } catch (err) {
+      console.error("Failed to fetch models", err);
+    }
+  }, [selectedModel]);
 
-    // Debug log
-    console.log("[App] Mounted / Initial Fetch");
-
-    return () => console.log("[App] Unmounted");
-  }, []); // Run on mount
+  // Initial Load
+  useEffect(() => {
+    refreshModels();
+  }, []);
 
   // Computed visible models
   const visibleModels = availableModels.filter(m => !enabledModels || enabledModels.includes(m.name));
@@ -257,10 +262,10 @@ function App() {
 
     // 1. Add User Message (Only if NOT hidden, otherwise we already added a placeholder or don't want to show raw system prompt)
     if (!isSystemHidden) {
-        const userMsg = { role: 'user', text };
-        setMessages(prev => [...prev, userMsg]);
+      const userMsg = { role: 'user', text };
+      setMessages(prev => [...prev, userMsg]);
     }
-    
+
     setIsProcessing(true);
 
     try {
@@ -463,20 +468,22 @@ function App() {
       // We want the AI to execute the tool.
       // Best way: Send a message that forces the tool call.
       const prompt = `[SYSTEM: User clicked "${action.label}". Execute tool '${action.tool}' with args: ${JSON.stringify(action.args)}]`;
-      
+
       // We display a cleaner message to the user
       const userDisplayMsg = { role: 'user', text: `Clicked: ${action.label}` };
       setMessages(prev => [...prev, userDisplayMsg]);
-      
+
       // But we send the System Prompt to the backend handling logic
       // Reuse handleSendMessage but with modified 'text' payload? 
       // handleSendMessage expects text and adds it to UI. We need to decouple.
-      
+
       // Let's modify handleSendMessage to allow "hidden" prompt
-      await handleSendMessage(prompt, true); 
+      await handleSendMessage(prompt, true);
     }
   };
 
+
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <Layout
@@ -485,6 +492,7 @@ function App() {
       onRegisterApi={() => setModalType('api')}
       onRegisterDb={() => setModalType('db')}
       onOpenLoadModal={() => setShowLoadModal(true)}
+      onToggleSettings={() => setShowSettings(true)}
       headerContent={
         <ModelSelector
           models={visibleModels}
@@ -553,7 +561,25 @@ function App() {
           onEdit={(type, data) => handleEditResource(type, data)}
         />
       )}
-      {activeTab === 'settings' && <SettingsView />}
+
+      {/* Settings Modal Overlay */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[60] flex justify-end transition-opacity duration-300">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+            onClick={() => setShowSettings(false)}
+          />
+
+          {/* Side Panel */}
+          <div className="relative w-full max-w-2xl bg-slate-950 border-l border-slate-800 shadow-2xl h-full transform transition-transform duration-300 animate-in slide-in-from-right shadow-black/50">
+            <SettingsView
+              onSettingsChanged={refreshModels}
+              onClose={() => setShowSettings(false)}
+            />
+          </div>
+        </div>
+      )}
 
       <Modal
         isOpen={!!modalType}
@@ -631,4 +657,14 @@ function App() {
   );
 }
 
+// Wrapper for Toast Provider
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
+  );
+}
+
 export default App;
+

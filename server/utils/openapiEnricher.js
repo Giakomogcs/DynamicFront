@@ -202,6 +202,30 @@ function enrichBodySchema(requestBody, spec) {
                     items = resolveRef(items.$ref, spec) || items;
                 }
 
+                // 🔥 FIX: Check for Tuple Validation (Array of schemas)
+                if (Array.isArray(items)) {
+                    // Convert tuple to single schema (union type not supported by all, so take first or merge)
+                    // For simplicity, take the first one or default to generic object
+                    items = items.length > 0 ? items[0] : { type: 'string' };
+                }
+
+                // 🔥 FIX: Flatten double-nested arrays (Gemini doesn't support items.items)
+                // Check if items is itself an array type with nested items
+                while (items && typeof items === 'object' && items.type === 'array' && items.items) {
+                    console.warn(`[OpenAPI Enricher] ⚠️ Flattening double-nested array for property: ${key}`);
+                    items = items.items;
+
+                    // Handle nested tuple
+                    if (Array.isArray(items)) {
+                        items = items.length > 0 ? items[0] : { type: 'string' };
+                    }
+
+                    // Resolve nested $ref if present
+                    if (items?.$ref) {
+                        items = resolveRef(items.$ref, spec) || items;
+                    }
+                }
+
                 if (items) {
                     const itemsSchema = {
                         type: items.type || 'object'

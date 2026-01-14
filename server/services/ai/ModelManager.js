@@ -4,6 +4,8 @@ import { GroqProvider } from './providers/GroqProvider.js';
 import { OpenAIProvider } from './providers/OpenAIProvider.js';
 import { AnthropicProvider } from './providers/AnthropicProvider.js';
 import { XAIProvider } from './providers/XAIProvider.js';
+import { CopilotProvider } from './providers/CopilotProvider.js';
+import { GenericOpenAIProvider } from './providers/GenericOpenAIProvider.js';
 
 class ModelManager {
     constructor() {
@@ -35,10 +37,34 @@ class ModelManager {
             { Provider: GroqProvider, key: 'GROQ_API_KEY', name: 'Groq' },
             { Provider: OpenAIProvider, key: 'OPENAI_API_KEY', name: 'OpenAI' },
             { Provider: AnthropicProvider, key: 'ANTHROPIC_API_KEY', name: 'Anthropic' },
-            { Provider: XAIProvider, key: 'XAI_API_KEY', name: 'xAI' }
+            { Provider: XAIProvider, key: 'XAI_API_KEY', name: 'xAI' },
+            { Provider: CopilotProvider, key: 'GITHUB_COPILOT_TOKEN', name: 'Copilot' }
         ];
 
         let availableCount = 0;
+
+        // LOCAL LLM REGISTRATION
+        if (settings.LM_STUDIO_URL) {
+            this.registerProvider(new GenericOpenAIProvider({
+                id: 'lmstudio',
+                name: 'LM Studio',
+                baseUrl: settings.LM_STUDIO_URL,
+                apiKey: 'lm-studio'
+            }));
+            console.log(`[ModelManager] ✅ LM Studio provider registered at ${settings.LM_STUDIO_URL}`);
+            availableCount++;
+        }
+
+        if (settings.OLLAMA_URL) {
+            this.registerProvider(new GenericOpenAIProvider({
+                id: 'ollama',
+                name: 'Ollama',
+                baseUrl: settings.OLLAMA_URL,
+                apiKey: 'ollama'
+            }));
+            console.log(`[ModelManager] ✅ Ollama provider registered at ${settings.OLLAMA_URL}`);
+            availableCount++;
+        }
 
         for (const { Provider, key, name } of providerConfigs) {
             const apiKey = settings[key] || process.env[key];
@@ -53,11 +79,11 @@ class ModelManager {
         }
 
         if (availableCount === 0) {
-            throw new Error('[ModelManager] CRITICAL: No AI providers available! Please configure at least one API key.');
+            console.warn('[ModelManager] WARN: No AI providers available! Chat will fail.');
         }
 
         this.isInitialized = true;
-        console.log(`[ModelManager] Initialized with ${availableCount}/${providerConfigs.length} providers.`);
+        console.log(`[ModelManager] Initialized with ${availableCount} providers.`);
     }
 
     async reload() {
@@ -115,7 +141,10 @@ class ModelManager {
             { pattern: /llama|mixtral|gemma/i, providerId: 'groq' },
             { pattern: /^gpt|^o1/i, providerId: 'openai' },
             { pattern: /^claude/i, providerId: 'anthropic' },
-            { pattern: /grok/i, providerId: 'xai' }
+            { pattern: /grok/i, providerId: 'xai' },
+            { pattern: /^copilot/i, providerId: 'copilot' },
+            { pattern: /local|lm-studio/i, providerId: 'lmstudio' },
+            { pattern: /ollama/i, providerId: 'ollama' }
         ];
 
         for (const { pattern, providerId } of detectionMap) {
@@ -126,6 +155,10 @@ class ModelManager {
                 console.warn(`[ModelManager] Model ${modelName} matched ${providerId} but provider not available`);
             }
         }
+
+        // Fallback: If model name matches a provider ID partially (e.g. "lmstudio/my-model")
+        if (modelName.includes('lmstudio')) return this.providers.get('lmstudio');
+        if (modelName.includes('ollama')) return this.providers.get('ollama');
 
         // Fallback: Return first available provider
         const fallback = this.providers.values().next().value;
@@ -150,6 +183,14 @@ class ModelManager {
         let provider = this.getProviderForModel(targetModel);
 
         console.log(`[ModelManager] Generating content with ${targetModel} (Provider: ${provider?.id})...`);
+
+        if (!provider) {
+            console.error(`No provider available for model ${targetModel}`);
+            // Try a forced fallback?
+            provider = this.providers.values().next().value;
+            if (!provider) throw new Error(`No providers available at all.`);
+            console.log(`[ModelManager] Forced fallback to ${provider.id}...`);
+        }
 
         try {
             const result = await this.executeWithRetry(provider, targetModel, input, config);
@@ -309,7 +350,8 @@ class ModelManager {
                 { providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' },
                 { providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' },
                 { providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' },
-                { providerId: 'xai', model: 'grok-beta', tier: 'paid' }
+                { providerId: 'xai', model: 'grok-beta', tier: 'paid' },
+                { providerId: 'copilot', model: 'copilot/gpt-4o', tier: 'paid' }
             );
         }
 

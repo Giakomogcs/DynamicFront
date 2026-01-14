@@ -35,13 +35,55 @@ export class AgentOrchestrator {
         console.log(`[Orchestrator] Planner selected: [${selectedToolNames.join(', ')}]`);
         console.log(`[Orchestrator] Strategy: ${plan.thought}`);
 
-        // Filter Tools
-        let activeTools = allGeminiTools.filter(t => selectedToolNames.includes(t.name));
+        // Filter Tools with Fuzzy Matching
+        let activeTools = [];
+        const missingTools = [];
 
-        // FALLBACK: If Planner hallucinated or returned parsed tool names that don't match,
-        // and we have no active tools, UNLEASH THE BEAST (Give all tools).
+        for (const name of selectedToolNames) {
+            // 1. Exact Match
+            let match = allGeminiTools.find(t => t.name === name);
+
+            // 2. Fuzzy Match (if exact not found)
+            if (!match) {
+                // Try to find by partial inclusion (ignoring case) or edit distance logic (simple version here)
+                const lowerName = name.toLowerCase();
+                match = allGeminiTools.find(t => {
+                    const tLower = t.name.toLowerCase();
+                    // Check for significant overlap (e.g. 80% similarity or containment of core part)
+                    // Heuristic: If one is substring of another and length diff is small
+                    if (tLower.includes(lowerName) || lowerName.includes(tLower)) return true;
+
+                    // Heuristic: Levenshtein-ish (simple typo check for "schools" vs "school")
+                    // Check if stripping standard prefixes matches
+                    const coreT = tLower.split('__').pop();
+                    const coreN = lowerName.split('__').pop();
+
+                    if (coreT === coreN) return true;
+
+                    // Use real Levenshtein for robust typo tolerance
+                    const dist = this._levenshtein(coreT, coreN);
+                    if (dist <= 3) return true; // Tolerate up to 3 errors
+
+                    return false;
+                });
+
+                if (match) {
+                    console.log(`[Orchestrator] 🔧 Fuzzy match: '${name}' -> '${match.name}'`);
+                }
+            }
+
+            if (match) {
+                if (!activeTools.find(t => t.name === match.name)) {
+                    activeTools.push(match);
+                }
+            } else {
+                missingTools.push(name);
+            }
+        }
+
+        // FALLBACK: If we still have NO tools and Planner asked for something, UNLEASH THE BEAST
         if (activeTools.length === 0 && allGeminiTools.length > 0) {
-            console.warn(`[Orchestrator] ⚠️ Planner selected tools [${selectedToolNames.join(', ')}] which were NOT found. Falling back to ALL ${allGeminiTools.length} tools.`);
+            console.warn(`[Orchestrator] ⚠️ Planner selected tools [${missingTools.join(', ')}] which were NOT found. Falling back to ALL ${allGeminiTools.length} tools.`);
 
             // Safety: If we have > 100 tools, maybe we should be careful? 
             // For now, Gemini 1.5/2.0 context is huge, so we just pass them all.
@@ -111,6 +153,32 @@ export class AgentOrchestrator {
         }
 
         return text.trim();
+    }
+
+    _levenshtein(a, b) {
+        const matrix = [];
+        for (let i = 0; i <= b.length; i++) {
+            matrix[i] = [i];
+        }
+        for (let j = 0; j <= a.length; j++) {
+            matrix[0][j] = j;
+        }
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1, // substitution
+                        Math.min(
+                            matrix[i][j - 1] + 1, // insertion
+                            matrix[i - 1][j] + 1 // deletion
+                        )
+                    );
+                }
+            }
+        }
+        return matrix[b.length][a.length];
     }
 }
 

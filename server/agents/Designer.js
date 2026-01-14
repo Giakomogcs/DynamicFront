@@ -2,39 +2,62 @@ import { modelManager } from '../services/ai/ModelManager.js';
 
 
 export class DesignerAgent {
-    constructor() { }
+   constructor() { }
 
-    /**
-     * Generates UI widgets based on the execution result.
-     * @param {string} summaryText 
-     * @param {Array} data 
-     * @param {string} modelName 
-     * @param {Array} steps - Execution steps
-     * @param {Object} canvasContext - Existing canvas context { widgets, messages, mode }
-     * @returns {Promise<{text: string, widgets: Array}>}
-     */
-    async design(summaryText, data, modelName, steps = [], canvasContext = null) {
-        console.log("[Designer] Generating Widgets...");
-        console.log("[Designer] Canvas Context:", canvasContext ? `Mode: ${canvasContext.mode}, Existing Widgets: ${canvasContext.widgets?.length || 0}` : 'None');
+   /**
+    * Generates UI widgets based on the execution result.
+    * @param {string} summaryText 
+    * @param {Array} data 
+    * @param {string} modelName 
+    * @param {Array} steps - Execution steps
+    * @param {Object} canvasContext - Existing canvas context { widgets, messages, mode }
+    * @returns {Promise<{text: string, widgets: Array}>}
+    */
+   async design(summaryText, data, modelName, steps = [], canvasContext = null) {
+      console.log("[Designer] Generating Widgets...");
+      console.log("[Designer] Canvas Context:", canvasContext ? `Mode: ${canvasContext.mode}, Existing Widgets: ${canvasContext.widgets?.length || 0}` : 'None');
 
-        // If no data check
-        if ((!data || data.length === 0) && (!steps || steps.length === 0)) {
-            return { text: summaryText, widgets: [] };
-        }
+      // If no data check
+      if ((!data || data.length === 0) && (!steps || steps.length === 0)) {
+         return { text: summaryText, widgets: [] };
+      }
 
-        const serializedData = JSON.stringify(data);
-        const MAX_DESIGNER_CONTEXT = 15000;
-        const safeData = serializedData.length > MAX_DESIGNER_CONTEXT
-            ? serializedData.substring(0, MAX_DESIGNER_CONTEXT) + "... [DATA TRUNCATED]"
-            : serializedData;
+      const MAX_DESIGNER_CONTEXT = 15000;
+      let safeData = JSON.stringify(data);
 
-        // Build context information
-        let contextInfo = '';
-        if (canvasContext) {
-            const { mode, widgets, messages } = canvasContext;
+      // Intelligent Truncation to ensure VALID JSON
+      if (safeData.length > MAX_DESIGNER_CONTEXT) {
+         console.log(`[Designer] ⚠️ Data too large (${safeData.length} chars). Truncating safely...`);
 
-            if (mode === 'append' && widgets && widgets.length > 0) {
-                contextInfo = `\n\nEXISTING CANVAS CONTEXT (APPEND MODE):
+         // If data is array (most likely), try to fit items
+         if (Array.isArray(data)) {
+            let currentSize = 2; // []
+            const safeArray = [];
+            for (const item of data) {
+               const itemStr = JSON.stringify(item);
+               if (currentSize + itemStr.length + 1 > MAX_DESIGNER_CONTEXT) {
+                  break;
+               }
+               safeArray.push(item);
+               currentSize += itemStr.length + 1; // +1 for comma
+            }
+            safeData = JSON.stringify(safeArray);
+            console.log(`[Designer] ✂️  Truncated to ${safeArray.length} items to fit context.`);
+         } else {
+            // If object, just substring and hope? No, better to send empty or error.
+            // Or try to strip large fields? 
+            // Fallback: Send summary only
+            safeData = JSON.stringify({ message: "Data too large for visualization", count: data.length || Object.keys(data).length });
+         }
+      }
+
+      // Build context information
+      let contextInfo = '';
+      if (canvasContext) {
+         const { mode, widgets, messages } = canvasContext;
+
+         if (mode === 'append' && widgets && widgets.length > 0) {
+            contextInfo = `\n\nEXISTING CANVAS CONTEXT (APPEND MODE):
 - Current widgets on canvas: ${widgets.length}
 - Widget types: ${widgets.map(w => w.type).join(', ')}
 - Recent chat: ${messages?.slice(-3).map(m => m.text).join(' | ') || 'None'}
@@ -45,10 +68,10 @@ IMPORTANT: You are in APPEND mode. The user wants to ADD to existing content, no
 - Detect relationships with existing information
 - Avoid duplicating information already shown
 - Create complementary visualizations`;
-            }
-        }
+         }
+      }
 
-        const designerPrompt = `
+      const designerPrompt = `
 You are the UI DESIGNER Agent.
 Your input: A summary text, a set of raw data blocks, and the EXECUTION PLAN used to get this data.
 Your goal: Generate a JSON array of "Widgets" to visualize this data and the process.
@@ -127,52 +150,52 @@ CRITICAL DATA FORMATTING RULES:
    - Example: One table for "SENAI Units", another table for "Courses".
 `;
 
-        try {
-            // Use ModelManager with Failover
-            const result = await modelManager.generateContent(designerPrompt, {
-                model: modelName,
-                jsonMode: true // Force JSON response
-            });
-            const designText = result.response.text();
-            const widgets = this.extractJsonArray(designText) || [];
+      try {
+         // Use ModelManager with Failover
+         const result = await modelManager.generateContent(designerPrompt, {
+            model: modelName,
+            jsonMode: true // Force JSON response
+         });
+         const designText = result.response.text();
+         const widgets = this.extractJsonArray(designText) || [];
 
-            return { text: summaryText, widgets };
+         return { text: summaryText, widgets };
 
-        } catch (e) {
-            console.error("[Designer] Failed:", e);
+      } catch (e) {
+         console.error("[Designer] Failed:", e);
 
-            // Better fallback: Return text with empty widgets
-            return {
-                text: this._createFallbackText(summaryText, data),
-                widgets: []
-            };
-        }
-    }
+         // Better fallback: Return text with empty widgets
+         return {
+            text: this._createFallbackText(summaryText, data),
+            widgets: []
+         };
+      }
+   }
 
-    _createFallbackText(summaryText, data) {
-        // Create a simple text summary if Designer fails
-        let text = summaryText || "Processamento concluído.";
+   _createFallbackText(summaryText, data) {
+      // Create a simple text summary if Designer fails
+      let text = summaryText || "Processamento concluído.";
 
-        if (data && data.length > 0) {
-            text += `\n\nDados coletados: ${data.length} registro(s).`;
-        }
+      if (data && data.length > 0) {
+         text += `\n\nDados coletados: ${data.length} registro(s).`;
+      }
 
-        return text;
-    }
+      return text;
+   }
 
-    extractJsonArray(text) {
-        try {
-            const match = text.match(/```json\s*([\s\S]*?)\s*```/);
-            if (match) {
-                const parsed = JSON.parse(match[1]);
-                return Array.isArray(parsed) ? parsed : [parsed];
-            }
-            const start = text.indexOf('[');
-            const end = text.lastIndexOf(']');
-            if (start !== -1 && end !== -1) return JSON.parse(text.substring(start, end + 1));
-        } catch (e) { return []; }
-        return [];
-    }
+   extractJsonArray(text) {
+      try {
+         const match = text.match(/```json\s*([\s\S]*?)\s*```/);
+         if (match) {
+            const parsed = JSON.parse(match[1]);
+            return Array.isArray(parsed) ? parsed : [parsed];
+         }
+         const start = text.indexOf('[');
+         const end = text.lastIndexOf(']');
+         if (start !== -1 && end !== -1) return JSON.parse(text.substring(start, end + 1));
+      } catch (e) { return []; }
+      return [];
+   }
 }
 
 export const designerAgent = new DesignerAgent();

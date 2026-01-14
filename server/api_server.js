@@ -339,6 +339,15 @@ import { getSettings, updateSetting } from './handlers/settings.js';
 app.get('/api/settings', getSettings);
 app.post('/api/settings', updateSetting);
 
+// 7. GitHub Copilot Auth
+import { startCopilotAuth, pollCopilotToken, listCopilotModels, getCopilotUser, handleCallback } from './handlers/copilot_auth.js';
+app.post('/api/auth/copilot/start', startCopilotAuth);
+app.post('/api/auth/copilot/poll', pollCopilotToken);
+app.get('/api/copilot/models', listCopilotModels);
+app.get('/api/copilot/user', getCopilotUser);
+app.get('/api/auth/callback', handleCallback);
+
+
 app.listen(PORT, () => {
     console.log(`API Bridge running on http://localhost:${PORT}`);
 });
