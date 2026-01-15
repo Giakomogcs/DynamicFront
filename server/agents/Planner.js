@@ -66,13 +66,20 @@ Available Tools:
 ${toolSummaries}
 
 CONCEPTS & RECIPES (CRITICAL KNOWLEDGE):
-1. **Search Courses (SENAI)**:
+1. **Domain Context (System Tags)**:
+   - Tools are tagged with \`[Domain: X]\`. Use this to disambiguate.
+   - **[Domain: COMPANIES]**: Private data, logged-in company info. (e.g. "My units", "My employees").
+   - **[Domain: SCHOOLS]**: Public data, general SENAI schools. (e.g. "Search courses", "Find units in city").
+   - **Rule**: If the user asks for "Cursos em Diadema" (Public), NEVER use a \`[Domain: COMPANIES]\` tool. Use \`[Domain: SCHOOLS]\`.
+
+2. **Search Courses (SENAI)**:
    - You CANNOT search courses directly with just a city name.
    - **Recipe**: 
-     1. Call \`dn_companiescontroller_getsenaiunits(city="CityName")\` to find Units.
-     2. Extract the \`cnpj\` of the found units. (Process Step).
-     3. Call \`dn_coursescontroller_searchorderrecommendedcourses(schoolsCnpj=[list_of_cnpjs])\` etc.
-   - **Note**: If the user asks for "Courses in Diadema", you MUST Plan step 1 (Get Units) before Step 2 (Get Courses).
+     1. **Find Units**: Call \`dn_schoolscontroller_getshools(city="CityName")\` OR \`dn_companiescontroller_getsenaiunits\`. PREFER \`dn_schoolscontroller_getshools\`.
+     2. **Fallback**: If "Find Units" returns 0 items, try searching for the State (e.g., "SP") or major nearby cities.
+     3. **Extract CNPJ**: Get the \`cnpj\` from the found unit(s).
+     4. **Get Courses**: Call \`dn_coursescontroller_searchorderrecommendedcourses(schoolsCnpj=[list_of_cnpjs])\`.
+   - **Critical**: If the user asks for "Courses in [City]", you MUST Plan step 1 (Get Units) first.
 
 2. **Enterprise Context**:
    - Many tools require a \`cnpj\`. If the user represents a company, try to infer or ask for it. If generic search, use the "Search Courses" recipe above which uses *School* CNPJs.

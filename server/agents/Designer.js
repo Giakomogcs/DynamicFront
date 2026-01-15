@@ -80,74 +80,44 @@ Input Text: "${summaryText}"
 Input Data: ${safeData}
 Execution Strategy (Steps): ${JSON.stringify(steps)}${contextInfo}
 
-WIDGET TYPES (Use these to tell a STORY):
-1. **process**: { "type": "process", "title": "Execution Pipeline", "steps": [{ "name": "Step 1", "status": "completed", "description": "..." }] }
-   - ALWAYS start with this to show *how* you got the data. Reflect the "Execution Strategy".
+*** DESIGN PHILOSOPHY: "DASHBOARD FIRST" ***
+You are NOT generating a chat response. You are generating a PROPRIETARY DATA DASHBOARD (PowerBI / Tableau Style).
+Every screen must look like a built-for-purpose mini-application.
+
+WIDGET TYPES (Visual Hierarchy):
+
+1. **process**: { "type": "process", "title": "Execution Pipeline", "steps": [...] }
+   - ALWAYS start with this. show the journey.
+
 2. **stat**: { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%", "icon": "trending_up" }] }
-   - Use for Key Performance Indicators or simple counts (e.g., "Total Schools Found").
-3. **chart**: { "type": "chart", "config": { "chartType": "bar|line|pie|area", "title": "Meaningful Title", "description": "What this chart shows", "actions": [] }, "data": [...] }
-   - Use 'bar' for comparisons (e.g. Courses per Branch).
-   - Use 'pie' for distribution (e.g. Schools by City).
-4. **table**: { "type": "table", "title": "Detailed Data", "data": [...], "actions": [] }
-   - Use for granular listings.
-5. **insight**: { "type": "insight", "title": "Analysis / Status", "content": ["Bullet point 1", "Bullet point 2"], "sentiment": "neutral|warning|success", "actions": [] }
-   - Use to summarize findings, give warnings (e.g. "No schools found in X"), or provide recommendations.
-6. **expandable**: { "type": "expandable", "title": "Detailed Breakdown", "sections": [{ "title": "Section 1", "content": "...", "data": [...] }] }
-   - Use for hierarchical data (e.g., Courses → Units → Lessons).
-7. **comparison**: { "type": "comparison", "title": "Side-by-Side Comparison", "items": [{ "name": "Item A", "metrics": {...} }, { "name": "Item B", "metrics": {...} }] }
-   - Use to compare similar entities.
+   - EXTRACT KPIS from lists.
+   - If input is a list of 10 schools -> Stat: "Total Schools: 10".
+   - If input is orders -> Stat: "Total Value: $500".
+   - MAKE UP meaningful stats from the raw data.
 
-**INTERACTIVITY & ACTIONS (NEW)**:
-You can add an "actions" array to widgets (chart, table, insight) to make them interactive.
-Action Schema: \` { "label": "Button Text", "type": "tool_call", "tool": "tool_name", "args": { "arg1": "value" }, "style": "primary|secondary" } \`
-OR for Navigation: \` { "label": "Open Analysis", "type": "navigate_canvas", "canvasId": "new_id_or_null_to_create", "style": "link" } \`
+3. **table**: { "type": "table", "title": "Main Data View", "data": [...], "actions": [] }
+   - THE CORE WIDGET.
+   - Put ALL list data here.
+   - **MANDATORY**: Add "actions" to table configuration for drill-down.
+   - Action Example: { "label": "View Courses", "type": "tool_call", "tool": "dn_coursescontroller_searchorderrecommendedcourses", "args_map": { "schoolsCnpj": "cnpj" }, "style": "primary" } (Smart mapping)
 
-**WHEN TO USE ACTIONS:**
-1. **Drill Down**: If showing a list of entities (e.g. Schools), add an action to fetch details (e.g. "View Courses").
-   - Example: For a table of Schools, each row acts as context, but you can add a global action "Analyze All Courses".
-   - *Advanced*: You can currently only add Global Actions to the widget.
-2. **Follow-up**: If a process failed or had warnings, add an action to "Retry with X" or "Search Y instead".
-3. **New Analysis**: If the data is dense, add an action "Create Dedicated Canvas" (\`navigate_canvas\`).
+4. **chart**: { "type": "chart", "config": { ... }, "data": [{ "name": "Label", "value": 123 }] }
+   - AGGREGATE data. Count items by city, by type, by status.
+   - Show distributions (Pie) or comparisons (Bar).
 
-INTELLIGENT INSIGHTS (CRITICAL):
-When analyzing data, you MUST:
-1. **Detect Relationships**: Identify duplicate or similar items across different locations/categories
-2. **Proximity Grouping**: When dealing with location data, group by:
-   - Nearest/closest items (top 3-5)
-   - Regional grouping (same city/state)
-   - Overall distribution
-3. **Complete Details**: For courses, schools, or services, include:
-   - Full descriptions
-   - Units/modules/components breakdown
-   - Prerequisites, duration, certification
-   - Contact information
-   - Availability and schedules
-4. **Cross-References**: Link related information
-   - "This course is also available in 3 other locations"
-   - "Similar to Course X but with focus on Y"
-5. **Professional Structure**: Create nested, expandable views for complex data
-   - Main overview → Detailed breakdown → Specific items
+5. **insight**: { "type": "insight", "title": "Executive Summary", "content": [], "sentiment": "neutral", "actions": [] }
+   - Summarize the finding like an analyst.
 
-INSTRUCTIONS:
-- Return ONLY the JSON array inside \`\`\`json\`\`\` code blocks.
-- **Visual Storytelling**: The widgets should flow logically: Process -> Stats -> Charts -> Details.
-- **Contextualize**: Don't just show numbers. Use Titles and Descriptions.
-- **Analysis**: If the user asked for "most repeated" or "top", calculate it from the raw list (e.g. Top 5 Bar Chart).
-- **Empty/Error State**: If data is missing/error, use an "insight" widget to explain why (e.g. "Try removing accents") AND a "process" widget showing where it failed.
-- **Completeness**: Aim for at least 3 widgets: Process, Insight, and Data (Table/Chart).
+**ACTIONS & NAVIGATION (Interactivity):**
+- Use \`navigate_canvas\` to "Create New Analysis" for complex drill-downs.
+- Use \`tool_call\` for immediate actions (e.g. "Enroll", "Details").
 
-CRITICAL DATA FORMATTING RULES:
-1. **Chart Data Structure**: EVERY chart data item MUST have exactly these keys: { "name": "Label", "value": 123 }
-   - ❌ WRONG: { "city": "São Paulo", "count": 5 }
-   - ✅ CORRECT: { "name": "São Paulo", "value": 5 }
-2. **Table Data Completeness**: Include ALL rows from the input data. DO NOT truncate or sample.
-   - If input has 18 items, table MUST show all 18 items.
-   - Only limit if explicitly asked (e.g., "top 5").
-3. **Data Transformation**: Extract and transform raw API responses into clean, user-friendly formats.
-   - Remove internal IDs, technical fields, null values.
-   - Format dates, numbers, and text for readability.
-4. **Multi-Tool Results**: If multiple tools were called, create separate widgets for each result set.
-   - Example: One table for "SENAI Units", another table for "Courses".
+**CRITICAL RULES:**
+1. **NO SIMPLE LISTS**: Never just dump text. Use Tables.
+2. **KPIs ARE KING**: Always find at least 2 numbers to show in a 'stat' widget.
+3. **INTERACTIVITY**: Every table should ideally have an action.
+4. **DATA COMPLETENESS**: Show all data, but organize it visually.
+5. **NO DUPLICATES**: Check 'Input Data' vs 'Existing Canvas Context'. If you are just refreshing the same data, provide an 'insight' or 'stat' update, but DO NOT re-render large tables unless the data changed significantly.
 `;
 
       try {

@@ -183,8 +183,15 @@ export async function getApiTools(api) {
 
                         for (const [key, prop] of Object.entries(enrichedBody)) {
                             flatProperties[key] = prop;
-                            if (prop.required) {
+                            // Check internal flag from Enricher
+                            if (prop._isRequired) {
                                 requiredParams.push(key);
+                                delete prop._isRequired; // Cleanup internal flag
+                            }
+                            // Fallback for legacy
+                            else if (prop.required === true) {
+                                requiredParams.push(key);
+                                delete prop.required; // Cleanup invalid schema
                             }
                         }
                     }
@@ -197,9 +204,27 @@ export async function getApiTools(api) {
                         nullable: true
                     };
 
+                    // SEMANTIC BOOST: Append key parameters to description to help Planner find this tool
+                    const paramSummary = Object.keys(flatProperties).length > 0 
+                        ? ` (Parameters: ${Object.keys(flatProperties).slice(0, 8).join(', ')}${Object.keys(flatProperties).length > 8 ? '...' : ''})`
+                        : '';
+
+                    // DOMAIN CONTEXT LINKING
+                    // Extract "Controller" from operationId to give a strong hint about the domain (e.g. "Schools" vs "Companies")
+                    // operationId is usually "CompaniesController_GetSenaiUnits" or "get_api_v1_schools" etc.
+                    let domainContext = "";
+                    if (operationId.includes('Controller')) {
+                         const match = operationId.match(/([a-zA-Z0-9]+)Controller/);
+                         if (match) domainContext = `[Domain: ${match[1].toUpperCase()}] `;
+                    } else if (toolName.includes('_')) {
+                         // Fallback: use first part of tool name as domain
+                         const parts = toolName.split('_');
+                         if (parts.length > 2) domainContext = `[Domain: ${parts[1].toUpperCase()}] `;
+                    }
+
                     tools.push({
                         name: toolName,
-                        description: operation.summary || operation.description || `Call ${method.toUpperCase()} ${path}`,
+                        description: domainContext + (operation.summary || operation.description || `Call ${method.toUpperCase()} ${path}`) + paramSummary,
                         inputSchema: {
                             type: "object",
                             properties: flatProperties,
@@ -427,6 +452,30 @@ export async function executeApiTool(toolExecConfig, args, toolSchema = null) {
 
         let data;
         try { data = JSON.parse(text); } catch { data = text; }
+
+        // --- SMART RETRY: HANDLE ACCENTS/DIACRITICS ---
+        // If result is EMPTY ARRAY and request had accents, retry with normalized text.
+        // E.g. User sent "São Caetano", API returned [], retry with "Sao Caetano".
+        if (Array.isArray(data) && data.length === 0 && !validatedArgs._retried) {
+            const hasDetailedParams = Object.values(params).some(val => typeof val === 'string' && /[^\u0000-\u007F]/.test(val));
+            if (hasDetailedParams) {
+                console.log(`[API Exec] ⚠️ Zero results found for query with accents. Retrying with normalization...`);
+                
+                // Recursive Call with NORMALISED params
+                const normalizedArgs = JSON.parse(JSON.stringify(validatedArgs));
+                normalizedArgs._retried = true; // Prevent infinite loop
+
+                // Normalize strings in params
+                for (const key of Object.keys(normalizedArgs)) {
+                     if (typeof normalizedArgs[key] === 'string') {
+                         normalizedArgs[key] = normalizedArgs[key].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                     }
+                }
+                
+                console.log(`[API Exec] 🔄 Retrying with:`, JSON.stringify(normalizedArgs));
+                return executeApiTool(toolExecConfig, normalizedArgs, toolSchema);
+            }
+        }
 
         return {
             content: [{ type: "text", text: JSON.stringify(data) }]

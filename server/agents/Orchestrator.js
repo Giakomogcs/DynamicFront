@@ -98,7 +98,7 @@ export class AgentOrchestrator {
 [PLANNER STRATEGY]: ${plan.thought}
 [PLANNED STEPS]: ${JSON.stringify(plan.steps)}
 `;
-        const executionResult = await executorAgent.execute(userMessage, history, modelName, activeTools, enhancedContext);
+        const executionResult = await executorAgent.execute(userMessage, history, modelName, activeTools, enhancedContext, location);
 
         // PERSISTENCE: If Executor switched models (failover), update global modelName
         if (executionResult.usedModel) {

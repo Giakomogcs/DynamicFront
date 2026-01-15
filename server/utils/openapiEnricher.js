@@ -290,9 +290,11 @@ function enrichBodySchema(requestBody, spec) {
                 enriched[key].default = resolvedProp.default;
             }
 
-            // Mark as required
+            // Mark as required (Internal Flag)
+            // We use '_isRequired' to pass this info to api.js, which will move it to the parent 'required' array
+            // and remove this property to ensure valid JSON Schema.
             if (required.includes(key)) {
-                enriched[key].required = true;
+                enriched[key]._isRequired = true;
             }
         }
     }

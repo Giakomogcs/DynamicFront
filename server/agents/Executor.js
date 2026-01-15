@@ -14,7 +14,17 @@ export class ExecutorAgent {
      * @param {Array} tools - Gemini formatted tools (TODO: standard format?)
      * @returns {Promise<{text: string, gatheredData: Array}>}
      */
-    async execute(userMessage, history, modelName, tools = [], planContext = "") {
+    /**
+     * Executes the chat loop with the selected tools.
+     * @param {string} userMessage 
+     * @param {Array} history 
+     * @param {string} modelName 
+     * @param {Array} tools - Gemini formatted tools (TODO: standard format?)
+     * @param {string} planContext 
+     * @param {Object} location - { lat, lon }
+     * @returns {Promise<{text: string, gatheredData: Array}>}
+     */
+    async execute(userMessage, history, modelName, tools = [], planContext = "", location = null) {
         console.log(`[Executor] Starting execution with ${tools.length} tools. Model: ${modelName}`);
 
         // 1. Prepare Initial Messages (Stateless)
@@ -24,10 +34,12 @@ export class ExecutorAgent {
         if (planContext) {
             finalUserMessage += `\n\n${planContext}`;
         }
-        // REMOVED SAFEGUARDS: Do not inject "SYSTEM INSTRUCTION" into User Message to avoid Azure Content Filter "Jailbreak" detection.
-        // if (tools && tools.length > 0) {
-        //     finalUserMessage += `\n\n[SYSTEM INSTRUCTION: You have ${tools.length} tools available...]`;
-        // }
+        
+        // Inject Location Context
+        if (location && location.lat && location.lon) {
+            finalUserMessage += `\n\n[CONTEXT: User Location is Latitude ${location.lat}, Longitude ${location.lon}. USE THESE COORDINATES if a tool requires user location.]`;
+        }
+
         messages.push({ role: 'user', content: finalUserMessage });
 
         const safeToolNames = tools.map(t => t.name).join(', ');
@@ -214,12 +226,26 @@ export class ExecutorAgent {
 
                         console.log(`[Executor] >>> Calling Tool: ${call.name}`);
 
-                        // Apply intelligent filtering BEFORE execution
+                        // Apply intelligent filters BEFORE execution
                         const filteredArgs = this.applyIntelligentFilters(call.name, call.args, userMessage, tools);
+                        
+                        // SMART CONTEXT INJECTION (Accumulator)
+                        // If we have previous context for this tool's parameters, inject it if missing
+                        if (this.contextAccumulator) {
+                             if (filteredArgs.schoolsCnpj === undefined && this.contextAccumulator.schoolsCnpj && toolName.includes('courses')) {
+                                   filteredArgs.schoolsCnpj = this.contextAccumulator.schoolsCnpj;
+                                   console.log(`[Executor] 🧠 Injecting Context: schoolsCnpj = ${JSON.stringify(filteredArgs.schoolsCnpj)}`);
+                             }
+                        }
 
                         let toolResult;
                         try {
                             toolResult = await toolService.executeTool(call.name, filteredArgs);
+
+                            // EXTRACT ENTITIES for future context (Generic Entity Recognition)
+                            if (toolResult && !toolResult.isError && toolResult.content) {
+                                this.extractContextEntities(toolResult.content);
+                            }
 
                             // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
                             if (toolResult && toolResult.isError && toolResult.content && toolResult.content[0].text.includes('not found')) {
@@ -389,6 +415,7 @@ export class ExecutorAgent {
      * @returns {object} - Compressed result
      */
     compressResult(toolResult, limit = 5) {
+        // ... (previous code)
         const copy = JSON.parse(JSON.stringify(toolResult));
 
         if (copy.content && Array.isArray(copy.content)) {
@@ -436,6 +463,44 @@ export class ExecutorAgent {
         }
 
         return copy;
+    }
+
+    /**
+     * Extracts potential entities for context persistence
+     * (e.g., CNPJs for school courses search)
+     */
+    extractContextEntities(content) {
+        if (!this.contextAccumulator) this.contextAccumulator = {};
+
+        // Loop through content items
+        for (const item of content) {
+            if (item.type !== 'text' || !item.text) continue;
+
+            try {
+                // Heuristic: Check if result is a List of Schools/Units
+                // We look for 'cnpj' fields in JSON arrays
+                if (item.text.includes('cnpj') || item.text.includes('CNPJ')) {
+                    const data = JSON.parse(item.text);
+                    let arrayData = Array.isArray(data) ? data : (data.items || data.data || []);
+                    
+                    if (Array.isArray(arrayData)) {
+                         // Extract CNPJs
+                         const cnpjs = arrayData
+                            .map(x => x.cnpj || x.CNPJ)
+                            .filter(x => x && typeof x === 'string')
+                            .map(x => ({ cnpj: x })); // Wrap in object as expected by schema
+
+                         if (cnpjs.length > 0) {
+                             // Store only the first 5 to avoid context bloat
+                             this.contextAccumulator.schoolsCnpj = cnpjs.slice(0, 5);
+                             console.log(`[Executor] 🧠 Extracted ${cnpjs.length} CNPJs for Context. Stored first 5.`);
+                         }
+                    }
+                }
+            } catch (e) {
+                // Ignore parsing errors, it's just a heuristic
+            }
+        }
     }
 }
 

@@ -1,5 +1,5 @@
-[2026-01-14T22:48:14.370Z] Error: The response was filtered due to the prompt triggering Azure OpenAI's content management policy. Please modify your prompt and retry. To learn more about our content filtering policies please read our documentation: https://go.microsoft.com/fwlink/?linkid=2198766
-Error: The response was filtered due to the prompt triggering Azure OpenAI's content management policy. Please modify your prompt and retry. To learn more about our content filtering policies please read our documentation: https://go.microsoft.com/fwlink/?linkid=2198766
-    at CopilotProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/providers/CopilotProvider.js:144:25)
+[2026-01-14T23:09:12.879Z] Error: Invalid schema for function 'dn_coursescontroller_searchorderrecommendedcourses': True is not of type 'array'.
+Error: Invalid schema for function 'dn_coursescontroller_searchorderrecommendedcourses': True is not of type 'array'.
+    at CopilotProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/providers/CopilotProvider.js:137:25)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/ModelManager.js:525:29)
