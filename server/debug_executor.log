@@ -1,5 +1,5 @@
-[2026-01-14T23:09:12.879Z] Error: Invalid schema for function 'dn_coursescontroller_searchorderrecommendedcourses': True is not of type 'array'.
-Error: Invalid schema for function 'dn_coursescontroller_searchorderrecommendedcourses': True is not of type 'array'.
+[2026-01-15T00:52:55.465Z] Error: Request failed with status code 429
+Error: Request failed with status code 429
     at CopilotProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/providers/CopilotProvider.js:137:25)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
     at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/ModelManager.js:525:29)

@@ -272,121 +272,85 @@ class ModelManager {
             return [];
         }
 
-        const plan = [];
+        let plan = [];
 
-        // STRATEGY: Diversify across providers to avoid hitting same quota
-        // Priority: Free/High Quota → Paid/Lower Quota → Premium
+        // 1. PRIORITY: USE USER'S ENABLED MODELS SETTING
+        if (this.settings?.enabledModels && Array.isArray(this.settings.enabledModels) && this.settings.enabledModels.length > 0) {
+            // Filter out the failed model
+            // And ensure we only pick models from *Registered* providers
+            const candidates = this.settings.enabledModels.filter(m => {
+                // Fuzzy match model name? or Exact? Usually exact from settings.
+                // handle "copilot/gpt-4o" vs "gpt-4o" mismatch? 
+                // Let's assume settings has full IDs like "copilot/gpt-4o" or simple IDs.
+                // We normalize comparison.
+                return !m.includes(failedModel) && !failedModel.includes(m);
+            });
 
-        // 1. GEMINI FAILOVER
-        if (failedModel.includes('gemini')) {
-            // Try other Gemini models first
-            if (failedModel !== 'gemini-1.5-flash') {
-                plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
+            // Map candidates to { providerId, model, tier }
+            candidates.forEach(m => {
+                const provider = this.getProviderForModel(m);
+                if (provider) {
+                    plan.push({ providerId: provider.id, model: m, tier: 'user-selected' });
+                }
+            });
+            
+            if (plan.length > 0) {
+                console.log(`[ModelManager] 🎯 Using user-defined enabledModels for failover: ${plan.map(p=>p.model).join(', ')}`);
+                return plan; // Return explicit user list
             }
-            if (failedModel !== 'gemini-2.0-flash-lite') {
-                plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash-lite', tier: 'free' });
-            }
-
-            // Switch to Groq (Fast, Free Tier)
-            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
-            plan.push({ providerId: 'groq', model: 'llama-3.1-8b-instant', tier: 'free' });
-
-            // Switch to OpenAI (Paid, but reliable)
-            plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
-
-            // Switch to Anthropic (Premium, high quota)
-            plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
-
-            // Last resort: xAI Grok
-            plan.push({ providerId: 'xai', model: 'grok-beta', tier: 'paid' });
         }
 
-        // 2. GROQ FAILOVER
-        else if (['llama', 'mixtral'].some(k => failedModel.includes(k))) {
-            // Try smaller Groq model
-            if (failedModel !== 'llama-3.1-8b-instant') {
-                plan.push({ providerId: 'groq', model: 'llama-3.1-8b-instant', tier: 'free' });
-            }
-
-            // Switch to Gemini
-            plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
-            plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash-lite', tier: 'free' });
-
-            // OpenAI
-            plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
-
-            // Anthropic
-            plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
-
-            // xAI
-            plan.push({ providerId: 'xai', model: 'grok-beta', tier: 'paid' });
+        // 2. FALLBACK: DYNAMIC DISCOVERY FROM REGISTERED PROVIDERS
+        // If no user list, we scan available providers for alternatives
+        const registeredProviders = Array.from(this.providers.values());
+        
+        // Group by provider to diversify?
+        // Or just list all other models?
+        // Let's just create a list of "Other Valid Models"
+        
+        // Hardcoded preferences for known providers if they are active
+        
+        // COPILOT SPECIFIC STRATEGY (Since user likely uses this)
+        if (this.providers.has('copilot')) {
+             // Copilot supports multiple models. If one fails, try others.
+             const copilotModels = ['gpt-3.5-turbo', 'claude-3.5-sonnet', 'gpt-4o']; 
+             // Note: CopilotProvider.listModels() would be better but requires fetch.
+             // We use known list for speed.
+             copilotModels.forEach(m => {
+                 const fullName = `copilot/${m}`;
+                 if (!failedModel.includes(m)) {
+                     plan.push({ providerId: 'copilot', model: fullName, tier: 'paid' });
+                 }
+             });
         }
 
-        // 3. OPENAI FAILOVER
-        else if (['gpt', 'o1'].some(k => failedModel.includes(k))) {
-            // Try cheaper OpenAI model
-            if (failedModel !== 'gpt-3.5-turbo') {
-                plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
-            }
-
-            // Switch to free tiers
-            plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
-            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
-
-            // Anthropic (similar quality)
-            plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
-
-            // xAI
-            plan.push({ providerId: 'xai', model: 'grok-beta', tier: 'paid' });
+        // Add Free Tiers if Providers are Registered
+        if (this.providers.has('gemini')) {
+             plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
+        }
+        if (this.providers.has('groq')) {
+             plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
+        }
+         if (this.providers.has('openai')) {
+             plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
         }
 
-        // 4. ANTHROPIC FAILOVER
-        else if (failedModel.includes('claude')) {
-            // Try cheaper Claude model
-            if (failedModel !== 'claude-3-haiku-20240307') {
-                plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
-            }
 
-            // Switch to OpenAI (similar quality)
-            plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
-
-            // Free tiers
-            plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
-            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
-
-            // xAI
-            plan.push({ providerId: 'xai', model: 'grok-beta', tier: 'paid' });
+        // FILTER: Remove unhealthy providers (and invalid ones)
+        // AND Remove duplicates
+        const uniquePlan = [];
+        const seen = new Set();
+        
+        for (const entry of plan) {
+             const key = `${entry.providerId}:${entry.model}`;
+             if (seen.has(key)) continue;
+             if (!this.isProviderHealthy(entry.providerId)) continue;
+             
+             uniquePlan.push(entry);
+             seen.add(key);
         }
 
-        // 5. XAI FAILOVER
-        else if (failedModel.includes('grok')) {
-            // Switch to other providers
-            plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
-            plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
-            plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
-            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
-        }
-
-        // UNIVERSAL FALLBACK: If no specific plan, try all providers
-        if (plan.length === 0) {
-            plan.push(
-                { providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' },
-                { providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' },
-                { providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' },
-                { providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' },
-                { providerId: 'xai', model: 'grok-beta', tier: 'paid' },
-                { providerId: 'copilot', model: 'copilot/gpt-4o', tier: 'paid' }
-            );
-        }
-
-        // FILTER: Remove unhealthy providers from plan
-        return plan.filter(entry => {
-            const healthy = this.isProviderHealthy(entry.providerId);
-            if (!healthy) {
-                console.log(`[ModelManager] ⚠️ Skipping ${entry.providerId}/${entry.model} - Provider marked unhealthy`);
-            }
-            return healthy;
-        });
+        return uniquePlan;
     }
 
     isRateLimitOrQuota(error) {
@@ -395,18 +359,14 @@ class ModelManager {
             const status = error.status || error.statusCode || 0;
 
             // Check for 429 in various forms including Google's specific errors
-            // ALSO check for Network/Connection errors (fetch failed) to trigger failover
             return status === 429 ||
                 msg.includes("429") ||
                 msg.includes("quota") ||
                 msg.includes("too many requests") ||
                 msg.includes("rate limit") ||
                 msg.includes("resource_exhausted") ||
-                msg.includes("insufficient_quota") || // OpenAI usage limit
-                msg.includes("fetch failed") ||        // Node/Undici network error
-                msg.includes("econnrefused") ||        // Connection refused
-                msg.includes("etimedout") ||           // Timeout
-                msg.includes("network error");         // Generic
+                msg.includes("insufficient_quota") || 
+                msg.includes("free tier limit");
         } catch (e) {
             return false;
         }
@@ -440,13 +400,19 @@ class ModelManager {
     }
 
     isProviderHealthy(providerId) {
+        // 1. Check if provider is REGISTERED
+        if (!this.providers.has(providerId)) return false;
+
+        // 2. Check health stats
         const health = this.providerHealth.get(providerId);
         if (!health) return true; // Assume healthy if no data
 
         // If provider failed more than 3 times in a row, mark as unhealthy
-        if (health.failCount > 3) return false;
-
-        return health.available;
+        // BUT for Rate Limits, we want to allow retry after cooldown? 
+        // For now strict check
+        if (!health.available) return false;
+        
+        return true;
     }
 
     // Metrics Tracking Methods

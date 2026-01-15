@@ -43,19 +43,19 @@ export class PlannerAgent {
                 // Even in groups, we should try to list them if possible
                 if (tools.length > 20) {
                     // Massive group: List names + Common Prefix Description
-                    const names = tools.map(t => t.name).join(', ');
+                    const names = tools.map(t => this._cleanName(t.name)).join(', ');
                     lines.push(`- **${prefix.toUpperCase()} Tools** (Count: ${tools.length}): [${names}]...`);
                 } else {
-                    tools.forEach(t => lines.push(`- ${t.name}: ${t.description?.substring(0, 150)}`));
+                    tools.forEach(t => lines.push(`- ${this._cleanName(t.name)}: ${t.description?.substring(0, 80)}`));
                 }
             }
             toolSummaries = lines.join('\n');
         } else {
-            // Standard compression: Name + first 150 chars of description
-            // Increased from 60 to 150 to ensure "DN" tools context is visible
-            toolSummaries = availableTools.map(t => `- ${t.name}: ${(t.description || '').substring(0, 150).replace(/\s+/g, ' ')}`).join('\n');
+            // Standard compression: Clean Name + first 80 chars of description
+            // "api_uuid_name" -> "name" to save tokens. Orchestrator fuzzy match handles the implementation detail.
+            toolSummaries = availableTools.map(t => `- ${this._cleanName(t.name)}: ${(t.description || '').substring(0, 80).replace(/\s+/g, ' ')}`).join('\n');
         }
-        console.log(`[Planner] Tool Summaries Length: ${toolSummaries.length} chars`);
+        console.log(`[Planner] Tool Summaries Length: ${toolSummaries.length} chars (Optimized for Context)`);
 
         const planningPrompt = `
 You are the PLANNER Agent.
@@ -94,16 +94,20 @@ CONCEPTS & RECIPES (CRITICAL KNOWLEDGE):
 
 INSTRUCTIONS:
 1. **Analyze** the User's request. Identify the Core Intent (e.g., "Comparison", "Search", "Aggregation").
-2. **Formulate a Strategy**: Create a logical pipeline of steps.
+2. **Select Batch Strategy**:
+   - **Courses near me?** -> \`BY_ENTITY\`. Plan Step 1 (Find Units). Return \`hasMore: true\`. Future batches will search courses for each unit.
+   - **Broad Search (e.g. "All python courses")?** -> \`BY_PAGE\`. Plan Page 1. Return \`hasMore: true\`.
+   - **Single Task?** -> \`NONE\`. Return \`hasMore: false\`.
+3. **Formulate a Strategy**: Create a logical pipeline of steps.
    - **Step 1**: Data Retrieval (What tools to call?)
    - **Step 2**: Data Processing/Filtering (How to refine the data?)
    - **Step 3**: Visualization (What is the best way to show this?)
-3. **Select Tools**: Identify ALL tools needed for this pipeline.
-   - If the user asks for "Cursos SENAI", you MUST select tools related to "courses" AND "branches" (if location is needed).
-   - If the user asks for "Maps", ensure you select a tool that returns Geocoordinates.
-4. **Return JSON**:
+4. **Select Tools**: Identify ALL tools needed for THIS BATCH.
+5. **Return JSON**:
    {
-     "thought": "Brief explanation of the strategy.",
+     "thought": "Brief explanation of the strategy and batching.",
+     "batchStrategy": "NONE" | "BY_ENTITY" | "BY_PAGE",
+     "hasMore": boolean,
      "tools": ["tool_name_1", "tool_name_2"],
      "steps": [
        { 
@@ -113,7 +117,7 @@ INSTRUCTIONS:
        }
      ]
    }
-5. If no tools are relevant, return { "tools": [] }.
+6. If no tools are relevant, return { "tools": [] }.
 `;
 
         try {
@@ -145,16 +149,32 @@ INSTRUCTIONS:
                     tools: planJson.tools,
                     thought: planJson.thought,
                     steps: planJson.steps || [],
+                    batchStrategy: planJson.batchStrategy || 'NONE',
+                    hasMore: planJson.hasMore || false,
                     usedModel: result.usedModel // <--- Pass back the model useful for Orchestrator
                 };
             }
             return { tools: [] };
         } catch (e) {
             console.error("[Planner] Error:", e);
+            
+            // CRITICAL: Rethrow Rate Limits so Orchestrator can Backoff
+            if (e.message.includes('429') || e.message.includes('Quota') || e.message.includes('Too Many Requests')) {
+                throw e;
+            }
+
             fs.writeFileSync('debug_planner.log', `[${new Date().toISOString()}] Error: ${e.message}\n${e.stack}\n`);
             // Fallback: If planning fails, maybe return empty toolset to avoid triggering random things
             return { tools: [] };
         }
+    }
+
+    _cleanName(name) {
+        // Remove "api_uuid_" prefix if present to save tokens
+        if (name.includes('__')) {
+            return name.split('__').pop();
+        }
+        return name;
     }
 
     extractJson(text) {

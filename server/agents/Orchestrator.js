@@ -9,6 +9,153 @@ import { designerAgent } from './Designer.js';
 export class AgentOrchestrator {
     constructor() { }
 
+    /**
+     * STREAMING Implementation of processRequest
+     */
+    async processRequestStream(res, userMessage, history, modelName = null, location = null, canvasContext = null) {
+        // Helper to send chunks
+        const sendChunk = (type, data) => {
+            res.write(JSON.stringify({ type, ...data }) + '\n');
+        };
+
+        console.log(`\n=== [Orchestrator] New Stream Request: "${userMessage?.substring(0, 50)}..." ===`);
+        sendChunk('status', { message: 'Analyzing request...' });
+
+        // 1. Fetch Tools
+        const allMcpTools = await toolService.getAllTools();
+        const allCompatibleTools = mapMcpToolsToAiModels(allMcpTools);
+        
+        // 2. PLAN (Recursive Loop for Batches)
+        let isDone = false;
+        let batchCount = 0;
+        let currentContext = canvasContext; // Evolves as we build widgets
+        let aggregatedText = "";
+
+        while (!isDone && batchCount < 5) {
+            batchCount++;
+            console.log(`[Orchestrator] Planning Batch ${batchCount}...`);
+            sendChunk('status', { message: `Planning Step ${batchCount}...` });
+
+            try {
+                // TODO: Pass 'batchCount' or 'previousSteps' to Planner so it knows to proceed
+                const plan = await plannerAgent.plan(userMessage, allMcpTools, location, modelName);
+                
+                // Smart Model Retention: Only update if valid and not an error-prone internal ID
+                if (plan.usedModel && !plan.usedModel.startsWith('/')) {
+                     modelName = plan.usedModel;
+                }
+
+                const selectedToolNames = plan.tools || [];
+                sendChunk('plan', { thought: plan.thought, steps: plan.steps });
+
+                if (selectedToolNames.length === 0) {
+                    console.log("[Orchestrator] No tools selected. Finishing.");
+                    isDone = true;
+                }
+
+                // FILTER TOOLS
+                let activeTools = [];
+                for (const name of selectedToolNames) {
+                    const match = allCompatibleTools.find(t => t.name === name);
+                    if (match) activeTools.push(match);
+                }
+
+                // 3. EXECUTE
+                if (activeTools.length > 0) {
+                    sendChunk('status', { message: `Executing ${activeTools.length} tools...` });
+                    
+                    const executionResult = await executorAgent.execute(userMessage, history, modelName, activeTools, null, location);
+                    if (executionResult.usedModel && !executionResult.usedModel.startsWith('/')) {
+                        modelName = executionResult.usedModel;
+                    }
+
+                    // Stream Execution Logs
+                    if (executionResult.gatheredData) {
+                        executionResult.gatheredData.forEach(item => {
+                            sendChunk('log', { message: `Executed ${item.tool}` });
+                        });
+                    }
+
+                    // 4. DESIGN (Incremental)
+                    sendChunk('status', { message: 'Designing UI updates...' });
+                    const designResult = await designerAgent.design(
+                        executionResult.text,
+                        executionResult.gatheredData,
+                        modelName,
+                        plan.steps,
+                        currentContext
+                    );
+
+                    // Update Context for next batch
+                    if (designResult.widgets) {
+                        if (!currentContext) currentContext = { widgets: [] };
+                        currentContext.widgets = designResult.widgets; 
+                    }
+
+                    // STREAM WIDGETS
+                    sendChunk('ui_update', { 
+                        text: designResult.text, 
+                        widgets: designResult.widgets 
+                    });
+                    
+                    aggregatedText = designResult.text;
+
+                } else {
+                    isDone = true;
+                }
+
+                // CHECK: Does Planner want us to continue?
+                if (!plan.hasMore) {
+                    isDone = true;
+                }
+
+                // THROTTLE: Wait 4s before next batch to avoid 429s
+                if (!isDone) {
+                    await new Promise(r => setTimeout(r, 4000));
+                }
+
+            } catch (error) {
+                console.error(`[Orchestrator] Batch ${batchCount} failed:`, error);
+                
+                // If it's a Rate Limit, trigger CONTINGENCY PLAN
+                if (error.message.includes('429') || error.message.includes('Quota')) {
+                     sendChunk('status', { message: '⚠️ Rate limit hit. Initiating Contingency Plan...' });
+                     
+                     // 1. Wait
+                     await new Promise(r => setTimeout(r, 10000)); // 10s cooldown
+                     
+                     // 2. Switch Model (Safe Rotation for Copilot Users)
+                     const previousModel = modelName || 'gpt-4o';
+                     if (previousModel.includes('gpt-4')) {
+                         // Downgrade to faster/cheaper model within same provider (likely Copilot)
+                         modelName = 'gpt-3.5-turbo';
+                     } else if (previousModel.includes('gpt-3.5')) {
+                         // Try a different family if supported (Copilot supports Claude-3.5-sonnet often)
+                         modelName = 'claude-3.5-sonnet';
+                     } else {
+                         // Cycle back or try default
+                         modelName = 'gpt-4o';
+                     }
+                     
+                     sendChunk('status', { message: `🔄 Switching Strategy: Using model ${modelName}` });
+                     console.log(`[Orchestrator] 🔄 Switched model to ${modelName} due to 429.`);
+
+                     // Decrement batchCount so we effectively 'retry' this step slot?
+                     // Or just accept the loss of this batch and try next?
+                     // Better to continue to next iteration with new model. The Planner will figure it out.
+                } else {
+                     sendChunk('log', { message: `Batch failed: ${error.message}` });
+                     // If critical error, stop
+                     isDone = true;
+                }
+            }
+        }
+
+        sendChunk('status', { message: 'Complete' });
+        // Final "Done" event
+        sendChunk('done', { text: aggregatedText });
+    }
+
     async processRequest(userMessage, history, modelName = null, location = null, canvasContext = null) {
         console.log(`\n=== [Orchestrator] New Request: "${userMessage?.substring(0, 50)}..." ===`);
         if (canvasContext) {

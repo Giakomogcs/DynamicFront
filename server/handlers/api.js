@@ -424,7 +424,22 @@ export async function executeApiTool(toolExecConfig, args, toolSchema = null) {
         for (const [key, value] of Object.entries(params)) {
             // Avoid duplicating if we just added it via auth, or path var
             if (!url.includes(`{${key}}`) && key !== auth?.paramName) {
-                urlObj.searchParams.append(key, value);
+                if (Array.isArray(value)) {
+                    // Check if array contains objects
+                    const hasObjects = value.some(v => typeof v === 'object' && v !== null);
+                    if (hasObjects) {
+                        // Serializing complex array as JSON string
+                        urlObj.searchParams.append(key, JSON.stringify(value));
+                    } else {
+                        // Append multiple values for simple arrays (standard style)
+                        value.forEach(v => urlObj.searchParams.append(key, v));
+                    }
+                } else if (typeof value === 'object' && value !== null) {
+                    // Serialize object as JSON string
+                    urlObj.searchParams.append(key, JSON.stringify(value));
+                } else {
+                    urlObj.searchParams.append(key, value);
+                }
             }
         }
         finalUrl = urlObj.toString();

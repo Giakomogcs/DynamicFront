@@ -230,11 +230,22 @@ export class ExecutorAgent {
                         const filteredArgs = this.applyIntelligentFilters(call.name, call.args, userMessage, tools);
                         
                         // SMART CONTEXT INJECTION (Accumulator)
-                        // If we have previous context for this tool's parameters, inject it if missing
-                        if (this.contextAccumulator) {
-                             if (filteredArgs.schoolsCnpj === undefined && this.contextAccumulator.schoolsCnpj && toolName.includes('courses')) {
+                        // If we have previous context for this tool's parameters, inject it if missing OR if strictly better
+                        if (this.contextAccumulator && call.name.includes('courses')) {
+                             // Case A: Missing argument entirely
+                             if (filteredArgs.schoolsCnpj === undefined && this.contextAccumulator.schoolsCnpj) {
                                    filteredArgs.schoolsCnpj = this.contextAccumulator.schoolsCnpj;
-                                   console.log(`[Executor] 🧠 Injecting Context: schoolsCnpj = ${JSON.stringify(filteredArgs.schoolsCnpj)}`);
+                                   console.log(`[Executor] 🧠 Injecting Context (Missing Arg): schoolsCnpj = ${this.contextAccumulator.schoolsCnpj.length} items`);
+                             }
+                             // Case B: Weak argument (String or Array of Strings) -> OVERRIDE with Rich Context
+                             else if (this.contextAccumulator.schoolsCnpj) {
+                                 const current = filteredArgs.schoolsCnpj;
+                                 const isWeak = typeof current === 'string' || (Array.isArray(current) && typeof current[0] === 'string');
+                                 
+                                 if (isWeak) {
+                                     filteredArgs.schoolsCnpj = this.contextAccumulator.schoolsCnpj;
+                                     console.log(`[Executor] 🧠 Injecting Context (Overriding Weak Input): Replaced string input with ${this.contextAccumulator.schoolsCnpj.length} rich objects.`);
+                                 }
                              }
                         }
 
@@ -255,10 +266,65 @@ export class ExecutorAgent {
                                 // Override error with GUIDANCE
                                 toolResult.content[0].text = `[SYSTEM ERROR]: Tool '${call.name}' does not exist. You are HALLUCINATING generic tools. You MUST use one of the following available tools: [${validToolNames}]. Retry now using the correct tool name.`;
                             }
-                            // DATA ROBUSTNESS: Check for empty results and suggest retries
-                            else if (toolResult && !toolResult.isError) {
+                            // DATA ROBUSTNESS: Check for empty results and suggest retries OR Auto-Correct
+                            if (toolResult && !toolResult.isError) {
                                 const resultStr = JSON.stringify(toolResult.content);
-                                // Simple heuristic: length of result is small or explicit "empty"/"no results"
+                                const isEmpty = resultStr.length < 50 || resultStr.includes('"length":0') || resultStr.includes('[]') || resultStr.includes('"totalItems":0');
+                                
+                                if (isEmpty && !call._isRetry) {
+                                    // 1. Analyze for Restrictive Filters that might be hiding data
+                                    const restrictiveKeys = Object.keys(filteredArgs).filter(k => 
+                                        k.startsWith('is') || 
+                                        k.startsWith('has') || 
+                                        k.endsWith('Only') || 
+                                        k === 'status' || 
+                                        k === 'verified'
+                                    );
+
+                                    if (restrictiveKeys.length > 0) {
+                                        console.log(`[Executor] 🕵️ Empty result detected with restrictive filters: [${restrictiveKeys.join(', ')}]. Attempting Auto-Relaxation...`);
+                                        
+                                        // RELAXATION STRATEGY: Flip booleans, remove status/filters
+                                        const relaxedArgs = { ...filteredArgs };
+                                        let changeMade = false;
+
+                                        for (const key of restrictiveKeys) {
+                                            if (typeof relaxedArgs[key] === 'boolean' && relaxedArgs[key] === true) {
+                                                relaxedArgs[key] = false; // Try the opposite (e.g. isRecommended: true -> false)
+                                                changeMade = true;
+                                            } else if (key === 'status') {
+                                                delete relaxedArgs[key]; // Remove status filter
+                                                changeMade = true;
+                                            }
+                                        }
+
+                                        if (changeMade) {
+                                            console.log(`[Executor] 🔄 RETRYING Tool '${call.name}' with relaxed args:`, JSON.stringify(relaxedArgs));
+                                            
+                                            // RE-EXECUTE TOOL
+                                            const retryResult = await toolService.executeTool(call.name, relaxedArgs);
+                                            
+                                            if (retryResult && !retryResult.isError) {
+                                                 const retryStr = JSON.stringify(retryResult.content);
+                                                 // Check if retry found something
+                                                 if (retryStr.length > resultStr.length && !retryStr.includes('"totalItems":0')) {
+                                                     console.log(`[Executor] ✅ Auto-Relaxation SUCCESS! Found data.`);
+                                                     toolResult = retryResult; // OVERRIDE original empty result
+                                                     
+                                                     // Inject a system hint so the AI knows what happened
+                                                     toolResult.content.push({
+                                                         type: "text",
+                                                         text: `\n[SYSTEM NOTE]: The initial strict search (e.g. ${restrictiveKeys.join(',')}) returned 0 results. The system automatically performed a BROAD SEARCH (relaxed filters) and found the data below.`
+                                                     });
+                                                 } else {
+                                                     console.log(`[Executor] ❌ Auto-Relaxation failed (still empty). Keeping original result.`);
+                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // (Existing strict empty check logic...)
                                 if (resultStr.length < 50 || resultStr.includes('"length":0') || resultStr.includes('[]')) {
                                     const argValues = Object.values(call.args).filter(v => typeof v === 'string');
                                     if (argValues.length > 0) {
@@ -268,8 +334,7 @@ export class ExecutorAgent {
                                             text: `\n[SYSTEM HINT]: The search returned NO results for "${argValues.join(', ')}". \n1. Try REMOVING accents (e.g. "São Paulo" -> "Sao Paulo").\n2. Try UPPERCASE or lowercase.\n3. Try a broader search term.\n\n[AUTH HINT]: If this tool requires login, ensure you have called the authentication tool first. If you suspect missing privileges, report this to the user.`
                                         });
                                     }
-                                } else {
-                                }
+                                } 
                             }
 
                         } catch (e) {
@@ -351,6 +416,19 @@ export class ExecutorAgent {
             console.log(`[Executor] 📊 Auto-applied limit: 10`);
         }
 
+        // --- SPECIAL NORMALIZATION: schoolsCnpj ---
+        // Ensure schoolsCnpj is always [{ cnpj: "..." }] and not ["..."] or "..."
+        if (filtered.schoolsCnpj) {
+             if (typeof filtered.schoolsCnpj === 'string') {
+                 filtered.schoolsCnpj = [{ cnpj: filtered.schoolsCnpj }];
+             } else if (Array.isArray(filtered.schoolsCnpj)) {
+                 filtered.schoolsCnpj = filtered.schoolsCnpj.map(item => {
+                     return (typeof item === 'string') ? { cnpj: item } : item;
+                 });
+             }
+        }
+
+
         if (params.page && !filtered.page) {
             filtered.page = 1;
             console.log(`[Executor] 📄 Auto-applied page: 1`);
@@ -392,9 +470,17 @@ export class ExecutorAgent {
         }
 
         // 3. SMART DEFAULTS: Set reasonable defaults for optional filters
-        if (params.isRecommended !== undefined && filtered.isRecommended === undefined) {
-            filtered.isRecommended = true;
-            console.log(`[Executor] ⭐ Auto-applied isRecommended: true`);
+        if (params.isRecommended !== undefined) {
+            // Aggressive default: Force FALSE unless user specifically asks for recommendations.
+            // "Recommended" filter often returns empty sets for many units.
+            const userWantsRec = /recomend|melhor|best|top|indica/i.test(userMessage);
+            
+            if (!userWantsRec) {
+                filtered.isRecommended = false;
+                console.log(`[Executor] ⭐ Forced isRecommended: false (Broad Search - User did not ask for recommendations)`);
+            } else if (filtered.isRecommended === undefined) {
+                 filtered.isRecommended = true; // Default to true ONLY if user asked for it and didn't specify
+            }
         }
 
         // 4. SPECIFIC FIX: dn_schoolscontroller_getshools - Clear generic 'search_bar'
@@ -484,16 +570,20 @@ export class ExecutorAgent {
                     let arrayData = Array.isArray(data) ? data : (data.items || data.data || []);
                     
                     if (Array.isArray(arrayData)) {
-                         // Extract CNPJs
-                         const cnpjs = arrayData
-                            .map(x => x.cnpj || x.CNPJ)
-                            .filter(x => x && typeof x === 'string')
-                            .map(x => ({ cnpj: x })); // Wrap in object as expected by schema
+                         // Extract FULL School Objects (Required by Schema: cnpj, latitude, longitude, name)
+                         const schools = arrayData
+                            .filter(x => (x.cnpj || x.CNPJ) && (x.latitude || x.lat) && (x.longitude || x.lng || x.lon))
+                            .map(x => ({
+                                cnpj: x.cnpj || x.CNPJ,
+                                latitude: x.latitude || x.lat,
+                                longitude: x.longitude || x.lng || x.lon,
+                                name: x.name || x.nome || x.unidade || "Senai Unit"
+                            }));
 
-                         if (cnpjs.length > 0) {
+                         if (schools.length > 0) {
                              // Store only the first 5 to avoid context bloat
-                             this.contextAccumulator.schoolsCnpj = cnpjs.slice(0, 5);
-                             console.log(`[Executor] 🧠 Extracted ${cnpjs.length} CNPJs for Context. Stored first 5.`);
+                             this.contextAccumulator.schoolsCnpj = schools.slice(0, 5);
+                             console.log(`[Executor] 🧠 Extracted ${schools.length} Full School Objects for Context.`);
                          }
                     }
                 }

@@ -40,34 +40,42 @@ app.get('/api/models', async (req, res) => {
     }
 });
 
-// 1. Chat Endpoint
+// 1. Chat Endpoint (Streaming Support)
 app.post('/api/chat', async (req, res) => {
     try {
-        const { message, history, location, model, canvasContext } = req.body;
-        console.log(`[API Server] Received chat request: "${message?.substring(0, 50)}..."`);
-        if (canvasContext) {
-            console.log(`[API Server] Canvas Context: mode=${canvasContext.mode}, widgets=${canvasContext.widgets?.length || 0}`);
+        const { message, history, location, model, canvasContext, stream = true } = req.body;
+        console.log(`[API Server] Received chat request: "${message?.substring(0, 50)}..." (Stream: ${stream})`);
+        
+        if (stream) {
+            // Setup NDJSON Stream
+            res.setHeader('Content-Type', 'application/x-ndjson');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.flushHeaders();
+
+            // Delegate to Orchestrator with Response Stream
+            await orchestrator.processRequestStream(res, message, history, model, location, canvasContext);
+            res.end();
+        } else {
+            // Legacy / Fallback Mode
+            const result = await orchestrator.processRequest(message, history, model, location, canvasContext);
+            res.json(result);
         }
-
-        // Delegate entire process to the Multi-Agent Orchestrator
-        const result = await orchestrator.processRequest(message, history, model, location, canvasContext);
-
-        res.json(result);
 
     } catch (error) {
         console.error("Chat Error:", error);
+        
+        const errorMessage = error.message.includes('429') 
+            ? `⚠️ **Quota Exceeded**. Please switch models.` 
+            : `System Error: ${error.message}`;
 
-        let userMessage = "I am experiencing heavy traffic or an internal error occurred.";
-
-        // Clearer feedback for Quota/Rate Limits
-        if (error.message.includes('429') || error.message.includes('Quota') || error.message.includes('Too Many Requests')) {
-            userMessage = `⚠️ **Quota Exceeded** for the selected model (${model || 'Default'}).\n\nPlease try:\n1. Switching to a different model (e.g., 'gemini-2.0-flash') using the selector in the header.\n2. Waiting a few minutes.`;
+        // If headers sent (streaming), write error chunk
+        if (res.headersSent) {
+            res.write(JSON.stringify({ type: 'error', text: errorMessage }) + '\n');
+            res.end();
+        } else {
+            res.status(500).json({ text: errorMessage, error: error.message });
         }
-
-        res.status(500).json({
-            text: userMessage,
-            error: error.message
-        });
     }
 });
 
