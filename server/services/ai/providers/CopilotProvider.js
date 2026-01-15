@@ -1,28 +1,30 @@
 
 import axios from 'axios';
 import { convertStandardToolsToOpenAI, convertOpenAIToolsToStandard } from './utils/GenericToolMapper.js';
+import { copilotService } from '../../copilotService.js';
 
 export class CopilotProvider {
     constructor(config) {
         this.id = 'copilot';
-        this.apiKey = config.apiKey; // This is the Access Token
-        this.url = 'https://models.github.ai/inference/chat/completions';
+        this.apiKey = config.apiKey ? config.apiKey.trim() : ""; // OAuth token (gho_) or Internal Token (tid_)
+        this.url = 'https://api.githubcopilot.com/chat/completions'; // Default
+
+        // Cache for exchanged token
+        this.sessionToken = null;
+        this.tokenExpiresAt = 0;
+        this.sessionEndpoint = null;
     }
 
     async listModels() {
         try {
-            // We use the catalog logic from copilotService, but reused here or duplicated
-            const res = await axios.get("https://models.github.ai/catalog/models", {
-                headers: {
-                    "Authorization": `Bearer ${this.apiKey}`,
-                    "Accept": "application/vnd.github+json",
-                    "X-GitHub-Api-Version": "2022-11-28"
-                }
-            });
+            // Ensure we have a valid session token if possible
+            await this.ensureSessionToken();
+            const tokenToUse = this.sessionToken || this.apiKey;
 
-            if (Array.isArray(res.data)) {
-                return res.data.map(m => {
-                    // Use the id as the source of truth, fall back to name
+            // Pass the potentially exchanged token to service
+            const models = await copilotService.getModels(tokenToUse);
+            if (Array.isArray(models)) {
+                return models.map(m => {
                     const modelId = m.id || m.name;
                     return {
                         name: `copilot/${modelId}`,
@@ -39,15 +41,66 @@ export class CopilotProvider {
         }
     }
 
-    async generateContent(input, config) {
-        // Input: "User message"
-        // Config: { model: 'copilot/gpt-4', history: [...], ... }
+    async ensureSessionToken() {
+        // If we already have a valid session token, do nothing
+        if (this.sessionToken && Date.now() < this.tokenExpiresAt) {
+            return;
+        }
 
-        // Remove prefix, but handle cases where model name might contain slashes naturally if needed (though unlikely for copilot catalog)
+        // Only attempt exchange if it looks like an OAuth token (gho_) OR if we haven't tried yet.
+        // But to be safe and match ia-chat, we try exchange if provided key is NOT a tid_ token?
+        // Actually ia-chat assumes input IS oauthToken.
+        // Let's try exchange if it starts with gho_
+        if (this.apiKey.startsWith('gh')) {
+            try {
+                const exchangeData = await copilotService.exchangeToken(this.apiKey);
+                this.sessionToken = exchangeData.token; // tid_...
+                this.tokenExpiresAt = (exchangeData.expires_at || (Date.now() / 1000 + 1500)) * 1000;
+
+                if (exchangeData.endpoints && exchangeData.endpoints.api) {
+                    this.sessionEndpoint = `${exchangeData.endpoints.api}/chat/completions`;
+                } else {
+                    this.sessionEndpoint = this.url;
+                }
+                console.log(`[CopilotProvider] Token exchanged. Expires at: ${new Date(this.tokenExpiresAt).toISOString()}`);
+            } catch (err) {
+                console.error("[CopilotProvider] Token exchange failed:", err.message);
+                // Fallback: assume apiKey is the session token or try to use it directly
+                this.sessionToken = this.apiKey;
+                this.sessionEndpoint = this.url;
+                // Don't set expiration so we retry next time if maybe transient? 
+                // Or set short expiry? Let's leave it.
+            }
+        } else {
+            // Assume it's already a session token (tid_) or we just try using it
+            if (!this.sessionToken) {
+                this.sessionToken = this.apiKey;
+                this.sessionEndpoint = this.url;
+            }
+        }
+    }
+
+    async generateContent(input, config) {
         let modelName = config.model;
         if (modelName.startsWith('copilot/')) {
             modelName = modelName.replace('copilot/', '');
         }
+
+        // Remap unsupported/hallucinated models to standard gpt-4
+        if (modelName.includes('gpt-5') || modelName === 'gpt-5-mini') {
+            console.warn(`[CopilotProvider] ⚠️ Model '${modelName}' is not supported. Remapping to 'gpt-4'.`);
+            modelName = 'gpt-4';
+        }
+
+        // refresh/ensure token
+        await this.ensureSessionToken();
+
+        const finalToken = this.sessionToken || this.apiKey;
+        const finalEndpoint = this.sessionEndpoint || this.url;
+
+        // Debug Log (Masked)
+        const tokenPreview = finalToken ? (finalToken.substring(0, 4) + '...' + finalToken.substring(finalToken.length - 4)) : 'NONE';
+        console.log(`[CopilotProvider] Using token: ${tokenPreview}`);
 
         // Prepare messages
         const messages = [];
@@ -59,32 +112,21 @@ export class CopilotProvider {
         if (config.history && Array.isArray(config.history)) {
             config.history.forEach(h => {
                 const role = h.role === 'model' ? 'assistant' : 'user';
-                // Copilot (OpenAI format) expects string content usually
                 messages.push({ role, content: h.parts ? h.parts[0].text : (h.content || "") });
             });
         }
 
         // Add current user message
-        // Add current user message
         if (typeof input === 'string') {
             messages.push({ role: 'user', content: input });
         } else if (Array.isArray(input)) {
-             // 2024-05-23: FIX for Copilot/OpenAI "Missing required parameter: 'messages[1].content[0].type'."
-             // If input is an array (e.g. from Executor or multimodal context), we must map it to OpenAI Content Parts.
-             const contentParts = input.map(part => {
-                 // If the part is already a string, wrap it
-                 if (typeof part === 'string') return { type: 'text', text: part };
-                 
-                 // If it's an object with 'text', ensure it has 'type: text'
-                 if (part.text && !part.type) return { type: 'text', text: part.text };
-
-                 // Using standard 'image_url' or other valid types if present
-                 if (part.type) return part;
-
-                 // Fallback: stringify unknown objects
-                 return { type: 'text', text: JSON.stringify(part) };
-             });
-             messages.push({ role: 'user', content: contentParts });
+            const contentParts = input.map(part => {
+                if (typeof part === 'string') return { type: 'text', text: part };
+                if (part.text && !part.type) return { type: 'text', text: part.text };
+                if (part.type) return part;
+                return { type: 'text', text: JSON.stringify(part) };
+            });
+            messages.push({ role: 'user', content: contentParts });
         }
 
         const body = {
@@ -104,19 +146,23 @@ export class CopilotProvider {
             }
         }
 
+        // GitHub Copilot Headers (based on ia-chat reference)
+        const headers = {
+            "Authorization": `Bearer ${finalToken}`,
+            "Content-Type": "application/json",
+            "Copilot-Integration-Id": "vscode-chat",
+            "Accept": "application/json",
+            "User-Agent": "GeminiChat-App/1.0",
+            "Editor-Version": "vscode/1.85.0",
+            "Editor-Plugin-Version": "copilot/1.145.0"
+        };
+
         try {
-            console.log(`[CopilotProvider] Calling model ${modelName}...`);
+            console.log(`[CopilotProvider] Calling model ${modelName} at ${finalEndpoint}...`);
             const res = await axios.post(
-                this.url,
+                finalEndpoint,
                 body,
-                {
-                    headers: {
-                        "Authorization": `Bearer ${this.apiKey}`,
-                        "Content-Type": "application/json",
-                        "Accept": "application/vnd.github+json",
-                        "X-GitHub-Api-Version": "2022-11-28"
-                    }
-                }
+                { headers }
             );
 
             if (res.data && res.data.choices && res.data.choices.length > 0) {
@@ -131,7 +177,6 @@ export class CopilotProvider {
 
         } catch (error) {
             console.error(`[CopilotProvider] Error:`, error.response?.data || error.message);
-            // Standardize error for ModelManager
             const status = error.response?.status || 500;
             const msg = error.response?.data?.error?.message || error.message;
             const err = new Error(msg);

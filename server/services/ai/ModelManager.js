@@ -81,7 +81,7 @@ class ModelManager {
                 apiKey = process.env[key];
             } else if (apiKey.trim() === "") {
                 // If user deliberately saved empty string, treat it as disabled/missing, do not fallback to ENV.
-                apiKey = undefined; 
+                apiKey = undefined;
             }
 
             const enabled = isProviderEnabled(id);
@@ -375,7 +375,7 @@ class ModelManager {
                 { providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' },
                 { providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' },
                 { providerId: 'xai', model: 'grok-beta', tier: 'paid' },
-                { providerId: 'copilot', model: 'copilot/gpt-4o', tier: 'paid' }
+                { providerId: 'copilot', model: 'copilot/gpt-4', tier: 'paid' }
             );
         }
 

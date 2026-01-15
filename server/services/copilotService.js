@@ -1,34 +1,40 @@
 import axios from 'axios';
 
+const DEFAULT_CLIENT_ID = 'Iv1.b507a08c87ecfe98'; // VS Code ID
+
+// Headers from ia-chat reference
+const DEFAULT_HEADERS = {
+    "Accept": "application/json",
+    "User-Agent": "GeminiChat-App/1.0",
+    "Editor-Version": "vscode/1.85.0",
+    "Editor-Plugin-Version": "copilot/1.145.0"
+};
+
 class CopilotService {
     constructor() {
-        this.baseUrl = 'https://api.githubcopilot.com'; // Standard Copilot API, but ref uses models.github.ai. Let's support both or follow ref.
-        // Ref repo uses:
-        // Auth: https://github.com/login/device/code
-        // Token: https://github.com/login/oauth/access_token
-        // Models: https://models.github.ai/catalog/models
-        // Chat: https://models.github.ai/inference/chat/completions
-
-        this.userAgent = 'DynamicFront/1.0';
+        this.baseUrl = 'https://api.githubcopilot.com';
+        this.userAgent = DEFAULT_HEADERS["User-Agent"];
     }
 
     /**
      * Step 1: Request Device Code
      */
     async requestDeviceCode(clientId) {
+        // Use env var or passed clientId or default
+        const finalClientId = process.env.COPILOT_CLIENT_ID || clientId || DEFAULT_CLIENT_ID;
+
         try {
-            console.log(`[CopilotService] Requesting device code for client: ${clientId}`);
+            console.log(`[CopilotService] Requesting device code for client: ${finalClientId}`);
             const res = await axios.post(
                 'https://github.com/login/device/code',
                 {
-                    client_id: clientId,
+                    client_id: finalClientId,
                     scope: "read:user"
                 },
                 {
                     headers: {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json",
-                        "User-Agent": this.userAgent
+                        ...DEFAULT_HEADERS,
+                        "Content-Type": "application/json"
                     },
                 }
             );
@@ -44,19 +50,20 @@ class CopilotService {
      * The frontend or caller should handle the polling loop/interval.
      */
     async fetchToken(clientId, deviceCode) {
+        const finalClientId = process.env.COPILOT_CLIENT_ID || clientId || DEFAULT_CLIENT_ID;
+
         try {
             const res = await axios.post(
                 'https://github.com/login/oauth/access_token',
                 {
-                    client_id: clientId,
+                    client_id: finalClientId,
                     device_code: deviceCode,
                     grant_type: "urn:ietf:params:oauth:grant-type:device_code",
                 },
                 {
                     headers: {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json",
-                        "User-Agent": this.userAgent
+                        ...DEFAULT_HEADERS,
+                        "Content-Type": "application/json"
                     },
                 }
             );
@@ -78,30 +85,101 @@ class CopilotService {
     }
 
     /**
+     * Step 3: Exchange OAuth Token for Internal API Token
+     * This is the crucial step for VS Code compatibility.
+     */
+    async exchangeToken(oauthToken) {
+        try {
+            console.log('[CopilotService] Exchanging OAuth token for Internal Token...');
+            const res = await axios.get(
+                'https://api.github.com/copilot_internal/v2/token',
+                {
+                    headers: {
+                        ...DEFAULT_HEADERS,
+                        "Authorization": `token ${oauthToken}`
+                    }
+                }
+            );
+
+            // Response: { token: "tid_...", endpoints: { api: "https://api.githubcopilot.com" }, expires_at: 123... }
+            return res.data;
+        } catch (error) {
+            console.error('[CopilotService] Token Exchange Error:', error.message);
+            // If 401, the oauth token might be invalid
+            if (error.response?.status === 401) {
+                throw new Error("Unauthorized: Invalid OAuth Token during exchange");
+            }
+            throw new Error(error.response?.data?.message || "Failed to exchange token");
+        }
+    }
+
+    /**
+     * Get Available Models (Using the exchanged token or performing exchange implicitly?)
      * Get Available Models
+     * Automatically attempts token exchange if an OAuth token is provided.
      */
     async getModels(accessToken) {
         if (!accessToken) throw new Error("No access token provided");
 
+        let tokenToUse = accessToken;
+        let endpointBase = "https://api.githubcopilot.com"; // Correct default for VS Code-like behavior
+
+        // If it looks like an OAuth token, exchange it first to get the correct endpoint and token
+        if (accessToken.startsWith('gho_')) {
+            try {
+                const exchange = await this.exchangeToken(accessToken);
+                tokenToUse = exchange.token;
+                if (exchange.endpoints && exchange.endpoints.api) {
+                    endpointBase = exchange.endpoints.api;
+                }
+            } catch (e) {
+                console.warn("[CopilotService] Token exchange failed in getModels, trying direct access...", e.message);
+                // If exchange fails, we might still try standard endpoint if the token is valid for it
+            }
+        }
+
         try {
-            // Using logic from reference repo
-            const res = await axios.get("https://models.github.ai/catalog/models", {
+            // Reference says: GET <api_endpoint>/models
+            const url = `${endpointBase}/models`;
+
+            const res = await axios.get(url, {
                 headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Accept": "application/vnd.github+json",
-                    "X-GitHub-Api-Version": "2022-11-28",
-                    "User-Agent": this.userAgent
+                    ...DEFAULT_HEADERS,
+                    "Authorization": `Bearer ${tokenToUse}`,
+                    "Copilot-Integration-Id": "vscode-chat"
                 }
             });
 
+            if (res.data && res.data.data) {
+
+                const validModels = res.data.data.filter((m) => {
+                    // model_picker_enabled === true
+                    if (m.model_picker_enabled !== true) return false;
+                    // capabilities.type === "chat"
+                    if (m.capabilities?.type !== "chat") return false;
+                    // policy.state === "enabled"
+                    if (m.policy?.state !== "enabled") return false;
+                    return true;
+                });
+                return validModels;
+            }
+
             if (Array.isArray(res.data)) {
-                // Map to a standard format if needed, or return as is
-                return res.data;
+                // Filter
+                const validModels = res.data.filter((m) => {
+                    // model_picker_enabled === true
+                    if (m.model_picker_enabled !== true) return false;
+                    // capabilities.type === "chat"
+                    if (m.capabilities?.type !== "chat") return false;
+                    // policy.state === "enabled"
+                    if (m.policy?.state !== "enabled") return false;
+                    return true;
+                });
+                return validModels;
             }
             return [];
         } catch (error) {
             console.error('[CopilotService] Get Models Error:', error.message);
-            // If 401, token might be invalid
             if (error.response?.status === 401) {
                 throw new Error("Unauthorized: Invalid Token");
             }
@@ -113,11 +191,12 @@ class CopilotService {
      * Validate Token (User Info)
      */
     async getUser(accessToken) {
+        // This still uses standard GitHub API with OAuth token
         try {
             const res = await axios.get("https://api.github.com/user", {
                 headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "User-Agent": this.userAgent
+                    ...DEFAULT_HEADERS,
+                    "Authorization": `Bearer ${accessToken}`
                 }
             });
             return res.data; // { login, id, ... }
