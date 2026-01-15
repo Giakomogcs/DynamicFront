@@ -106,5 +106,585 @@
     "linkedCanvases": [],
     "createdAt": "2026-01-15T12:28:11.156Z",
     "updatedAt": "2026-01-15T15:40:37.344Z"
+  },
+  "7nwe4jdws": {
+    "id": "7nwe4jdws",
+    "title": "Teste de curso",
+    "widgets": [
+      {
+        "type": "process",
+        "title": "Execution Pipeline",
+        "steps": [
+          {
+            "label": "Receber localização e preferências do usuário",
+            "icon": "location_on"
+          },
+          {
+            "label": "Buscar escolas SENAI próximas (<=10km)",
+            "tool": "dn_schoolscontroller_getshools",
+            "icon": "school"
+          },
+          {
+            "label": "Buscar cursos presenciais disponíveis nas escolas filtradas",
+            "tool": "dn_coursescontroller_searchorderrecommendedcourses",
+            "icon": "search"
+          },
+          {
+            "label": "Montar painel dashboard com opções",
+            "icon": "dashboard"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "data": [
+          {
+            "label": "Total de Escolas SENAI Próximas",
+            "value": 5,
+            "change": null,
+            "icon": "school"
+          },
+          {
+            "label": "Total de Cursos Presenciais Listados",
+            "value": 11,
+            "change": null,
+            "icon": "class"
+          },
+          {
+            "label": "Cidade com Mais Escolas",
+            "value": "São Bernardo do Campo",
+            "change": null,
+            "icon": "location_city"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Principais Escolas SENAI Próximas",
+        "data": [
+          {
+            "Nome": "Centro de Formação Profissional \"SENAI/Mercedes-Benz\"",
+            "Endereço": "Av. Alfred Jurzykowski, 562 - Paulicéia, 09880-050, São Bernardo do Campo - SP",
+            "Telefone": "(11)4173-7371",
+            "Cidade": "São Bernardo do Campo",
+            "Distância": "≈0 km",
+            "CNPJ": "03.774.819/0076-11"
+          },
+          {
+            "Nome": "Centro de Formação Profissional \"SENAI/Volkswagen\"",
+            "Endereço": "Rodovia Anchieta, Km 23,5, 0 - Demarchi, 09823-901, São Bernardo do Campo - SP",
+            "Telefone": "(11)4331-6050",
+            "Cidade": "São Bernardo do Campo",
+            "Distância": "≈0 km",
+            "CNPJ": "03.774.819/0059-10"
+          },
+          {
+            "Nome": "Escola SENAI \"A. Jacob Lafer\"",
+            "Endereço": "Av. Santos Dumont, 300 - Ipiranguinha, 09015-320, Santo André - SP",
+            "Telefone": "(11)4972-7300",
+            "Cidade": "Santo André",
+            "Distância": "≈0 km",
+            "CNPJ": "03.774.819/0028-14"
+          },
+          {
+            "Nome": "Escola SENAI \"Almirante Tamandaré\"",
+            "Endereço": "Av. Pereira Barreto, 456 - Centro, 09751-000, São Bernardo do Campo - SP",
+            "Telefone": "(11)4331-6050",
+            "Cidade": "São Bernardo do Campo",
+            "Distância": "≈0 km",
+            "CNPJ": "03.774.819/0059-10"
+          },
+          {
+            "Nome": "Escola SENAI \"Armando de Arruda Pereira\"",
+            "Endereço": "Rua Santo André, 680 - Boa Vista, 09572-000, São Caetano do Sul - SP",
+            "Telefone": "(11)4227-7450",
+            "Cidade": "São Caetano do Sul",
+            "Distância": "≈0 km",
+            "CNPJ": "03.774.819/0026-52"
+          }
+        ],
+        "actions": [
+          {
+            "label": "Ver Cursos",
+            "type": "tool_call",
+            "tool": "dn_coursescontroller_searchorderrecommendedcourses",
+            "args_map": {
+              "schoolsCnpj": "CNPJ"
+            },
+            "style": "primary"
+          },
+          {
+            "label": "Mostrar no Mapa",
+            "type": "navigate_canvas",
+            "args_map": {
+              "latitude": "latitude",
+              "longitude": "longitude"
+            },
+            "style": "secondary"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Cursos Presenciais Disponíveis",
+        "data": [
+          {
+            "Curso": "Mecânico de Produção Veicular (Montador de veículos)",
+            "Carga Horária": "1600h",
+            "Escola": "Centro de Formação Profissional \"SENAI/Mercedes-Benz\"",
+            "Modalidade": "Presencial",
+            "Área": "Indústria"
+          },
+          {
+            "Curso": "Assistente Administrativo",
+            "Carga Horária": "980h / 800h",
+            "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+            "Modalidade": "Presencial",
+            "Área": "Gestão"
+          },
+          {
+            "Curso": "Auxiliar de Linha de Produção",
+            "Carga Horária": "800h",
+            "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+            "Modalidade": "Presencial",
+            "Área": "Indústria"
+          },
+          {
+            "Curso": "CAI - Mecânico de Usinagem",
+            "Carga Horária": "1600h",
+            "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+            "Modalidade": "Presencial",
+            "Área": "Indústria"
+          },
+          {
+            "Curso": "CAI - Mecânico de Usinagem de Moldes para Plásticos",
+            "Carga Horária": "1600h",
+            "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+            "Modalidade": "Presencial",
+            "Área": "Indústria"
+          },
+          {
+            "Curso": "CAI - Produtor Industrial de Móveis",
+            "Carga Horária": "1200h",
+            "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+            "Modalidade": "Presencial",
+            "Área": "Indústria"
+          },
+          {
+            "Curso": "Assistente Administrativo",
+            "Carga Horária": "980h",
+            "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+            "Modalidade": "Presencial",
+            "Área": "Gestão"
+          },
+          {
+            "Curso": "Construtor de Estampos de Corte, Dobra e Repuixo",
+            "Carga Horária": "1600h",
+            "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+            "Modalidade": "Presencial",
+            "Área": "Indústria"
+          },
+          {
+            "Curso": "Técnico em Mecânica",
+            "Carga Horária": "1200h",
+            "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+            "Modalidade": "Presencial",
+            "Área": "Tecnologia"
+          },
+          {
+            "Curso": "Técnico em Eletroeletrônica",
+            "Carga Horária": "1200h",
+            "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+            "Modalidade": "Presencial",
+            "Área": "Tecnologia"
+          },
+          {
+            "Curso": "Técnico em Desenvolvimento de Sistemas",
+            "Carga Horária": "1200h",
+            "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+            "Modalidade": "Presencial",
+            "Área": "Tecnologia"
+          }
+        ],
+        "actions": [
+          {
+            "label": "Detalhar Turmas/Horários",
+            "type": "tool_call",
+            "tool": "dn_coursescontroller_searchorderrecommendedcourses",
+            "args_map": {
+              "nomeCurso": "Curso",
+              "schoolsCnpj": "Escola"
+            },
+            "style": "primary"
+          },
+          {
+            "label": "Filtrar por Área",
+            "type": "navigate_canvas",
+            "args_map": {
+              "area": "Área"
+            },
+            "style": "secondary"
+          }
+        ]
+      },
+      {
+        "type": "chart",
+        "config": {
+          "type": "pie",
+          "title": "Distribuição de Cursos por Área"
+        },
+        "data": [
+          {
+            "name": "Indústria",
+            "value": 6
+          },
+          {
+            "name": "Gestão",
+            "value": 2
+          },
+          {
+            "name": "Tecnologia",
+            "value": 3
+          }
+        ]
+      },
+      {
+        "type": "chart",
+        "config": {
+          "type": "bar",
+          "title": "Escolas por Cidade"
+        },
+        "data": [
+          {
+            "name": "São Bernardo do Campo",
+            "value": 3
+          },
+          {
+            "name": "Santo André",
+            "value": 1
+          },
+          {
+            "name": "São Caetano do Sul",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "type": "insight",
+        "title": "Executive Summary",
+        "content": [
+          "A região do Grande ABC Paulista possui pelo menos 5 escolas SENAI em até 10km, com predominância em São Bernardo do Campo.",
+          "São oferecidos 11 cursos presenciais, com destaque para áreas industriais, gestão e tecnologia.",
+          "A maioria dos cursos está ligada à indústria e tecnologia, atendendo à demanda regional.",
+          "Usuários podem filtrar por área, modalidade ou escola, além de detalhar horários e localização."
+        ],
+        "sentiment": "positive",
+        "actions": [
+          {
+            "label": "Criar Novo Filtro",
+            "type": "navigate_canvas"
+          },
+          {
+            "label": "Ver Mapa de Escolas",
+            "type": "navigate_canvas"
+          }
+        ]
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "text": "cursos perto"
+      },
+      {
+        "role": "model",
+        "text": "Encontrei várias opções de cursos próximos à sua localização (região do Grande ABC Paulista, SP). Veja as principais escolas SENAI próximas e alguns dos cursos presenciais disponíveis:\n\n---\n\n🏫 Principais Escolas SENAI próximas (até 10km):\n1. Centro de Formação Profissional \"SENAI/Mercedes-Benz\" — São Bernardo do Campo\n   - Endereço: Av. Alfred Jurzykowski, 562 - Paulicéia\n2. Centro de Formação Profissional \"SENAI/Volkswagen\" — São Bernardo do Campo\n   - Endereço: Rodovia Anchieta, Km 23,5 - Demarchi\n3. Escola SENAI \"A. Jacob Lafer\" — Santo André\n   - Endereço: Av. Santos Dumont, 300 - Ipiranguinha\n4. Escola SENAI \"Almirante Tamandaré\" — São Bernardo do Campo\n   - Endereço: Av. Pereira Barreto, 456 - Centro\n5. Escola SENAI \"Armando de Arruda Pereira\" — São Caetano do Sul\n   - Endereço: Rua Santo André, 680 - Boa Vista\n\n---\n\n🎓 Cursos Presenciais disponíveis próximos:\n\n▸ Centro de Formação Profissional \"SENAI/Mercedes-Benz\"\n- Mecânico de Produção Veicular (Montador de veículos) — 1600h\n\n▸ Escola SENAI \"Almirante Tamandaré\"\n- Assistente Administrativo — 980h / 800h\n- Auxiliar de Linha de Produção — 800h\n- CAI - Mecânico de Usinagem — 1600h\n- CAI - Mecânico de Usinagem de Moldes para Plásticos — 1600h\n- CAI - Produtor Industrial de Móveis — 1200h\n\n▸ Escola SENAI \"A. Jacob Lafer\"\n- Assistente Administrativo — 980h\n- Construtor de Estampos de Corte, Dobra e Repuixo — 1600h\n- Técnico em Mecânica — 1200h\n- Técnico em Eletroeletrônica — 1200h\n- Técnico em Desenvolvimento de Sistemas — 1200h\n\n▸ Escola SENAI \"Armando de Arruda Pereira\"\n- Auxiliar de Linha de Produção — 800h\n- Inspetor da Qualidade — 1600h\n- Inspetor de Análise da Qualidade — 1600h\n- Técnico em Automação Industrial — 1200h\n- Técnico em Desenvolvimento de Sistemas — 1200h\n\n---\n\nSe quiser filtrar por área (ex: tecnologia, gestão, automação), modalidade ou curso específico, me avise! Também posso detalhar turmas, horários ou mostrar a localização das escolas no mapa.",
+        "widgets": [
+          {
+            "type": "process",
+            "title": "Execution Pipeline",
+            "steps": [
+              {
+                "label": "Receber localização e preferências do usuário",
+                "icon": "location_on"
+              },
+              {
+                "label": "Buscar escolas SENAI próximas (<=10km)",
+                "tool": "dn_schoolscontroller_getshools",
+                "icon": "school"
+              },
+              {
+                "label": "Buscar cursos presenciais disponíveis nas escolas filtradas",
+                "tool": "dn_coursescontroller_searchorderrecommendedcourses",
+                "icon": "search"
+              },
+              {
+                "label": "Montar painel dashboard com opções",
+                "icon": "dashboard"
+              }
+            ]
+          },
+          {
+            "type": "stat",
+            "data": [
+              {
+                "label": "Total de Escolas SENAI Próximas",
+                "value": 5,
+                "change": null,
+                "icon": "school"
+              },
+              {
+                "label": "Total de Cursos Presenciais Listados",
+                "value": 11,
+                "change": null,
+                "icon": "class"
+              },
+              {
+                "label": "Cidade com Mais Escolas",
+                "value": "São Bernardo do Campo",
+                "change": null,
+                "icon": "location_city"
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "title": "Principais Escolas SENAI Próximas",
+            "data": [
+              {
+                "Nome": "Centro de Formação Profissional \"SENAI/Mercedes-Benz\"",
+                "Endereço": "Av. Alfred Jurzykowski, 562 - Paulicéia, 09880-050, São Bernardo do Campo - SP",
+                "Telefone": "(11)4173-7371",
+                "Cidade": "São Bernardo do Campo",
+                "Distância": "≈0 km",
+                "CNPJ": "03.774.819/0076-11"
+              },
+              {
+                "Nome": "Centro de Formação Profissional \"SENAI/Volkswagen\"",
+                "Endereço": "Rodovia Anchieta, Km 23,5, 0 - Demarchi, 09823-901, São Bernardo do Campo - SP",
+                "Telefone": "(11)4331-6050",
+                "Cidade": "São Bernardo do Campo",
+                "Distância": "≈0 km",
+                "CNPJ": "03.774.819/0059-10"
+              },
+              {
+                "Nome": "Escola SENAI \"A. Jacob Lafer\"",
+                "Endereço": "Av. Santos Dumont, 300 - Ipiranguinha, 09015-320, Santo André - SP",
+                "Telefone": "(11)4972-7300",
+                "Cidade": "Santo André",
+                "Distância": "≈0 km",
+                "CNPJ": "03.774.819/0028-14"
+              },
+              {
+                "Nome": "Escola SENAI \"Almirante Tamandaré\"",
+                "Endereço": "Av. Pereira Barreto, 456 - Centro, 09751-000, São Bernardo do Campo - SP",
+                "Telefone": "(11)4331-6050",
+                "Cidade": "São Bernardo do Campo",
+                "Distância": "≈0 km",
+                "CNPJ": "03.774.819/0059-10"
+              },
+              {
+                "Nome": "Escola SENAI \"Armando de Arruda Pereira\"",
+                "Endereço": "Rua Santo André, 680 - Boa Vista, 09572-000, São Caetano do Sul - SP",
+                "Telefone": "(11)4227-7450",
+                "Cidade": "São Caetano do Sul",
+                "Distância": "≈0 km",
+                "CNPJ": "03.774.819/0026-52"
+              }
+            ],
+            "actions": [
+              {
+                "label": "Ver Cursos",
+                "type": "tool_call",
+                "tool": "dn_coursescontroller_searchorderrecommendedcourses",
+                "args_map": {
+                  "schoolsCnpj": "CNPJ"
+                },
+                "style": "primary"
+              },
+              {
+                "label": "Mostrar no Mapa",
+                "type": "navigate_canvas",
+                "args_map": {
+                  "latitude": "latitude",
+                  "longitude": "longitude"
+                },
+                "style": "secondary"
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "title": "Cursos Presenciais Disponíveis",
+            "data": [
+              {
+                "Curso": "Mecânico de Produção Veicular (Montador de veículos)",
+                "Carga Horária": "1600h",
+                "Escola": "Centro de Formação Profissional \"SENAI/Mercedes-Benz\"",
+                "Modalidade": "Presencial",
+                "Área": "Indústria"
+              },
+              {
+                "Curso": "Assistente Administrativo",
+                "Carga Horária": "980h / 800h",
+                "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+                "Modalidade": "Presencial",
+                "Área": "Gestão"
+              },
+              {
+                "Curso": "Auxiliar de Linha de Produção",
+                "Carga Horária": "800h",
+                "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+                "Modalidade": "Presencial",
+                "Área": "Indústria"
+              },
+              {
+                "Curso": "CAI - Mecânico de Usinagem",
+                "Carga Horária": "1600h",
+                "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+                "Modalidade": "Presencial",
+                "Área": "Indústria"
+              },
+              {
+                "Curso": "CAI - Mecânico de Usinagem de Moldes para Plásticos",
+                "Carga Horária": "1600h",
+                "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+                "Modalidade": "Presencial",
+                "Área": "Indústria"
+              },
+              {
+                "Curso": "CAI - Produtor Industrial de Móveis",
+                "Carga Horária": "1200h",
+                "Escola": "Escola SENAI \"Almirante Tamandaré\"",
+                "Modalidade": "Presencial",
+                "Área": "Indústria"
+              },
+              {
+                "Curso": "Assistente Administrativo",
+                "Carga Horária": "980h",
+                "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+                "Modalidade": "Presencial",
+                "Área": "Gestão"
+              },
+              {
+                "Curso": "Construtor de Estampos de Corte, Dobra e Repuixo",
+                "Carga Horária": "1600h",
+                "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+                "Modalidade": "Presencial",
+                "Área": "Indústria"
+              },
+              {
+                "Curso": "Técnico em Mecânica",
+                "Carga Horária": "1200h",
+                "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+                "Modalidade": "Presencial",
+                "Área": "Tecnologia"
+              },
+              {
+                "Curso": "Técnico em Eletroeletrônica",
+                "Carga Horária": "1200h",
+                "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+                "Modalidade": "Presencial",
+                "Área": "Tecnologia"
+              },
+              {
+                "Curso": "Técnico em Desenvolvimento de Sistemas",
+                "Carga Horária": "1200h",
+                "Escola": "Escola SENAI \"A. Jacob Lafer\"",
+                "Modalidade": "Presencial",
+                "Área": "Tecnologia"
+              }
+            ],
+            "actions": [
+              {
+                "label": "Detalhar Turmas/Horários",
+                "type": "tool_call",
+                "tool": "dn_coursescontroller_searchorderrecommendedcourses",
+                "args_map": {
+                  "nomeCurso": "Curso",
+                  "schoolsCnpj": "Escola"
+                },
+                "style": "primary"
+              },
+              {
+                "label": "Filtrar por Área",
+                "type": "navigate_canvas",
+                "args_map": {
+                  "area": "Área"
+                },
+                "style": "secondary"
+              }
+            ]
+          },
+          {
+            "type": "chart",
+            "config": {
+              "type": "pie",
+              "title": "Distribuição de Cursos por Área"
+            },
+            "data": [
+              {
+                "name": "Indústria",
+                "value": 6
+              },
+              {
+                "name": "Gestão",
+                "value": 2
+              },
+              {
+                "name": "Tecnologia",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "type": "chart",
+            "config": {
+              "type": "bar",
+              "title": "Escolas por Cidade"
+            },
+            "data": [
+              {
+                "name": "São Bernardo do Campo",
+                "value": 3
+              },
+              {
+                "name": "Santo André",
+                "value": 1
+              },
+              {
+                "name": "São Caetano do Sul",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "type": "insight",
+            "title": "Executive Summary",
+            "content": [
+              "A região do Grande ABC Paulista possui pelo menos 5 escolas SENAI em até 10km, com predominância em São Bernardo do Campo.",
+              "São oferecidos 11 cursos presenciais, com destaque para áreas industriais, gestão e tecnologia.",
+              "A maioria dos cursos está ligada à indústria e tecnologia, atendendo à demanda regional.",
+              "Usuários podem filtrar por área, modalidade ou escola, além de detalhar horários e localização."
+            ],
+            "sentiment": "positive",
+            "actions": [
+              {
+                "label": "Criar Novo Filtro",
+                "type": "navigate_canvas"
+              },
+              {
+                "label": "Ver Mapa de Escolas",
+                "type": "navigate_canvas"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "groupId": null,
+    "linkedCanvases": [],
+    "createdAt": "2026-01-15T20:07:37.910Z",
+    "updatedAt": "2026-01-15T20:07:39.831Z"
   }
 }
