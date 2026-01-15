@@ -15,15 +15,20 @@ export class AgentOrchestrator {
             console.log(`[Orchestrator] Canvas Context: Mode=${canvasContext.mode}, Widgets=${canvasContext.widgets?.length || 0}`);
         }
 
-        // 1. Fetch All Tools
-        console.log("[Orchestrator] Step 1: Fetching available tools...");
+        // 1. Fetch All Tools (Cached)
+        // console.log("[Orchestrator] Step 1: Fetching available tools...");
         const allMcpTools = await toolService.getAllTools();
         const allCompatibleTools = mapMcpToolsToAiModels(allMcpTools);
-        console.log(`[Orchestrator] Found ${allMcpTools.length} total tools.`);
+        // console.log(`[Orchestrator] Found ${allMcpTools.length} total tools.`);
+
+        // 1.5 Fetch Resource Context for "What can you do?"
+        // const resources = await toolService.getRegisteredResources();
+        // const resourceSummary = this._formatResourceSummary(resources);
+        const resourceSummary = await toolService.getResourceProfiles();
 
         // 2. PLAN
         console.log("[Orchestrator] Step 2: Planning tool usage...");
-        const plan = await plannerAgent.plan(userMessage, allMcpTools, location, modelName);
+        const plan = await plannerAgent.plan(userMessage, allMcpTools, location, modelName, history);
 
         // PERSISTENCE: If Planner switched models (failover), update global modelName
         if (plan.usedModel) {
@@ -51,7 +56,18 @@ export class AgentOrchestrator {
                     const tLower = t.name.toLowerCase();
                     // Check for significant overlap (e.g. 80% similarity or containment of core part)
                     // Heuristic: If one is substring of another and length diff is small
-                    if (tLower.includes(lowerName) || lowerName.includes(tLower)) return true;
+                    // SEMANTIC CHECK: Always prevent 'list' matching 'get' regardless of similarity
+                    // If one contains 'list' and the other contains 'get', they are NOT the same.
+                    const actionA = lowerName.includes('list') ? 'list' : (lowerName.includes('get') ? 'get' : 'other');
+                    const actionB = tLower.includes('list') ? 'list' : (tLower.includes('get') ? 'get' : 'other');
+                    if (actionA !== 'other' && actionB !== 'other' && actionA !== actionB) {
+                        return false;
+                    }
+
+                    // Heuristic: If one is substring of another
+                    if (tLower.includes(lowerName) || lowerName.includes(tLower)) {
+                        return true;
+                    }
 
                     // Heuristic: Levenshtein-ish (simple typo check for "schools" vs "school")
                     // Check if stripping standard prefixes matches
@@ -98,7 +114,7 @@ export class AgentOrchestrator {
 [PLANNER STRATEGY]: ${plan.thought}
 [PLANNED STEPS]: ${JSON.stringify(plan.steps)}
 `;
-        const executionResult = await executorAgent.execute(userMessage, history, modelName, activeTools, enhancedContext, location);
+        const executionResult = await executorAgent.execute(userMessage, history, modelName, activeTools, enhancedContext, location, resourceSummary);
 
         // PERSISTENCE: If Executor switched models (failover), update global modelName
         if (executionResult.usedModel) {
@@ -157,6 +173,7 @@ export class AgentOrchestrator {
     }
 
     _levenshtein(a, b) {
+        // ... (existing levenshtein implementation)
         const matrix = [];
         for (let i = 0; i <= b.length; i++) {
             matrix[i] = [i];
@@ -180,6 +197,21 @@ export class AgentOrchestrator {
             }
         }
         return matrix[b.length][a.length];
+    }
+
+    _formatResourceSummary(resources) {
+        if (!resources || (!resources.apis?.length && !resources.dbs?.length)) {
+            return "No external resources connected yet.";
+        }
+
+        let summary = [];
+        if (resources.apis?.length) {
+            summary.push(`- APIs: ${resources.apis.map(a => `${a.name} (${a.baseUrl})`).join(', ')} `);
+        }
+        if (resources.dbs?.length) {
+            summary.push(`- Databases: ${resources.dbs.map(d => `${d.name} (${d.type})`).join(', ')} `);
+        }
+        return summary.join('\\n');
     }
 }
 

@@ -45,7 +45,7 @@ class ParameterInferenceEngine {
             }
 
             // 2. Default estimator
-            const type = this._detectType(schema);
+            const type = this._detectType(schema, paramName);
             const estimator = this.estimators.get(type);
 
             if (estimator) {
@@ -85,7 +85,12 @@ class ParameterInferenceEngine {
         return result;
     }
 
-    _detectType(schema) {
+    _detectType(schema, paramName = '') {
+        const name = paramName.toLowerCase();
+        if (name.includes('lat')) return 'latitude';
+        if (name.includes('lng') || name.includes('lon')) return 'longitude';
+        if (name.includes('cnpj')) return 'cnpj';
+
         if (schema.format === 'date') return 'date';
         if (schema.type === 'object' && schema.properties?.start) return 'daterange';
         if (schema.enum) return 'enum';

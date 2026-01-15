@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Database, Globe, Loader2, AlertCircle, Eye, RefreshCw, Pencil, Power } from 'lucide-react';
+import { useToast } from './ui/Toast';
 
 export const ResourcesView = ({ onEdit }) => {
+    const { success, error: toastError } = useToast();
     const [resources, setResources] = useState({ apis: [], dbs: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+    const [loadingToolsId, setLoadingToolsId] = useState(null);
 
     const fetchResources = async () => {
         try {
@@ -22,6 +25,7 @@ export const ResourcesView = ({ onEdit }) => {
         } catch (e) {
             console.error('[ResourcesView] Error:', e);
             setError(e.message);
+            toastError("Failed to load resources");
         } finally {
             setLoading(false);
         }
@@ -40,8 +44,9 @@ export const ResourcesView = ({ onEdit }) => {
             const res = await fetch(`http://localhost:3000/api/resources/${type}/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error("Failed to delete");
             await fetchResources();
+            success("Resource deleted successfully");
         } catch (e) {
-            alert(e.message);
+            toastError(e.message);
         } finally {
             setDeletingId(null);
         }
@@ -54,19 +59,23 @@ export const ResourcesView = ({ onEdit }) => {
             const res = await fetch(`http://localhost:3000/api/resources/${type}/${id}/refresh`, { method: 'POST' });
             if (!res.ok) throw new Error("Refresh failed");
             await fetchResources();
-            alert("Resource refreshed successfully!");
+            success("Resource refreshed successfully!");
         } catch (e) {
-            alert(e.message);
+            toastError(e.message);
         }
     };
 
     const handleViewTools = async (type, id, name) => {
+        setLoadingToolsId(id);
         try {
             const res = await fetch(`http://localhost:3000/api/resources/${type}/${id}/tools`);
+            if (!res.ok) throw new Error("Failed to load tools");
             const tools = await res.json();
             setViewingTools({ name, tools });
         } catch (e) {
-            alert("Failed to load tools");
+            toastError("Failed to load tools");
+        } finally {
+            setLoadingToolsId(null);
         }
     };
 
@@ -75,8 +84,9 @@ export const ResourcesView = ({ onEdit }) => {
             const res = await fetch(`http://localhost:3000/api/resources/${type}/${id}/toggle`, { method: 'PATCH' });
             if (!res.ok) throw new Error("Toggle failed");
             await fetchResources();
+            success("Resource status updated");
         } catch (e) {
-            alert(e.message);
+            toastError(e.message);
         }
     };
 
@@ -118,6 +128,7 @@ export const ResourcesView = ({ onEdit }) => {
                                 onRefresh={() => handleRefresh('api', api.idString)}
                                 onViewTools={() => handleViewTools('api', api.idString, api.name)}
                                 isDeleting={deletingId === api.idString}
+                                isToolsLoading={loadingToolsId === api.idString}
                             />
                         ))}
                     </div>
@@ -144,6 +155,7 @@ export const ResourcesView = ({ onEdit }) => {
                                 onRefresh={() => handleRefresh('db', db.idString)}
                                 onViewTools={() => handleViewTools('db', db.idString, db.name)}
                                 isDeleting={deletingId === db.idString}
+                                isToolsLoading={loadingToolsId === db.idString}
                             />
                         ))}
                     </div>
@@ -233,7 +245,7 @@ export const ResourcesView = ({ onEdit }) => {
     );
 };
 
-const ResourceCard = ({ icon, name, subtext, details, isEnabled, onToggle, onDelete, isDeleting, onEdit, onRefresh, onViewTools }) => (
+const ResourceCard = ({ icon, name, subtext, details, isEnabled, onToggle, onDelete, isDeleting, onEdit, onRefresh, onViewTools, isToolsLoading }) => (
     <div className={`bg-slate-900 border rounded-xl p-4 flex items-center justify-between transition-all ${isEnabled ? 'border-slate-800 hover:border-slate-700' : 'border-slate-800/50 opacity-60'
         }`}>
         <div className="flex items-center gap-4">
@@ -258,8 +270,13 @@ const ResourceCard = ({ icon, name, subtext, details, isEnabled, onToggle, onDel
             >
                 <Power size={18} />
             </button>
-            <button onClick={onViewTools} className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors" title="View Generated Tools">
-                <Eye size={18} />
+            <button
+                onClick={onViewTools}
+                className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
+                title="View Generated Tools"
+                disabled={isToolsLoading}
+            >
+                {isToolsLoading ? <Loader2 size={18} className="animate-spin" /> : <Eye size={18} />}
             </button>
             <button onClick={onRefresh} className="p-2 text-slate-500 hover:text-green-400 hover:bg-slate-800 rounded-lg transition-colors" title="Force Refresh">
                 <RefreshCw size={18} />

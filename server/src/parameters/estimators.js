@@ -104,5 +104,19 @@ export default {
         if (falseTerms.some(t => lowerObj.includes(t))) return { value: false, confidence: 0.7 };
 
         return { value: false, confidence: 0.3 };
-    }
+    },
+
+    // --- New Estimators ---
+
+    cnpj: ({ objective }) => {
+        // Regex for CNPJ (strict or loose)
+        const cnpjMatch = objective.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+        if (cnpjMatch) {
+            return { value: cnpjMatch[0], confidence: 0.95 };
+        }
+        return { value: "60627955000131", confidence: 0.1 }; // Default fallback
+    },
+
+    latitude: () => ({ value: -23.5505, confidence: 0.4 }), // SP
+    longitude: () => ({ value: -46.6333, confidence: 0.4 }) // SP
 };

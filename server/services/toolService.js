@@ -1,17 +1,27 @@
 import prisma from '../registry.js';
 import { registerTools, handleRegisterTool, processApiRegistration } from '../handlers/register.js';
 import { mcpClientService } from './mcpClientService.js';
+import { resourceEnricher } from '../src/core/ResourceEnricher.js';
 
 export class ToolService {
     constructor() {
         this.executionMap = new Map();
+        this.toolsCache = null;
+        this.lastCacheTime = 0;
+        this.CACHE_TTL = 1000 * 60 * 5; // 5 minutes
     }
 
     /**
      * Refreshes and returns all available MCP tools (Static + Registered APIs + Registered DBs)
      * Rebuilds the execution cache.
+     * @param {boolean} forceRefresh - Force ignore cache
      */
-    async getAllTools() {
+    async getAllTools(forceRefresh = false) {
+        if (!forceRefresh && this.toolsCache && (Date.now() - this.lastCacheTime < this.CACHE_TTL)) {
+            // console.log("[ToolService] ⚡ Using cached tools.");
+            return this.toolsCache;
+        }
+
         console.log("[ToolService] Fetching all tools...");
         const tools = [];
         this.executionMap.clear();
@@ -35,6 +45,13 @@ export class ToolService {
             console.error("[ToolService] Error fetching MCP Tools:", e);
         }
 
+        // ENRICHMENT STEP
+        const enrichment = resourceEnricher.analyzeTools(tools);
+        // console.log("[ToolService] Enrichment Summary:\n", enrichment.summary);
+
+        this.toolsCache = tools;
+        this.paramsCache = enrichment; // Cache the enrichment result
+        this.lastCacheTime = Date.now();
         return tools;
     }
 
@@ -169,6 +186,7 @@ export class ToolService {
     }
 
     async getResourceTools(type, id) {
+        // ... (existing implementation)
         let tools = [];
         if (type === 'api') {
             const api = await prisma.verifiedApi.findUnique({ where: { idString: id } });
@@ -188,6 +206,16 @@ export class ToolService {
             description: t.description,
             inputSchema: t.inputSchema
         }));
+    }
+
+    /**
+     * Returns the enriched summary of capabilities
+     */
+    async getResourceProfiles() {
+        if (!this.toolsCache) {
+            await this.getAllTools();
+        }
+        return this.paramsCache?.summary || "Analyzing resources...";
     }
 }
 

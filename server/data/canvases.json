@@ -100,11 +100,11 @@
   "y7iroyzhc": {
     "id": "y7iroyzhc",
     "title": "Escolas e cursos",
-    "widgets": null,
-    "messages": null,
+    "widgets": [],
+    "messages": [],
     "groupId": null,
     "linkedCanvases": [],
     "createdAt": "2026-01-15T12:28:11.156Z",
-    "updatedAt": "2026-01-15T12:28:19.139Z"
+    "updatedAt": "2026-01-15T15:40:37.344Z"
   }
 }

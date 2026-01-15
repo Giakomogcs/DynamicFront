@@ -1,5 +1,5 @@
-[2026-01-15T12:14:17.418Z] Error: Request failed with status code 403
-Error: Request failed with status code 403
+[2026-01-15T18:06:22.113Z] Error: getaddrinfo ENOTFOUND api.business.githubcopilot.com
+Error: getaddrinfo ENOTFOUND api.business.githubcopilot.com
     at CopilotProvider.generateContent (file:///C:/Github/DynamicFront/server/services/ai/providers/CopilotProvider.js:182:25)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
     at async RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:525:29)

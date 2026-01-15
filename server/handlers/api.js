@@ -205,7 +205,7 @@ export async function getApiTools(api) {
                     };
 
                     // SEMANTIC BOOST: Append key parameters to description to help Planner find this tool
-                    const paramSummary = Object.keys(flatProperties).length > 0 
+                    const paramSummary = Object.keys(flatProperties).length > 0
                         ? ` (Parameters: ${Object.keys(flatProperties).slice(0, 8).join(', ')}${Object.keys(flatProperties).length > 8 ? '...' : ''})`
                         : '';
 
@@ -214,12 +214,12 @@ export async function getApiTools(api) {
                     // operationId is usually "CompaniesController_GetSenaiUnits" or "get_api_v1_schools" etc.
                     let domainContext = "";
                     if (operationId.includes('Controller')) {
-                         const match = operationId.match(/([a-zA-Z0-9]+)Controller/);
-                         if (match) domainContext = `[Domain: ${match[1].toUpperCase()}] `;
+                        const match = operationId.match(/([a-zA-Z0-9]+)Controller/);
+                        if (match) domainContext = `[Domain: ${match[1].toUpperCase()}] `;
                     } else if (toolName.includes('_')) {
-                         // Fallback: use first part of tool name as domain
-                         const parts = toolName.split('_');
-                         if (parts.length > 2) domainContext = `[Domain: ${parts[1].toUpperCase()}] `;
+                        // Fallback: use first part of tool name as domain
+                        const parts = toolName.split('_');
+                        if (parts.length > 2) domainContext = `[Domain: ${parts[1].toUpperCase()}] `;
                     }
 
                     tools.push({
@@ -288,7 +288,7 @@ export async function executeApiTool(toolExecConfig, args, toolSchema = null) {
     if (flatParams) {
         // Exclude internal keys
         for (const [k, v] of Object.entries(validatedArgs)) {
-            if (k !== '_authProfile' && k !== '_headers') {
+            if (k !== '_authProfile' && k !== '_headers' && k !== '_retried') {
                 params[k] = v;
             }
         }
@@ -460,18 +460,18 @@ export async function executeApiTool(toolExecConfig, args, toolSchema = null) {
             const hasDetailedParams = Object.values(params).some(val => typeof val === 'string' && /[^\u0000-\u007F]/.test(val));
             if (hasDetailedParams) {
                 console.log(`[API Exec] ⚠️ Zero results found for query with accents. Retrying with normalization...`);
-                
+
                 // Recursive Call with NORMALISED params
                 const normalizedArgs = JSON.parse(JSON.stringify(validatedArgs));
                 normalizedArgs._retried = true; // Prevent infinite loop
 
                 // Normalize strings in params
                 for (const key of Object.keys(normalizedArgs)) {
-                     if (typeof normalizedArgs[key] === 'string') {
-                         normalizedArgs[key] = normalizedArgs[key].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                     }
+                    if (typeof normalizedArgs[key] === 'string') {
+                        normalizedArgs[key] = normalizedArgs[key].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    }
                 }
-                
+
                 console.log(`[API Exec] 🔄 Retrying with:`, JSON.stringify(normalizedArgs));
                 return executeApiTool(toolExecConfig, normalizedArgs, toolSchema);
             }
