@@ -686,5 +686,103 @@
     "linkedCanvases": [],
     "createdAt": "2026-01-15T20:07:37.910Z",
     "updatedAt": "2026-01-15T20:07:39.831Z"
+  },
+  "canvas_filiais_petrobras": {
+    "id": "canvas_filiais_petrobras",
+    "title": "Filiais Petrobras (Consolidado)",
+    "widgets": [
+      {
+        "type": "process",
+        "title": "Fluxo de Execução",
+        "steps": [
+          {
+            "title": "Buscar Filiais",
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "data": [
+          {
+            "label": "Total de Filiais/Matriz",
+            "value": "7",
+            "icon": "business"
+          },
+          {
+            "label": "Foco Principal",
+            "value": "Refino",
+            "icon": "factory"
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "title": "Lista de Unidades Petrobras",
+        "data": [
+          {
+            "Tipo": "Matriz",
+            "UF": "RJ",
+            "Cidade": "Rio de Janeiro",
+            "Foco": "Refino de petróleo"
+          },
+          {
+            "Tipo": "Filial",
+            "UF": "BA",
+            "Cidade": "Ilhéus",
+            "Foco": "Refino de petróleo"
+          },
+          {
+            "Tipo": "Filial",
+            "UF": "CE",
+            "Cidade": "Fortaleza",
+            "Foco": "Refino de petróleo"
+          },
+          {
+            "Tipo": "Filial",
+            "UF": "RJ",
+            "Cidade": "Rio de Janeiro (Maracanã)",
+            "Foco": "Refino de petróleo"
+          },
+          {
+            "Tipo": "Filial",
+            "UF": "RJ",
+            "Cidade": "Duque de Caxias",
+            "Foco": "Refino de petróleo"
+          },
+          {
+            "Tipo": "Filial",
+            "UF": "RN",
+            "Cidade": "RN-221",
+            "Foco": "Refino de petróleo"
+          },
+          {
+            "Tipo": "Filial",
+            "UF": "SE",
+            "Cidade": "Laranjeiras",
+            "Foco": "Refino de petróleo"
+          }
+        ],
+        "actions": [
+          {
+            "label": "Ver Detalhes",
+            "type": "tool_call",
+            "tool": "api_enterprise__details",
+            "style": "primary"
+          }
+        ]
+      },
+      {
+        "type": "insight",
+        "title": "Análise de Distribuição",
+        "content": "A empresa concentra suas operações de refino majoritariamente no estado do Rio de Janeiro (sede), com presença estratégica em polos do Nordeste (BA, CE, RN, SE).",
+        "sentiment": "neutral"
+      }
+    ],
+    "messages": [],
+    "groupId": "demo_group",
+    "linkedCanvases": [],
+    "createdAt": "2026-01-16T13:07:40.296Z",
+    "updatedAt": "2026-01-16T19:29:35.836Z"
   }
 }

@@ -1,5 +1,6 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 import fs from 'fs';
+import { resourceEnricher } from '../src/core/ResourceEnricher.js';
 
 export class PlannerAgent {
     constructor() { }
@@ -10,9 +11,11 @@ export class PlannerAgent {
      * @param {Array} availableTools 
      * @param {Object} location 
      * @param {string} modelName 
-     * @returns {Promise<string[]>} Array of selected tool names
+     * @param {Array} history - Conversation history
+     * @param {Object} canvasAnalysis - Canvas context analysis from CanvasContextAnalyzer
+     * @returns {Promise<Object>} Plan with tools, thought, and steps
      */
-    async plan(userMessage, availableTools, location, modelName, history = []) {
+    async plan(userMessage, availableTools, location, modelName, history = [], canvasAnalysis = null) {
         console.log("[Planner] Analyzing request...");
 
         // Heuristic: If no tools, return empty.
@@ -46,14 +49,37 @@ export class PlannerAgent {
         // Context Construction
         const lastBotMessage = history.findLast(m => m.role === 'model' || m.role === 'assistant')?.text || "None";
 
+        // Canvas Analysis Context
+        let canvasInfo = '';
+        if (canvasAnalysis) {
+            canvasInfo = `
+EXISTING CANVAS CONTEXT:
+- Theme: ${canvasAnalysis.theme.primary}${canvasAnalysis.theme.subTheme ? ` / ${canvasAnalysis.theme.subTheme}` : ''}
+- Components: ${canvasAnalysis.components.length} (${canvasAnalysis.components.map(c => c.type).join(', ')})
+- Tools Used: ${canvasAnalysis.toolsUsed.join(', ') || 'None'}
+- Resources: Schools=${canvasAnalysis.resources.schools.length}, Enterprises=${canvasAnalysis.resources.enterprises.length}
+`;
+        }
+
+        // Auth Awareness - (Logic delegated to resourceEnricher)
+        let authInfo = ''; // Placeholder if needed in future
+
+
+        // Auth Awareness
+        const profiles = resourceEnricher.getAllProfiles(); // Get ALL registered profiles (Resource + Default)
+        const profilesList = profiles.map(p => `- ${p.label} (Role: ${p.role}, Email/User: ${p.credentials?.email || p.credentials?.user || p.credentials?.cnpj || 'N/A'}, ID: ${p.id})`).join('\n');
+
         const planningPrompt = `
 You are the PLANNER Agent.
 User Request: "${userMessage}"
         Context: ${location ? `Lat ${location.lat}, Lon ${location.lon}` : 'No location'}
 Last System Message: "${lastBotMessage.substring(0, 300)}..."
-
+${canvasInfo}${authInfo}
 Available Tools:
 ${toolSummaries}
+
+Available Authentication Profiles (REGISTERED USERS):
+${profilesList}
 
         CONCEPTS & RECIPES(CRITICAL KNOWLEDGE):
         1. ** CHIT - CHAT vs ACTION(CRITICAL) **:
@@ -97,22 +123,40 @@ ${toolSummaries}
              - **The Executor will AUTOMATICALLY SORT by distance** if the user location is known. 
              - **Action**: Call \`dn_enterprisecontroller_listenterprise(search_bar="", state="SP")\` (or inferred state).
              - **Search Bar**: If user gave a name ("Selco"), use it. If "companies near me", use "Empresa", "Indústria", or leave empty (System will handle).
+
+        7. **AUTHENTICATION (PHASE 1)**:
+             - **CRITICAL**: Use the **Available Authentication Profiles** above.
+             - If the user asks for "Minha Empresa" or "Dashboards", look at the profiles.
+             - **SELECT** the most appropriate email (e.g. company email for company data).
+             - **OUTPUT** this email in the \`auth_strategy\` field.
+             - **DO NOT** ask the user for an email if you have one in the profiles.
              
-        6. **FALLBACK PROTOCOLS (HONESTY)**:
-           - **WEB SEARCH**: YOU DO NOT HAVE INTERNET ACCESS. You CANNOT search Google/Bing.
-           - **Protocol**: If the user asks for something outside of internal data (e.g. "Whats the stock price of Google?", "Weather in Tokyo"), you MUST:
-             - Return \`[]\` (Empty Tools).
-             - The Executor will then explain: "I can only access the internal database (Schools, Courses, Companies). I do not have external web search capabilities."
-           - **Exceptions**: If the user query implies a possibly internal search ("Quem é o diretor?", "Notícias do setor"), try to map it to an internal resource if plausible, otherwise fail gracefully.
+         6. **FALLBACK PROTOCOLS (HONESTY)**:
+            - **WEB SEARCH**: YOU DO NOT HAVE INTERNET ACCESS. You CANNOT search Google/Bing.
+            - **Protocol**: If the user asks for something outside of internal data (e.g. "Whats the stock price of Google?", "Weather in Tokyo"), you MUST:
+              - Return \`[]\` (Empty Tools).
+              - The Executor will then explain: "I can only access the internal database (Schools, Courses, Companies). I do not have external web search capabilities."
+            - **Exceptions**: If the user query implies a possibly internal search ("Quem é o diretor?", "Notícias do setor"), try to map it to an internal resource if plausible, otherwise fail gracefully.
+
+         7. **CRITICAL ENFORCEMENT**:
+            - NEVER return empty tools array for internal data requests
+            - NEVER respond with greetings like "Hello!" or "How can I assist?"
+            - For "minha empresa": ALWAYS select dn_authcontroller_session first
+            - Answer in PORTUGUESE (same language as user request)
+            - If unsure which tool, select multiple related tools
 
 INSTRUCTIONS:
 1. **Analyze** User Request & Last Message.
-2. **Formulate Strategy**.
-3. **Select Tools**.
-4. **Return JSON**:
+2. **Formulate Strategy** (including Auth).
+3. **Select Tools** (NEVER empty for internal requests).
+4. **Return JSON** (with auth_strategy):
    {
-     "thought": "Reasoning...",
-     "tools": ["tool_1", "tool_2"]
+     "thought": "Reasoning in PORTUGUESE...",
+     "tools": ["tool_1", "tool_2"],
+     "auth_strategy": {
+        "email": "user@example.com",
+        "reason": "Why this account"
+     }
    }
 `;
 
@@ -145,6 +189,7 @@ INSTRUCTIONS:
                     tools: planJson.tools,
                     thought: planJson.thought,
                     steps: planJson.steps || [],
+                    auth_strategy: planJson.auth_strategy || null,
                     usedModel: result.usedModel // <--- Pass back the model useful for Orchestrator
                 };
             }

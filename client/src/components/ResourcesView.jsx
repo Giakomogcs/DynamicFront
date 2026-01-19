@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Database, Globe, Loader2, AlertCircle, Eye, RefreshCw, Pencil, Power } from 'lucide-react';
+import { Trash2, Database, Globe, Loader2, AlertCircle, Eye, RefreshCw, Pencil, Power, Users } from 'lucide-react';
 import { useToast } from './ui/Toast';
+import { AuthProfilesModal } from './AuthProfilesModal';
 
 export const ResourcesView = ({ onEdit }) => {
     const { success, error: toastError } = useToast();
@@ -53,6 +54,7 @@ export const ResourcesView = ({ onEdit }) => {
     };
 
     const [viewingTools, setViewingTools] = useState(null); // { name: '', tools: [] } | null
+    const [authModal, setAuthModal] = useState(null); // { id: '', name: '' } | null
 
     const handleRefresh = async (type, id) => {
         try {
@@ -127,6 +129,7 @@ export const ResourcesView = ({ onEdit }) => {
                                 onEdit={() => onEdit && onEdit('api', api)}
                                 onRefresh={() => handleRefresh('api', api.idString)}
                                 onViewTools={() => handleViewTools('api', api.idString, api.name)}
+                                onAuth={() => setAuthModal({ id: api.idString, name: api.name })}
                                 isDeleting={deletingId === api.idString}
                                 isToolsLoading={loadingToolsId === api.idString}
                             />
@@ -160,6 +163,15 @@ export const ResourcesView = ({ onEdit }) => {
                         ))}
                     </div>
                 </div>
+            )}
+
+            {/* Auth Profiles Modal */}
+            {authModal && (
+                <AuthProfilesModal
+                    resourceId={authModal.id}
+                    resourceName={authModal.name}
+                    onClose={() => setAuthModal(null)}
+                />
             )}
 
             {/* Tools Modal - Enhanced */}
@@ -245,7 +257,7 @@ export const ResourcesView = ({ onEdit }) => {
     );
 };
 
-const ResourceCard = ({ icon, name, subtext, details, isEnabled, onToggle, onDelete, isDeleting, onEdit, onRefresh, onViewTools, isToolsLoading }) => (
+const ResourceCard = ({ icon, name, subtext, details, isEnabled, onToggle, onDelete, isDeleting, onEdit, onRefresh, onViewTools, onAuth, isToolsLoading }) => (
     <div className={`bg-slate-900 border rounded-xl p-4 flex items-center justify-between transition-all ${isEnabled ? 'border-slate-800 hover:border-slate-700' : 'border-slate-800/50 opacity-60'
         }`}>
         <div className="flex items-center gap-4">
@@ -269,6 +281,13 @@ const ResourceCard = ({ icon, name, subtext, details, isEnabled, onToggle, onDel
                 title={isEnabled ? "Disable Resource" : "Enable Resource"}
             >
                 <Power size={18} />
+            </button>
+            <button
+                onClick={onAuth}
+                className="p-2 text-slate-500 hover:text-purple-400 hover:bg-slate-800 rounded-lg transition-colors"
+                title="Manage Users & Auth"
+            >
+                <Users size={18} />
             </button>
             <button
                 onClick={onViewTools}

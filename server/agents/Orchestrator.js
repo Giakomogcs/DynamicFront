@@ -6,6 +6,18 @@ import { plannerAgent } from './Planner.js';
 import { executorAgent } from './Executor.js';
 import { designerAgent } from './Designer.js';
 
+// Phase 1: Context & Auth Intelligence
+import { canvasContextAnalyzer } from '../src/core/CanvasContextAnalyzer.js';
+import { authStrategyManager } from '../src/auth/AuthStrategyManager.js';
+
+// Phase 2: Strategic Reasoning
+import { strategicAgent } from '../src/agents/StrategicAgent.js';
+import { templateCache } from '../src/cache/TemplateCache.js';
+
+// Phase 3: Canvas Groups
+import { canvasGroupManager } from '../src/canvas/CanvasGroupManager.js';
+import { canvasMerger } from '../src/canvas/CanvasMerger.js';
+
 export class AgentOrchestrator {
     constructor() { }
 
@@ -13,6 +25,14 @@ export class AgentOrchestrator {
         console.log(`\n=== [Orchestrator] New Request: "${userMessage?.substring(0, 50)}..." ===`);
         if (canvasContext) {
             console.log(`[Orchestrator] Canvas Context: Mode=${canvasContext.mode}, Widgets=${canvasContext.widgets?.length || 0}`);
+        }
+
+        // PHASE 1: Analyze existing canvas (if any)
+        let canvasAnalysis = null;
+        if (canvasContext && canvasContext.widgets && canvasContext.widgets.length > 0) {
+            console.log('[Orchestrator] Step 0: Analyzing existing canvas...');
+            canvasAnalysis = await canvasContextAnalyzer.analyzeCanvas(canvasContext);
+            console.log(`[Orchestrator] Canvas Analysis: Theme="${canvasAnalysis.theme.primary}", Components=${canvasAnalysis.components.length}, Tools Used=${canvasAnalysis.toolsUsed.length}`);
         }
 
         // 1. Fetch All Tools (Cached)
@@ -26,9 +46,9 @@ export class AgentOrchestrator {
         // const resourceSummary = this._formatResourceSummary(resources);
         const resourceSummary = await toolService.getResourceProfiles();
 
-        // 2. PLAN
+        // 2. PLAN (with canvas analysis context)
         console.log("[Orchestrator] Step 2: Planning tool usage...");
-        const plan = await plannerAgent.plan(userMessage, allMcpTools, location, modelName, history);
+        const plan = await plannerAgent.plan(userMessage, allMcpTools, location, modelName, history, canvasAnalysis);
 
         // PERSISTENCE: If Planner switched models (failover), update global modelName
         if (plan.usedModel) {
@@ -40,11 +60,69 @@ export class AgentOrchestrator {
         console.log(`[Orchestrator] Planner selected: [${selectedToolNames.join(', ')}]`);
         console.log(`[Orchestrator] Strategy: ${plan.thought}`);
 
+        // 🔥 VALIDATE tools exist before proceeding
+        let validatedTools = selectedToolNames.filter(name => {
+            // Strip prefix if present to match sanitized names
+            const sanitizedName = name.includes('__') ? name.split('__').pop() : name;
+
+            const exists = allCompatibleTools.find(t =>
+                t.name === name || t.name === sanitizedName
+            );
+
+            if (!exists) {
+                console.warn(`[Orchestrator] ⚠️ Tool '${name}' doesn't exist. Ignoring.`);
+            }
+            return exists !== undefined;
+        });
+
+        console.log(`[Orchestrator] Validated: ${validatedTools.length}/${selectedToolNames.length} tools exist`);
+
+        // 🔥 AGGRESSIVE FALLBACK: If no valid tools, auto-select based on keywords
+        let finalToolNames = validatedTools;
+        if (finalToolNames.length === 0) {
+            console.log('[Orchestrator] ⚠️ Planner returned EMPTY tools. Auto-selecting based on keywords...');
+
+            const lowerMsg = userMessage.toLowerCase();
+            const autoSelected = [];
+
+            // Always try auth first for empresa/senai requests
+            if (lowerMsg.includes('empresa') || lowerMsg.includes('minha') || lowerMsg.includes('company')) {
+                const authTool = allCompatibleTools.find(t => t.name.includes('auth') && t.name.includes('session'));
+                if (authTool) {
+                    autoSelected.push(authTool.name);
+                    console.log(`[Orchestrator] 🔥 Auto-selected auth: ${authTool.name}`);
+                }
+
+                const companyTool = allCompatibleTools.find(t =>
+                    t.name.includes('getcompanyprofile') || t.name.includes('listenterprise')
+                );
+                if (companyTool) {
+                    autoSelected.push(companyTool.name);
+                    console.log(`[Orchestrator] 🔥 Auto-selected company: ${companyTool.name}`);
+                }
+            }
+
+            if (lowerMsg.includes('escola') || lowerMsg.includes('senai') || lowerMsg.includes('school')) {
+                const schoolTool = allCompatibleTools.find(t => t.name.includes('getshools') || t.name.includes('school'));
+                if (schoolTool) {
+                    autoSelected.push(schoolTool.name);
+                    console.log(`[Orchestrator] 🔥 Auto-selected school: ${schoolTool.name}`);
+                }
+            }
+
+            if (autoSelected.length > 0) {
+                finalToolNames = autoSelected;
+                console.log(`[Orchestrator] ✅ Auto-selected ${autoSelected.length} tools as fallback`);
+            } else {
+                console.warn('[Orchestrator] ❌ Could not auto-select any tools. Returning conversational response.');
+            }
+        }
+
         // Filter Tools with Fuzzy Matching
         let activeTools = [];
         const missingTools = [];
 
-        for (const name of selectedToolNames) {
+        for (const name of finalToolNames) {
             // 1. Exact Match
             let match = allCompatibleTools.find(t => t.name === name);
 
@@ -107,34 +185,84 @@ export class AgentOrchestrator {
             activeTools = allCompatibleTools;
         }
 
-        // 3. EXECUTE
-        console.log(`[Orchestrator] Step 3: Executing with ${activeTools.length} tools...`);
-        // Enhance User Message with the Plan Strategy so Executor knows strictly what to do
-        const enhancedContext = `
-[PLANNER STRATEGY]: ${plan.thought}
-[PLANNED STEPS]: ${JSON.stringify(plan.steps)}
-`;
-        const executionResult = await executorAgent.execute(userMessage, history, modelName, activeTools, enhancedContext, location, resourceSummary);
+        // 3. EXECUTE DIRECTLY (StrategicAgent disabled temporarily)
+        console.log(`[Orchestrator] Step 3: Executing with ${activeTools.length} tools DIRECTLY...`);
+
+        // TEMPORARY: Direct execution without retries
+        const executionData = await executorAgent.execute(
+            userMessage,
+            history,
+            modelName,
+            activeTools,
+            { thought: plan.thought, auth_strategy: plan.auth_strategy }, // Pass structured context
+            location,
+            "" // resourceSummary - not needed
+        );
+
+        const executionResult = { success: true, result: executionData, attempts: 1, strategy: plan.thought };
+
+        // Check if strategic execution was successful
+        if (!executionResult.success) {
+            console.warn(`[Orchestrator] ⚠️ Strategic execution failed after ${executionResult.attempts} attempts`);
+            console.warn(`[Orchestrator] Last strategy: ${executionResult.lastStrategy}`);
+
+            // Return fallback response
+            return {
+                text: executionResult.fallbackMessage || `Não consegui obter dados após ${executionResult.attempts} tentativas.`,
+                widgets: [],
+                metadata: {
+                    strategy: 'failed',
+                    attempts: executionResult.attempts,
+                    adaptations: executionResult.adaptations
+                }
+            };
+        }
+
+        console.log(`[Orchestrator] ✅ Strategic execution successful on attempt ${executionResult.attempts}`);
+        console.log(`[Orchestrator] Strategy used: ${executionResult.strategy}`);
 
         // PERSISTENCE: If Executor switched models (failover), update global modelName
-        if (executionResult.usedModel) {
-            console.log(`[Orchestrator] 🔄 Executor used model: ${executionResult.usedModel}. Persisting for next steps.`);
-            modelName = executionResult.usedModel;
+        if (executionResult.result?.usedModel) {
+            console.log(`[Orchestrator] 🔄 Executor used model: ${executionResult.result.usedModel}. Persisting for next steps.`);
+            modelName = executionResult.result.usedModel;
         }
 
         console.log("[Orchestrator] Execution finished. Gathering result...");
+
+        // 3.5. CANVAS DECISION (Phase 3): Merge or Create?
+        console.log("[Orchestrator] Step 3.5: Analyzing canvas decision (merge vs create)...");
+
+        let canvasDecision = null;
+        try {
+            canvasDecision = await canvasGroupManager.createOrUpdateCanvas(
+                'current-conversation', // TODO: usar conversationId real
+                userMessage,
+                canvasContext ? [canvasContext] : [],
+                modelName
+            );
+
+            console.log(`[Orchestrator] Canvas Decision: ${canvasDecision.action.toUpperCase()}`);
+            console.log(`[Orchestrator] Theme: ${canvasDecision.theme.primary}`);
+        } catch (error) {
+            console.warn(`[Orchestrator] Canvas decision failed: ${error.message}, defaulting to create`);
+            canvasDecision = { action: 'create', theme: { primary: 'General' } };
+        }
 
         // 4. DESIGN
         // Pass Plan Strategy/Steps to Designer for better visualization
         console.log("[Orchestrator] Step 4: Designing output widgets...");
 
         try {
+            // Extract correct data from strategic execution result
+            const executionData = executionResult.result || executionResult;
+
             const finalResult = await designerAgent.design(
-                executionResult.text,
-                executionResult.gatheredData,
+                executionData.text || summaryText || 'Processamento concluído',
+                executionData.gatheredData || [],
                 modelName,
                 plan.steps, // Execution steps
-                canvasContext // Canvas context for incremental mode
+                canvasContext, // Canvas context for incremental mode
+                canvasDecision // NEW: Pass canvas decision to Designer
             );
             console.log("=== [Orchestrator] Process Complete ===\n");
 

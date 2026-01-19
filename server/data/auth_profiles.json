@@ -1,0 +1,22 @@
+{
+  "edcdec59-27ba-4636-8d76-49a6033f01e2": [
+    {
+      "label": "Empresa Teste (CNPJ)",
+      "role": "company",
+      "credentials": {
+        "email": "ubirajara.sardinha@petrobras.com.br",
+        "cnpj": "33.000.167/0055-02",
+        "name": "Petrobras"
+      },
+      "id": "default_company"
+    },
+    {
+      "label": "Senai Unidade Tijuca",
+      "role": "senai_unit",
+      "credentials": {
+        "email": "flaranja@firjan.com.br"
+      },
+      "id": "1768562923779"
+    }
+  ]
+}

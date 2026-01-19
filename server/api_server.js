@@ -12,6 +12,10 @@ import { toolService } from './services/toolService.js';
 import { storageService } from './services/storageService.js';
 import { orchestrator } from './agents/Orchestrator.js';
 
+// Import routes
+import canvasRoutes from './routes/canvasRoutes.js';
+import widgetRoutes from './routes/widgetRoutes.js';
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -19,6 +23,10 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Routes
+app.use('/api/canvas', canvasRoutes);
+app.use('/api/widgets', widgetRoutes);
 
 // Initialize Gemini
 import { modelManager } from './services/ai/ModelManager.js';
@@ -142,6 +150,144 @@ app.get('/api/resources/:type/:id/tools', async (req, res) => {
         res.json(resourceTools);
     } catch (e) {
         console.error(`[API] Get tools error:`, e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- AUTH PROFILE MANAGEMENT ---
+import { resourceEnricher } from './src/core/ResourceEnricher.js';
+
+app.get('/api/resources/:id/auth-profiles', (req, res) => {
+    const profiles = resourceEnricher.getProfiles(req.params.id);
+    res.json(profiles);
+});
+
+app.post('/api/resources/:id/auth-profiles', async (req, res) => {
+    const profile = await resourceEnricher.addProfile(req.params.id, req.body);
+    res.json(profile);
+});
+
+app.delete('/api/resources/:id/auth-profiles/:profileId', async (req, res) => {
+    await resourceEnricher.removeProfile(req.params.id, req.params.profileId);
+    res.json({ success: true });
+});
+
+// TEST AUTH Endpoint
+app.post('/api/resources/:id/auth-profiles/test', async (req, res) => {
+    const { id } = req.params;
+    const { credentials, profileId } = req.body;
+
+    console.log(`[API] Testing Auth for Resource ${id} (Profile: ${profileId || 'Temp'})...`);
+
+    try {
+        // 1. Find the Auth Tool
+        const allTools = await toolService.getAllTools();
+        const authTool = allTools.find(t =>
+            t.name.includes(id) &&
+            (t.name.includes('auth') || t.name.includes('login') || t.name.includes('session'))
+        );
+
+        if (!authTool) {
+            return res.status(404).json({ error: "No authentication tool found for this resource." });
+        }
+
+        console.log(`[API] Using Auth Tool: ${authTool.name}`);
+
+        // 2. Execute with credentials
+        const result = await toolService.executeTool(authTool.name, credentials);
+
+        // 3. Analyze Result for Role/Success
+        let success = !result.isError;
+        let detectedRole = null;
+        let userData = {};
+        let message = "Auth executed.";
+
+        if (result.content && result.content[0]) {
+            const text = result.content[0].text;
+            message = text;
+
+            // Initial Heuristics for success
+            if (text.includes('Error') || text.includes('Falha') || text.includes('401') || text.includes('403')) {
+                success = false;
+            }
+
+            // Try to parse JSON output to extract User Data
+            try {
+                const json = JSON.parse(text);
+                userData = json;
+
+                // Normalize fields
+                if (json.role) detectedRole = json.role;
+                else if (json.type) detectedRole = json.type;
+                else if (json.user && json.user.role) detectedRole = json.user.role;
+
+                // Fallback Heuristics checks if JSON parse didn't find role
+                if (!detectedRole) {
+                    if (text.toLowerCase().includes('admin')) detectedRole = 'Admin';
+                    else if (text.toLowerCase().includes('company') || text.toLowerCase().includes('empresa')) detectedRole = 'Company';
+                    else if (text.toLowerCase().includes('senai')) detectedRole = 'SENAI User';
+                }
+
+            } catch (e) {
+                // Text fallback
+                if (text.toLowerCase().includes('admin')) detectedRole = 'Admin';
+                else if (text.toLowerCase().includes('company') || text.toLowerCase().includes('empresa')) detectedRole = 'Company';
+                else if (text.toLowerCase().includes('senai')) detectedRole = 'SENAI User';
+            }
+        }
+
+        // 4. SYNC PROFILE (If strictly successful and we have a profileId)
+        if (success && profileId) {
+            const updates = {};
+            if (detectedRole) updates.role = detectedRole;
+
+            // --- AUTO-ENRICHMENT LOGIC ---
+            // Extract Name
+            let name = userData.name || (userData.user && userData.user.name) || userData.nome || userData.fantasyName;
+            if (name) {
+                // Formatting: "Ubirajara (Petrobras)" or "Rafael (SENAI Admin)"
+                // Heuristic: If name is generic email, use Role. If real name, use it.
+                if (!name.includes('@')) {
+                    updates.label = `${name} (${detectedRole || 'User'})`;
+                }
+            }
+
+            // Extract Context (CNPJ, Unit ID) for Description
+            let contextInfo = [];
+            if (userData.cnpj) contextInfo.push(`CNPJ: ${userData.cnpj}`);
+            if (userData.unitId) contextInfo.push(`Unit ID: ${userData.unitId}`);
+            if (userData.fantasyName) contextInfo.push(`Fantasy: ${userData.fantasyName}`);
+
+            if (contextInfo.length > 0) {
+                updates.description = `[Auto-Synced] Authenticated as ${name || 'User'}. ${contextInfo.join(', ')}.`;
+            }
+
+            // Sync Credentials if we found better/new ones (e.g. planner guessed email, but response gave correct one? - usually response doesn't give password back, so be careful)
+            if (userData.cnpj) {
+                // If it's a company, ensure CNPJ is in credentials for future use
+                updates.credentials = { ...credentials, cnpj: userData.cnpj };
+            }
+
+            // Clean sensitive data from userData before saving if needed, but for now strict 1:1 map
+            if (userData.id) updates.externalId = userData.id;
+            updates.lastAuthData = userData;
+            updates.lastAuthTime = new Date().toISOString();
+
+            if (Object.keys(updates).length > 0) {
+                console.log(`[API] Syncing Profile ${profileId} with updates:`, updates);
+                resourceEnricher.updateProfile(id, profileId, updates);
+            }
+        }
+
+        res.json({
+            success,
+            detectedRole: detectedRole || "Unknown",
+            toolName: authTool.name,
+            output: message
+        });
+
+    } catch (e) {
+        console.error("Auth Test Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -347,6 +493,9 @@ app.get('/api/copilot/models', listCopilotModels);
 app.get('/api/copilot/user', getCopilotUser);
 app.get('/api/auth/callback', handleCallback);
 
+
+// Initialize Resource Enricher (Load from DB)
+await resourceEnricher.loadProfiles();
 
 app.listen(PORT, () => {
     console.log(`API Bridge running on http://localhost:${PORT}`);

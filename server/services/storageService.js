@@ -1,171 +1,172 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '../data');
-const STORAGE_FILE = path.join(DATA_DIR, 'canvases.json');
-
-// Ensure data directory exists
-async function initStorage() {
-    try {
-        await fs.access(DATA_DIR);
-    } catch {
-        await fs.mkdir(DATA_DIR, { recursive: true });
-    }
-
-    try {
-        await fs.access(STORAGE_FILE);
-    } catch {
-        await fs.writeFile(STORAGE_FILE, JSON.stringify({}, null, 2));
-    }
-}
-
-async function readStorage() {
-    await initStorage();
-    const data = await fs.readFile(STORAGE_FILE, 'utf-8');
-    return JSON.parse(data);
-}
-
-async function writeStorage(data) {
-    await fs.writeFile(STORAGE_FILE, JSON.stringify(data, null, 2));
-}
+import prisma from '../registry.js';
 
 export const storageService = {
     async getAllCanvases() {
-        const data = await readStorage();
-        return Object.values(data).map(c => ({
+        const canvases = await prisma.canvas.findMany({
+            include: { widgets: true, incomingLinks: true, outgoingLinks: true },
+            orderBy: { updatedAt: 'desc' }
+        });
+        return canvases.map(c => ({
             id: c.id,
-            title: c.title,
-            updatedAt: c.updatedAt,
-            widgetCount: c.widgets?.length || 0,
-            messageCount: c.messages?.length || 0,
-            groupId: c.groupId || null,
-            linkedCanvases: c.linkedCanvases || []
+            title: c.title || 'Untitled',
+            updatedAt: c.updatedAt.toISOString(),
+            widgetCount: c.widgets.length,
+            messageCount: Array.isArray(c.messages) ? c.messages.length : 0,
+            groupId: c.conversationId,
+            linkedCanvases: [
+                ...c.outgoingLinks.map(l => ({ id: l.toCanvasId, label: l.label })),
+                ...c.incomingLinks.map(l => ({ id: l.fromCanvasId, label: l.label })),
+            ]
         }));
     },
 
     async getCanvas(id) {
-        const data = await readStorage();
-        return data[id] || null;
+        const canvas = await prisma.canvas.findUnique({
+            where: { id },
+            include: { widgets: { orderBy: { position: 'asc' } }, outgoingLinks: true, incomingLinks: true }
+        });
+        if (!canvas) return null;
+
+        return {
+            ...canvas,
+            title: canvas.title || 'Untitled',
+            messages: canvas.messages || [],
+            groupId: canvas.conversationId,
+            widgets: canvas.widgets.map(w => ({
+                id: w.id,
+                type: w.type,
+                title: w.title,
+                // Map config back to root properties or content as needed
+                // If config contains content, expose it.
+                // We return both config and spread it for max compatibility
+                config: w.config,
+                ...(typeof w.config === 'object' ? w.config : {})
+            })),
+            linkedCanvases: [
+                ...canvas.outgoingLinks.map(l => ({ id: l.toCanvasId, label: l.label })),
+                ...canvas.incomingLinks.map(l => ({ id: l.fromCanvasId, label: l.label })),
+            ]
+        };
     },
 
     async saveCanvas(id, title, widgets, messages = null, groupId = null) {
-        const data = await readStorage();
-        const now = new Date().toISOString();
+        // Upsert Canvas
+        return prisma.$transaction(async (tx) => {
+            // 1. Upsert Canvas
+            // Prepare update data (ignore undefined)
+            const updateData = {};
+            if (title !== undefined) updateData.title = title;
+            if (messages !== undefined) updateData.messages = messages;
+            if (groupId !== undefined) updateData.conversationId = groupId;
 
-        if (data[id]) {
-            // Update
-            data[id] = {
-                ...data[id],
-                title: title !== undefined ? title : data[id].title,
-                widgets: widgets !== undefined ? widgets : data[id].widgets,
-                messages: messages !== undefined ? messages : data[id].messages,
-                groupId: groupId !== undefined ? groupId : data[id].groupId,
-                updatedAt: now
-            };
-        } else {
-            // Create
-            data[id] = {
-                id,
-                title: title || 'Untitled Canvas',
-                widgets: widgets || [],
-                messages: messages || [],
-                groupId: groupId || null,
-                linkedCanvases: [],
-                createdAt: now,
-                updatedAt: now
-            };
-        }
+            await tx.canvas.upsert({
+                where: { id },
+                create: {
+                    id,
+                    title,
+                    conversationId: groupId || 'default',
+                    theme: {},
+                    messages: messages || [],
+                    layoutType: 'dashboard'
+                },
+                update: updateData
+            });
 
-        await writeStorage(data);
-        return data[id];
-    },
+            // 2. Handle Widgets (Full Replacement if provided)
+            if (widgets !== undefined) {
+                // Delete all existing for this canvas
+                await tx.widget.deleteMany({ where: { canvasId: id } });
 
-    async appendWidgets(id, newWidgets) {
-        const data = await readStorage();
-        if (!data[id]) {
-            throw new Error('Canvas not found');
-        }
-
-        data[id].widgets = [...(data[id].widgets || []), ...newWidgets];
-        data[id].updatedAt = new Date().toISOString();
-
-        await writeStorage(data);
-        return data[id];
-    },
-
-    async linkCanvases(fromId, toId, label = null) {
-        const data = await readStorage();
-        if (!data[fromId] || !data[toId]) {
-            throw new Error('Canvas not found');
-        }
-
-        // Add bidirectional link
-        if (!data[fromId].linkedCanvases) data[fromId].linkedCanvases = [];
-        if (!data[toId].linkedCanvases) data[toId].linkedCanvases = [];
-
-        const linkExists = data[fromId].linkedCanvases.some(l => l.id === toId);
-        if (!linkExists) {
-            data[fromId].linkedCanvases.push({ id: toId, label });
-            data[toId].linkedCanvases.push({ id: fromId, label });
-        }
-
-        await writeStorage(data);
-        return { from: data[fromId], to: data[toId] };
-    },
-
-    async getRelatedCanvases(id) {
-        const data = await readStorage();
-        const canvas = data[id];
-        if (!canvas) return [];
-
-        const related = [];
-
-        // Get linked canvases
-        if (canvas.linkedCanvases) {
-            for (const link of canvas.linkedCanvases) {
-                if (data[link.id]) {
-                    related.push({
-                        ...data[link.id],
-                        linkLabel: link.label
+                // Create new
+                if (widgets.length > 0) {
+                    await tx.widget.createMany({
+                        data: widgets.map((w, index) => ({
+                            canvasId: id,
+                            type: w.type,
+                            title: w.title,
+                            config: w.config || w.content || w, // Fallback to whole object if no config/content
+                            position: index
+                        }))
                     });
                 }
             }
+
+            // Return full object
+            return this.getCanvas(id);
+        });
+    },
+
+    async appendWidgets(id, newWidgets) {
+        const maxPos = await prisma.widget.findFirst({
+            where: { canvasId: id },
+            orderBy: { position: 'desc' }
+        });
+        let startPos = (maxPos?.position || 0) + 1;
+
+        await prisma.widget.createMany({
+            data: newWidgets.map((w, i) => ({
+                canvasId: id,
+                type: w.type,
+                title: w.title,
+                config: w.config || w.content || w,
+                position: startPos + i
+            }))
+        });
+
+        await prisma.canvas.update({ where: { id }, data: { updatedAt: new Date() } });
+
+        return this.getCanvas(id);
+    },
+
+    async linkCanvases(fromId, toId, label = null) {
+        const existing = await prisma.navigationLink.findFirst({
+            where: { fromCanvasId: fromId, toCanvasId: toId }
+        });
+
+        if (!existing) {
+            await prisma.navigationLink.create({
+                data: { fromCanvasId: fromId, toCanvasId: toId, label: label || 'Link', type: 'sidebar' }
+            });
         }
 
-        // Get canvases in same group
-        if (canvas.groupId) {
-            for (const c of Object.values(data)) {
-                if (c.groupId === canvas.groupId && c.id !== id) {
-                    const alreadyLinked = related.some(r => r.id === c.id);
-                    if (!alreadyLinked) {
-                        related.push({
-                            ...c,
-                            linkLabel: 'Same Group'
-                        });
-                    }
-                }
-            }
+        const existingReverse = await prisma.navigationLink.findFirst({
+            where: { fromCanvasId: toId, toCanvasId: fromId }
+        });
+        if (!existingReverse) {
+            await prisma.navigationLink.create({
+                data: { fromCanvasId: toId, toCanvasId: fromId, label: label || 'Link', type: 'sidebar' }
+            });
         }
+
+        return { from: await this.getCanvas(fromId), to: await this.getCanvas(toId) };
+    },
+
+    async getRelatedCanvases(id) {
+        const c = await this.getCanvas(id);
+        if (!c) return [];
+        const related = c.linkedCanvases.map(l => ({ id: l.id, linkLabel: l.label }));
+
+        const siblings = await prisma.canvas.findMany({
+            where: { conversationId: c.groupId, NOT: { id: id } }
+        });
+
+        siblings.forEach(s => {
+            if (!related.find(r => r.id === s.id)) {
+                related.push({ id: s.id, title: s.title, linkLabel: 'Same Group' });
+            }
+        });
 
         return related;
     },
 
     async deleteCanvas(id) {
-        const data = await readStorage();
-        if (data[id]) {
-            // Remove links from other canvases
-            for (const canvas of Object.values(data)) {
-                if (canvas.linkedCanvases) {
-                    canvas.linkedCanvases = canvas.linkedCanvases.filter(l => l.id !== id);
-                }
-            }
-
-            delete data[id];
-            await writeStorage(data);
+        try {
+            await prisma.canvas.delete({ where: { id } });
             return true;
+        } catch {
+            return false;
         }
-        return false;
     }
 };
+
+

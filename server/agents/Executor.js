@@ -1,10 +1,13 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 import { toolService } from '../services/toolService.js';
 import { getOriginalToolName } from '../ToolAdapter.js';
+import { resourceEnricher } from '../src/core/ResourceEnricher.js'; // Import Resource Access
 import fs from 'fs';
 
 export class ExecutorAgent {
-    constructor() { }
+    constructor() {
+        this.resourceEnricher = resourceEnricher;
+    }
 
     /**
      * Executes the chat loop with the selected tools.
@@ -24,23 +27,69 @@ export class ExecutorAgent {
      * @param {Object} location - { lat, lon }
      * @returns {Promise<{text: string, gatheredData: Array}>}
      */
-    async execute(userMessage, history, modelName, tools = [], planContext = "", location = null, resourceSummary = "") {
+    async execute(userMessage, history, modelName, tools, enhancedContext, location = null, resourceSummary = null) {
         console.log(`[Executor] Starting execution with ${tools.length} tools. Model: ${modelName}`);
+
+        // 0. Parse Enhanced Context (Plan + Auth)
+        let planThought = "Use the available tools to answer the user request.";
+        let plannerAuthStrategy = null;
+
+        if (enhancedContext) {
+            if (typeof enhancedContext === 'object') {
+                planThought = enhancedContext.thought;
+                plannerAuthStrategy = enhancedContext.auth_strategy;
+            } else {
+                planThought = enhancedContext;
+            }
+        }
+
+        // SMART AUTO-AUTHENTICATION
+        // Priority: 1. Planner Strategy (Explicit) -> 2. Executor Detection (Implicit)
+        let authContext = null;
+
+        if (plannerAuthStrategy && plannerAuthStrategy.email) {
+            console.log(`[Executor] 🔐 Planner enforced Auth Strategy: Using ${plannerAuthStrategy.email}`);
+
+            // NEW: Fetch complete profile from ResourceEnricher instead of creating empty one
+            const allProfiles = this.resourceEnricher.getAllProfiles();
+            const matchingProfile = allProfiles.find(p =>
+                p.credentials?.email === plannerAuthStrategy.email ||
+                p.credentials?.user === plannerAuthStrategy.email
+            );
+
+            if (matchingProfile) {
+                console.log(`[Executor] ✅ Found matching profile: ${matchingProfile.label}`);
+                authContext = {
+                    context: "Planner Strategic Auth",
+                    profile: matchingProfile,
+                    profiles: [matchingProfile]
+                };
+            } else {
+                console.warn(`[Executor] ⚠️ Profile not found for ${plannerAuthStrategy.email}, falling back to detection`);
+                authContext = await this._detectAuthContext(userMessage, history);
+            }
+        } else {
+            authContext = await this._detectAuthContext(userMessage, history);
+        }
+        const authInstruction = authContext ? `
+🔐 AUTO-AUTHENTICATION ENABLED:
+Context detected: ${authContext.context}
+${authContext.profiles ? authContext.profiles.map(p =>
+            `- ${p.label} (${p.role}): ${JSON.stringify(p.credentials)}`
+        ).join('\n') : `Use profile: ${authContext.profile.label}\nCredentials: ${JSON.stringify(authContext.profile.credentials)}`}
+
+CRITICAL MULTI-AUTH RULES:
+1. If request needs BOTH company AND school data, authenticate with BOTH profiles
+2. Use company profile for: getCompanyProfile, listEnterprise
+3. Use senai_admin profile for: getSchools, dashboards  
+4. Execute tools with appropriate profile automatically
+5. DO NOT ask user for credentials - use profiles above
+` : '';
 
         // 1. Prepare Initial Messages (Stateless)
         const messages = this.prepareHistory(history);
 
         let finalUserMessage = userMessage;
-        if (planContext) {
-            finalUserMessage += `\n\n${planContext}`;
-        }
-
-        // Inject Location Context
-        if (location && location.lat && location.lon) {
-            finalUserMessage += `\n\n[CONTEXT: User Location is Latitude ${location.lat}, Longitude ${location.lon}. USE THESE COORDINATES if a tool requires user location.]`;
-        }
-
-        messages.push({ role: 'user', content: finalUserMessage });
 
         const safeToolNames = tools.map(t => t.name).join(', ');
         const systemInstruction = `You are a helpful assistant designed to help the user organize and visualize data from their connected resources.
@@ -49,12 +98,17 @@ export class ExecutorAgent {
             ${resourceSummary}
 
             TOOLS: [${safeToolNames}]
+
+            EXECUTION PLAN (STRATEGY):
+            ${planThought || "Use the available tools to answer the user request."}
             
             Instructions:
-            1. If the user asks what you can do (e.g. "what can we do?", "help"), explain your capabilities based on the CONNECTED RESOURCES above.
-            2. Use the provided tools to answer specific requests.
-            3. Return a Function Call object to invoke a tool.
-            4. Answer factually based on tool results.
+            1. **MANDATORY**: You MUST follow the EXECUTION PLAN above.
+            2. **DO NOT** just answer comfortably. You must CALL THE TOOLS to get the real data.
+            3. If the plan says to "Call Tool X", you MUST return a Function Call for Tool X.
+            4. If the user asks what you can do (e.g. "what can we do?", "help") AND no tools are selected/relevant, explain your capabilities.
+            5. Otherwise, your primary job is to **EXECUTE TOOLS**.
+            6. Return a Function Call object to invoke a tool.
         `;
 
         let gatheredData = [];
@@ -231,7 +285,36 @@ export class ExecutorAgent {
                         console.log(`[Executor] >>> Calling Tool: ${call.name}`);
 
                         // Apply intelligent filters BEFORE execution
-                        const filteredArgs = this.applyIntelligentFilters(call.name, call.args, userMessage, tools, location);
+                        const filteredArgs = this.applyIntelligentFilters(call.name, call.args, userMessage, tools, location, authContext);
+
+                        // ✨ PRE-VALIDATION: Check if required params are present
+                        const validation = this._validateToolParams(call.name, filteredArgs, tools);
+                        if (!validation.valid) {
+                            console.log(`[Executor] ⚠️ Tool params invalid: ${validation.reason}`);
+
+                            // Return structured error that StrategicAgent can understand
+                            toolResult = {
+                                isError: true,
+                                content: [{
+                                    text: JSON.stringify({
+                                        error: 'MISSING_REQUIRED_PARAMS',
+                                        missing: validation.missing,
+                                        suggestion: validation.suggestion,
+                                        tool: call.name
+                                    })
+                                }]
+                            };
+
+                            // Add to gathered data and continue
+                            gatheredData.push({ tool: call.name, result: toolResult });
+                            messages.push({
+                                role: 'tool',
+                                name: call.name,
+                                content: toolResult.content
+                            });
+
+                            continue; // Skip actual execution
+                        }
 
                         // SMART CONTEXT INJECTION (Accumulator)
                         // If we have previous context for this tool's parameters, inject it if missing
@@ -254,6 +337,82 @@ export class ExecutorAgent {
                         let toolResult;
                         try {
                             toolResult = await toolService.executeTool(call.name, filteredArgs);
+
+                            // 🔥 EXTRACT CONTEXT from AUTH responses & UPDATE PROFILE
+                            if (!toolResult.isError && toolResult.content && (call.name.includes('auth') || call.name.includes('login') || call.name.includes('session'))) {
+                                try {
+                                    const authText = toolResult.content[0]?.text;
+                                    if (authText) {
+                                        const authData = JSON.parse(authText);
+
+                                        // 1. Update Context Accumulator (Runtime)
+                                        this.contextAccumulator = this.contextAccumulator || {};
+                                        if (authData.cnpj) this.contextAccumulator.companyCnpj = authData.cnpj;
+                                        if (authData.name) this.contextAccumulator.companyName = authData.name;
+                                        if (authData.id) this.contextAccumulator.companyId = authData.id;
+                                        if (authData.token) this.contextAccumulator.authToken = authData.token;
+
+                                        console.log(`[Executor] 🧠 Extracted from auth: CNPJ=${authData.cnpj || 'N/A'}, Name=${authData.name || 'N/A'}`);
+
+                                        // 2. DYNAMIC PROFILE UPDATE (Persistence)
+                                        // Find which profile was used for this call
+                                        let usedEmail = filteredArgs.email || filteredArgs.user;
+                                        if (usedEmail) {
+                                            const profiles = this.resourceEnricher.getAllProfiles();
+                                            const usedProfile = profiles.find(p => p.credentials?.email === usedEmail || p.credentials?.user === usedEmail);
+
+                                            if (usedProfile) {
+                                                console.log(`[Executor] 💾 Updating Auth Profile '${usedProfile.label}' with new data...`);
+
+                                                // Merge new data into credentials
+                                                const newCredentials = { ...usedProfile.credentials };
+                                                const updates = {};
+                                                let hasUpdates = false;
+
+                                                // 1. Credentials Updates (Generic/Dynamic)
+                                                // User requested to save EVERYTHING ("pode salvar tudo") because different resources return different data.
+                                                // We merge ALL fields from authData into credentials.
+                                                Object.entries(authData).forEach(([key, value]) => {
+                                                    // Skip complex objects if needed, or unnecessary fields like 'message' or 'statusCode' if they exist?
+                                                    // Assuming authData is the "user" object or "session" object returned.
+                                                    // We'll skip standard HTTP response fields if they leak in, but usually tool result text is the data payload.
+                                                    if (key !== 'message' && key !== 'statusCode' && key !== 'error') {
+                                                        if (JSON.stringify(newCredentials[key]) !== JSON.stringify(value)) {
+                                                            newCredentials[key] = value;
+                                                            hasUpdates = true;
+                                                        }
+                                                    }
+                                                });
+
+                                                if (hasUpdates) {
+                                                    updates.credentials = newCredentials;
+                                                }
+
+                                                // 2. Core Profile Updates (Role, Label/Name)
+                                                // Update Label (Name in UI)
+                                                if (authData.name && usedProfile.label !== authData.name) {
+                                                    updates.label = authData.name;
+                                                    hasUpdates = true;
+                                                }
+                                                // Update Role if provided and different
+                                                if (authData.role && usedProfile.role !== authData.role) {
+                                                    updates.role = authData.role;
+                                                    hasUpdates = true;
+                                                }
+
+                                                if (hasUpdates) {
+                                                    await this.resourceEnricher.updateProfile(usedProfile.resourceId, usedProfile.id, updates);
+                                                    console.log(`[Executor] ✅ Auth Profile Updated in DB (Label, Role, or Creds changed).`);
+                                                } else {
+                                                    console.log(`[Executor] No new data to update in profile.`);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn(`[Executor] Failed to process auth response for profile update: ${e.message}`);
+                                }
+                            }
 
                             // EXTRACT ENTITIES for future context (Generic Entity Recognition)
                             if (toolResult && !toolResult.isError && toolResult.content) {
@@ -497,7 +656,7 @@ export class ExecutorAgent {
      * @param {object} [location] - Optional user location data {lat, lon}
      * @returns {object} - Filtered arguments
      */
-    applyIntelligentFilters(toolName, args, userMessage, tools, location = null) {
+    applyIntelligentFilters(toolName, args, userMessage, tools, location = null, authContext = null) {
         const filtered = { ...args };
         const tool = tools.find(t => t.name === toolName);
 
@@ -593,6 +752,18 @@ export class ExecutorAgent {
             }
         }
 
+        // 4.1.1. SPECIFIC FIX: dn_companiescontroller_getcompanyprofile
+        // - Also benefits from CNPJ injection
+        if (toolName.includes('companiescontroller_getcompanyprofile')) {
+            // 🔥 INJECT CNPJ from auth if available
+            if (this.contextAccumulator && this.contextAccumulator.companyCnpj) {
+                if (!filtered.cnpj || filtered.cnpj.trim() === "") {
+                    console.log(`[Executor] 💉 Auto-injecting CNPJ for company profile: ${this.contextAccumulator.companyCnpj}`);
+                    filtered.cnpj = this.contextAccumulator.companyCnpj;
+                }
+            }
+        }
+
         // 4.1. SPECIFIC FIX: dn_enterprisecontroller_listenterprise
         // - Requires search_bar (cannot be empty).
         // - Does NOT support lat/lon.
@@ -603,6 +774,14 @@ export class ExecutorAgent {
             if (filtered.latitude) delete filtered.latitude;
             if (filtered.longitude) delete filtered.longitude;
 
+            // 🔥 INJECT CNPJ from auth if available
+            if (this.contextAccumulator && this.contextAccumulator.companyCnpj) {
+                if (!filtered.search_bar || filtered.search_bar.trim() === "") {
+                    console.log(`[Executor] 💉 Auto-injecting CNPJ from auth: ${this.contextAccumulator.companyCnpj}`);
+                    filtered.search_bar = this.contextAccumulator.companyCnpj;
+                }
+            }
+
             // Handle search_bar
             if (!filtered.search_bar || filtered.search_bar.trim() === "") {
                 console.log(`[Executor] 🏢 Enterprise Search: search_bar is empty. Defaulting to "Empresa" (Generic) to list available.`);
@@ -610,18 +789,86 @@ export class ExecutorAgent {
             }
         }
 
+        // 4.2. AUTO-AUTH INJECTION (Sagaz Security)
+        // If the tool is an Auth tool and parameters are missing, try to auto-inject from Resource Profile.
+        if (toolName.includes('authcontroller_session') || toolName.includes('login') || toolName.includes('createsession')) {
+            let resourceId = null;
+            if (!toolName.includes('__') && tools) {
+                const match = tools.find(t => t.name.endsWith(toolName) || t.name === toolName);
+                if (match && match.name.includes('__')) {
+                    const parts = match.name.split('__');
+                    const rawId = parts[0].replace('api_', '').replace('db_', '');
+                    if (resourceEnricher.resources.has(rawId)) resourceId = rawId;
+                    else resourceId = 'default';
+                }
+            } else if (toolName.includes('__')) {
+                const parts = toolName.split('__');
+                const rawId = parts[0].replace('api_', '').replace('db_', '');
+                resourceId = resourceEnricher.resources.has(rawId) ? rawId : 'default';
+            }
+            if (!resourceId) resourceId = 'default';
+
+            console.log(`[Executor] 🧠 Using Resource ID: '${resourceId}' for Auth Profile Lookup`);
+            const resource = resourceEnricher.resources.get(resourceId);
+            let authorizedUser = null;
+
+            if (authContext && authContext.profile) {
+                authorizedUser = authContext.profile;
+                console.log(`[Executor] 🔐 Using Enforced Auth Context: ${authorizedUser.label}`);
+            }
+
+            if (!authorizedUser && resource && resource.authProfiles && resource.authProfiles.length > 0) {
+                authorizedUser = resource.authProfiles[0];
+                if (toolName.includes('dashboard') || toolName.includes('admin') || toolName.includes('session')) {
+                    const adminProfile = resource.authProfiles.find(p => p.role === 'senai_admin');
+                    if (adminProfile) authorizedUser = adminProfile;
+                }
+            }
+
+            if (authorizedUser && authorizedUser.credentials) {
+                console.log(`[Executor] 🔐 Auto-Auth: Injecting credentials for user '${authorizedUser.label}' (${authorizedUser.role})`);
+
+                // STRICT PARAMETER MATCHING: Only inject credentials that the tool actually requests.
+                // Find tool definition
+                const toolDef = tools ? tools.find(t => t.name === toolName) : null;
+                const allowedParams = toolDef ? (toolDef.inputSchema?.properties ? Object.keys(toolDef.inputSchema.properties) : []) : [];
+
+                if (toolDef) {
+                    console.log(`[Executor] 🛡️ Strict Auth: Tool '${toolName}' accepts: [${allowedParams.join(', ')}]`);
+                }
+
+                for (const [paramName, paramValue] of Object.entries(authorizedUser.credentials)) {
+                    // 1. STRICT CHECK: Only inject if tool defines this parameter
+                    if (allowedParams.length > 0 && !allowedParams.includes(paramName)) {
+                        continue; // Skip keys not in schema (e.g. don't send 'cnpj' to a login endpoint that only wants 'email'/'password')
+                    }
+
+                    const currentVal = filtered[paramName];
+                    let shouldOverwrite = false;
+                    if (!currentVal) shouldOverwrite = true;
+                    else if (paramName === 'email' && !currentVal.includes('@')) shouldOverwrite = true;
+                    else if (paramName === 'user' && !currentVal.includes('@')) shouldOverwrite = true;
+                    else if (paramName === 'cnpj' && currentVal.length < 5) shouldOverwrite = true;
+                    if (toolName.includes('auth') || toolName.includes('session')) {
+                        if (paramName === 'email' || paramName === 'user') shouldOverwrite = true;
+                    }
+
+                    if (shouldOverwrite) {
+                        filtered[paramName] = paramValue;
+                        console.log(`[Executor]    -> ✅ Injected '${paramName}'`);
+                    }
+                }
+            }
+        }
+
         // 5. SAGAZ DEFAULTS: Auto-fill Location and CNPJ
-        // Location Strategy: Browser Location > Default SP
         const paramKeys = Object.keys(params);
         if ((paramKeys.includes('lat') || paramKeys.includes('latitude') || paramKeys.includes('userLat') || paramKeys.includes('companyLat')) &&
             (!filtered.lat && !filtered.latitude && !filtered.userLat && !filtered.companyLat)) {
 
             let lat = -23.5505; // Default SP
-            let useBrowser = false;
-
             if (location && location.lat) {
                 lat = location.lat;
-                useBrowser = true;
                 console.log(`[Executor] 📍 Sagaz Mode: Using BROWSER Location: ${lat}`);
             } else {
                 console.log(`[Executor] 📍 Sagaz Mode: Using DEFAULT Location (Sao Paulo): ${lat}`);
@@ -637,10 +884,7 @@ export class ExecutorAgent {
             (!filtered.lon && !filtered.longitude && !filtered.userLng && !filtered.companyLng)) {
 
             let lon = -46.6333; // Default SP
-
-            if (location && location.lon) {
-                lon = location.lon;
-            }
+            if (location && location.lon) lon = location.lon;
 
             if (paramKeys.includes('lon')) filtered.lon = lon;
             if (paramKeys.includes('longitude')) filtered.longitude = lon;
@@ -648,21 +892,14 @@ export class ExecutorAgent {
             if (paramKeys.includes('companyLng')) filtered.companyLng = lon;
         }
 
-        // Schools CNPJ (Default to generic list or null to force backend to handle it)
-        // If the tool is asking for a list of CNPJs and we have none, we inject a "dummy" or try to rely on the backend finding "all".
-        // However, if it's REQUIRED, we must provide something.
         if (paramKeys.includes('schoolsCnpj') && (!filtered.schoolsCnpj || filtered.schoolsCnpj.length === 0)) {
             console.log(`[Executor] 🏢 Sagaz Mode: Injecting Default CNPJ Context`);
-            // We inject a placeholder structure. The backend ideally should handle "empty" as "all", 
-            // but if it validates strict existence, we try a common SENAI/Industry pattern or a valid test CNPJ.
-            // Using a generic valid-format CNPJ (e.g., FIESP or SENAI SP numeric root) might be risky if validated against DB.
-            // Strategy: Provide a valid-looking structure.
             filtered.schoolsCnpj = [{
                 cnpj: "60.627.955/0001-31",
                 latitude: -23.5505,
                 longitude: -46.6333,
                 name: "Escola SENAI Default"
-            }]; // Example: SENAI SP (generic)
+            }];
         }
 
         return filtered;
@@ -844,13 +1081,136 @@ export class ExecutorAgent {
                             this.contextAccumulator.courseId = id;
                             console.log(`[Executor] 🧠 Extracted Course ID for Context: ${id} (from "${firstItem.name || firstItem.title}")`);
                         }
+                        // Ignore parsing errors, it's just a heuristic
                     }
                 }
-
             } catch (e) {
                 // Ignore parsing errors, it's just a heuristic
             }
         }
+    }
+
+    /**
+     * Validates tool parameters before execution
+     * Prevents calling APIs with missing required params
+     * @private
+     */
+    _validateToolParams(toolName, params, tools) {
+        const tool = tools.find(t => t.name === toolName);
+        if (!tool || !tool.parameters) {
+            return { valid: true }; // Can't validate, proceed
+        }
+
+        const schema = tool.parameters.properties || {};
+        const required = tool.parameters.required || [];
+
+        const missing = [];
+        for (const req of required) {
+            const value = params[req];
+            // Check if missing, empty string, or empty array
+            if (value === undefined || value === null || value === '' ||
+                (Array.isArray(value) && value.length === 0)) {
+                missing.push(req);
+            }
+        }
+
+        if (missing.length > 0) {
+            let suggestion = `Missing required parameters: ${missing.join(', ')}`;
+
+            // Context-specific suggestions
+            if (toolName.includes('enterprise') || toolName.includes('company')) {
+                if (missing.includes('search_bar') || missing.includes('cnpj') || missing.includes('name')) {
+                    suggestion = 'Ask user for company CNPJ or company name to search. Without this, the API cannot return results.';
+                }
+            }
+
+            if (toolName.includes('school')) {
+                if (missing.includes('city') && missing.includes('state')) {
+                    suggestion = 'Need at least city or state to search schools. Ask user for location.';
+                }
+            }
+
+            return {
+                valid: false,
+                missing,
+                suggestion,
+                reason: `Required params missing: ${missing.join(', ')}`
+            };
+        }
+
+        return { valid: true };
+    }
+
+    /**
+     * Detects authentication context from user message
+     * Supports MULTI-AUTH: Returns ALL needed profiles (company + admin)
+     * @private
+     */
+    async _detectAuthContext(userMessage, history) {
+        const lower = userMessage.toLowerCase();
+
+        // Load auth profiles from ResourceEnricher (Database)
+        let profiles = [];
+        try {
+            profiles = this.resourceEnricher.getAllProfiles();
+            console.log(`[Executor] Loaded ${profiles.length} auth profiles from database`);
+        } catch (error) {
+            console.error(`[Executor] Failed to load auth profiles:`, error);
+            return null;
+        }
+
+        if (profiles.length === 0) {
+            console.warn(`[Executor] No auth profiles found in database`);
+            return null;
+        }
+
+        // Detect BOTH contexts (pode precisar de múltiplos perfis)
+        const isCompanyContext = lower.includes('empresa') || lower.includes('company') ||
+            lower.includes('filial') || lower.includes('cnpj');
+        const isSenaiContext = lower.includes('senai') || lower.includes('escola') ||
+            lower.includes('school') || lower.includes('unidade') || lower.includes('curso');
+
+        const neededProfiles = [];
+
+        // MULTI-AUTH: Se pede empresas E escolas, usa AMBOS perfis
+        if (isCompanyContext) {
+            const companyProfile = profiles.find(p => p.role === 'company');
+            if (companyProfile) {
+                neededProfiles.push(companyProfile);
+            }
+        }
+
+        if (isSenaiContext) {
+            const adminProfile = profiles.find(p => p.role === 'senai_admin');
+            if (adminProfile) {
+                // Evita duplicação se já adicionou
+                if (!neededProfiles.find(p => p.role === 'senai_admin')) {
+                    neededProfiles.push(adminProfile);
+                }
+            }
+        }
+
+        // Se não detectou nenhum contexto específico, usa admin padrão
+        if (neededProfiles.length === 0) {
+            const defaultProfile = profiles.find(p => p.role.includes('admin'));
+            if (defaultProfile) {
+                neededProfiles.push(defaultProfile);
+            }
+        }
+
+        if (neededProfiles.length === 0) return null;
+
+        // Retorna MÚLTIPLOS perfis se necessário
+        const contexts = [];
+        if (isCompanyContext) contexts.push('Company/Enterprise');
+        if (isSenaiContext) contexts.push('SENAI Administration');
+        if (contexts.length === 0) contexts.push('General');
+
+        return {
+            context: contexts.join(' + '), // "Company + SENAI"
+            profiles: neededProfiles,
+            profile: neededProfiles[0] // Mantém compatibilidade com código existente
+        };
     }
 }
 

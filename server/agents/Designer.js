@@ -1,5 +1,9 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 
+// Phase 3 & 4: Canvas Management & Layout
+import { canvasMerger } from '../src/canvas/CanvasMerger.js';
+import { layoutOptimizer } from '../src/layout/LayoutOptimizer.js';
+
 
 export class DesignerAgent {
    constructor() { }
@@ -11,9 +15,10 @@ export class DesignerAgent {
     * @param {string} modelName 
     * @param {Array} steps - Execution steps
     * @param {Object} canvasContext - Existing canvas context { widgets, messages, mode }
+    * @param {Object} canvasDecision - Canvas decision from CanvasGroupManager  
     * @returns {Promise<{text: string, widgets: Array}>}
     */
-   async design(summaryText, data, modelName, steps = [], canvasContext = null) {
+   async design(summaryText, data, modelName, steps = [], canvasContext = null, canvasDecision = null) {
       console.log("[Designer] Generating Widgets...");
       console.log("[Designer] Canvas Context:", canvasContext ? `Mode: ${canvasContext.mode}, Existing Widgets: ${canvasContext.widgets?.length || 0}` : 'None');
 
@@ -127,7 +132,58 @@ WIDGET TYPES (Visual Hierarchy):
             jsonMode: true // Force JSON response
          });
          const designText = result.response.text();
-         const widgets = this.extractJsonArray(designText) || [];
+         let widgets = this.extractJsonArray(designText) || [];
+
+         // PHASE 3: Canvas Merge (if needed)
+         if (canvasDecision && canvasDecision.action === 'merge' && canvasContext) {
+            console.log('[Designer] Merging new widgets into existing canvas...');
+            const mergeResult = await canvasMerger.mergeIntoCanvas(
+               canvasContext,
+               summaryText,
+               data,
+               widgets
+            );
+            widgets = mergeResult.canvas.widgets || widgets;
+            console.log(`[Designer] Merge complete: ${mergeResult.summary}`);
+         }
+
+         // PHASE 4: Layout Optimization
+         if (widgets && widgets.length > 0) {
+            console.log('[Designer] Optimizing layout...');
+            const optimizedWidgets = await layoutOptimizer.optimizeLayout(widgets, {
+               strategy: 'auto',
+               spacing: 20
+            });
+            widgets = optimizedWidgets;
+            console.log(`[Designer] Layout optimized: ${widgets.length} widgets positioned`);
+         }
+
+         // PHASE 5: Data Source Enrichment (Auto-Refresh Metadata)
+         if (widgets && widgets.length > 0 && steps && steps.length > 0) {
+            console.log('[Designer] Adding auto-refresh metadata...');
+            widgets = widgets.map(widget => {
+               // Only add dataSource to data-driven widgets
+               if (!['stat', 'table', 'chart', 'list'].includes(widget.type)) {
+                  return widget;
+               }
+
+               // Find which tool provided data for this widget
+               const toolStep = steps.find(s => s.tool);
+
+               if (toolStep && toolStep.tool) {
+                  widget.dataSource = {
+                     tool: toolStep.tool,
+                     authProfile: toolStep.authProfile || 'default',
+                     params: toolStep.args || {},
+                     refreshInterval: this._getRefreshInterval(widget.type),
+                     lastUpdate: new Date().toISOString()
+                  };
+                  console.log(`[Designer] Added auto-refresh to ${widget.type}: ${toolStep.tool}`);
+               }
+
+               return widget;
+            });
+         }
 
          return { text: summaryText, widgets };
 
@@ -151,6 +207,25 @@ WIDGET TYPES (Visual Hierarchy):
       }
 
       return text;
+   }
+
+   /**
+    * Determines refresh interval based on widget type
+    * @private
+    */
+   _getRefreshInterval(widgetType) {
+      // Stats need fresh data more frequently
+      if (widgetType === 'stat') return 300000;  // 5 minutes
+
+      // Tables can wait longer
+      if (widgetType === 'table') return 600000; // 10 minutes
+      if (widgetType === 'list') return 600000;  // 10 minutes
+
+      // Charts somewhere in between
+      if (widgetType === 'chart') return 450000; // 7.5 minutes
+
+      // Default
+      return 600000; // 10 minutes
    }
 
    extractJsonArray(text) {

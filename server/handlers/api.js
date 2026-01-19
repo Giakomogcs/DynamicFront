@@ -323,31 +323,52 @@ export async function executeApiTool(toolExecConfig, args, toolSchema = null) {
                 const cleanLoginUrl = auth.loginUrl.trim();
                 const loginFullUrl = cleanLoginUrl.startsWith('http') ? cleanLoginUrl : `${baseUrl.trim().replace(/\/$/, '')}${cleanLoginUrl.startsWith('/') ? '' : '/'}${cleanLoginUrl}`;
 
+                console.log(`[API Exec] Authenticating via ${loginFullUrl}...`);
+
+                // Build login body from configured parameters
                 let loginBody = {};
                 if (auth.loginParams && Array.isArray(auth.loginParams)) {
+                    // NEW: Map configured params to auth profile credentials
                     auth.loginParams.forEach(p => {
-                        if (p.key) loginBody[p.key] = p.value || '';
+                        if (p.key) {
+                            // Try to get value from profile credentials first
+                            // If value is explicitly set in loginParams, use that
+                            // Otherwise, look for matching key in credentials
+                            if (p.value !== undefined && p.value !== null && p.value !== '') {
+                                loginBody[p.key] = p.value;
+                            } else {
+                                // Look for the key in auth credentials
+                                // Common mappings: email -> email, user -> user, username -> user, etc.
+                                const credValue = auth[p.key] || auth.credentials?.[p.key];
+                                if (credValue) {
+                                    loginBody[p.key] = credValue;
+                                } else {
+                                    console.warn(`[API Exec] Missing credential for param '${p.key}'`);
+                                    loginBody[p.key] = '';
+                                }
+                            }
+                        }
                     });
                 } else {
-                    // Legacy
+                    // Legacy: Use username/password keys
                     const userKey = auth.usernameKey || 'username';
                     const passKey = auth.passwordKey || 'password';
-                    loginBody[userKey] = auth.username;
-                    loginBody[passKey] = auth.password;
+                    loginBody[userKey] = auth.username || auth.credentials?.username;
+                    loginBody[passKey] = auth.password || auth.credentials?.password;
 
                     if (auth.extraBody) {
                         try { Object.assign(loginBody, JSON.parse(auth.extraBody)); } catch (e) { }
                     }
                 }
 
-                console.log(`[API Exec] Authenticating via ${loginFullUrl}...`);
+                console.log(`[API Exec] Login body keys: ${Object.keys(loginBody).join(', ')}`);
+
                 const loginRes = await fetch(loginFullUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(loginBody),
                     signal: AbortSignal.timeout(5000)
                 });
-
                 if (loginRes.ok) {
                     const loginData = await loginRes.json();
                     let tokenPath = auth.tokenPath || 'access_token';
