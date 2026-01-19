@@ -75,6 +75,21 @@ class McpClientService {
         const serverName = `api_${apiConfig.idString}`;
         console.log(`[McpClient] Spawning API server '${serverName}'...`);
 
+        // Check if already running and kill/close it
+        if (this.clients.has(serverName)) {
+            console.log(`[McpClient] Server '${serverName}' already running. Closing before respawn...`);
+            try {
+                const client = this.clients.get(serverName);
+                await client.close(); 
+                // Note: client.close() might not kill the spawned process if transport doesn't handle it. 
+                // StdioClientTransport usually kills the child process.
+                this.clients.delete(serverName);
+                this.toolsCache.delete(serverName);
+            } catch (e) {
+                console.warn(`[McpClient] Warning closing '${serverName}':`, e);
+            }
+        }
+
         const wrapperPath = path.resolve("./mcp-servers/openapi-wrapper.js");
 
         // Use Base64 to avoid Windows command line quote escaping issues

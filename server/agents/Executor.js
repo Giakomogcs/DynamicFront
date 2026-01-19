@@ -52,10 +52,30 @@ export class ExecutorAgent {
 
             // NEW: Fetch complete profile from ResourceEnricher instead of creating empty one
             const allProfiles = this.resourceEnricher.getAllProfiles();
-            const matchingProfile = allProfiles.find(p =>
+            let matchingProfile = allProfiles.find(p =>
                 p.credentials?.email === plannerAuthStrategy.email ||
                 p.credentials?.user === plannerAuthStrategy.email
             );
+
+            // ROBUST FALLBACK: If Planner hallucinated an email (e.g. random admin@...), find a REAL admin profile
+            if (!matchingProfile) {
+                console.warn(`[Executor] ⚠️ Planner email '${plannerAuthStrategy.email}' not found. Searching for valid fallback profile...`);
+                
+                // 1. Try to find a profile with the same Role if listed in strategy (not currently passed, but implied)
+                // 2. Fallback to any 'admin' profile if the strategy implies admin
+                if (plannerAuthStrategy.email && (plannerAuthStrategy.email.includes('admin') || plannerAuthStrategy.reason?.toLowerCase().includes('admin'))) {
+                    matchingProfile = allProfiles.find(p => p.role.toLowerCase().includes('admin') || p.label.toLowerCase().includes('admin'));
+                    if (matchingProfile) {
+                        console.log(`[Executor] 🔄 Fallback: Found valid ADMIN profile '${matchingProfile.label}' needed for request.`);
+                    }
+                }
+
+                // 3. Fallback to the first available profile if still nothing (better than nothing)
+                if (!matchingProfile && allProfiles.length > 0) {
+                     matchingProfile = allProfiles[0];
+                     console.log(`[Executor] 🔄 Fallback: Using first available profile '${matchingProfile.label}' as last resort.`);
+                }
+            }
 
             if (matchingProfile) {
                 console.log(`[Executor] ✅ Found matching profile: ${matchingProfile.label}`);

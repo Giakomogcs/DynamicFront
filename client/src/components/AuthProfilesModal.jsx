@@ -87,10 +87,18 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                 role: newRole,
                 credentials
             };
-            if (editingId) payload.id = editingId; // Include ID to update
+            
+            let url = `http://localhost:3000/api/resources/${resourceId}/auth-profiles`;
+            let method = 'POST';
 
-            const res = await fetch(`http://localhost:3000/api/resources/${resourceId}/auth-profiles`, {
-                method: 'POST',
+            if (editingId) {
+                // UPDATE user (PUT)
+                url = `http://localhost:3000/api/resources/${resourceId}/auth-profiles/${editingId}`;
+                method = 'PUT';
+            }
+
+            const res = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -194,7 +202,7 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                                             </div>
                                             <div className="text-xs text-slate-500 font-mono space-y-1">
                                                 {Object.entries(profile.credentials).map(([k, v]) => (
-                                                    <div key={k}>{k}: <span className="text-slate-400">{v.replace(/./g, '*')}</span></div>
+                                                    <div key={k}>{k}: <span className="text-slate-400">{String(v).replace(/./g, '*')}</span></div>
                                                 ))}
                                             </div>
                                         </div>
@@ -258,12 +266,12 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                         </div>
                     )}
 
-                    {/* Add New Section */}
+                    {/* Add New Section (Collapsible) */}
                     {isAdding && (
-                        <div className="bg-slate-900 border border-indigo-500/30 rounded-xl p-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="bg-slate-900 border border-indigo-500/30 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 shadow-lg mb-6">
                             <h4 className="text-sm font-medium text-white mb-4 flex items-center gap-2">
                                 {editingId ? <Pencil size={16} className="text-amber-400" /> : <Plus size={16} className="text-indigo-400" />}
-                                {editingId ? 'Edit User' : 'Add New User'}
+                                {editingId ? `Editing: ${profiles.find(p => p.id === editingId)?.label}` : 'Add New User'}
                             </h4>
 
                             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -289,35 +297,35 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                                 </div>
                             </div>
 
-                            <div className="space-y-2 mb-4">
-                                <label className="text-xs text-slate-400 block">Credentials (Key / Value)</label>
+                            <div className="space-y-2 mb-4 bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                <label className="text-xs text-slate-400 block uppercase tracking-wider font-semibold mb-2">Credentials (Key / Value)</label>
                                 {credentialsKV.map((kv, i) => (
                                     <div key={i} className="flex gap-2">
                                         <input
                                             placeholder="Key (e.g. email)"
                                             value={kv.key}
                                             onChange={e => handleParamChange(i, 'key', e.target.value)}
-                                            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:border-indigo-500 outline-none"
+                                            className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:border-indigo-500 outline-none placeholder:text-slate-600"
                                         />
                                         <input
                                             placeholder="Value"
                                             value={kv.value}
                                             onChange={e => handleParamChange(i, 'value', e.target.value)}
-                                            className="flex-[2] bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:border-indigo-500 outline-none"
+                                            className="flex-[2] bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white font-mono focus:border-indigo-500 outline-none placeholder:text-slate-600"
                                         />
-                                        <button onClick={() => handleRemoveParam(i)} className="p-2 text-slate-600 hover:text-red-400 rounded-lg">
+                                        <button onClick={() => handleRemoveParam(i)} className="p-2 text-slate-600 hover:text-red-400 hover:bg-slate-900 rounded-lg transition-colors">
                                             <X size={16} />
                                         </button>
                                     </div>
                                 ))}
-                                <button onClick={handleAddParam} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-1">
+                                <button onClick={handleAddParam} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-2 px-2 py-1 rounded hover:bg-indigo-500/10 transition-colors w-fit">
                                     <Plus size={12} /> Add Parameter
                                 </button>
                             </div>
 
-                            <div className="flex justify-end gap-2">
-                                <button onClick={handleCancel} className="px-3 py-2 text-sm text-slate-400 hover:text-white">Cancel</button>
-                                <button onClick={handleSaveProfile} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium">
+                            <div className="flex justify-end gap-2 border-t border-slate-800 pt-3">
+                                <button onClick={handleCancel} className="px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
+                                <button onClick={handleSaveProfile} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium shadow-lg shadow-indigo-500/20">
                                     {editingId ? 'Update User' : 'Save User'}
                                 </button>
                             </div>
@@ -325,7 +333,7 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                     )}
 
                     {!isAdding && profiles.length > 0 && (
-                        <button onClick={() => setIsAdding(true)} className="w-full py-3 border border-dashed border-slate-800 rounded-xl text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 hover:bg-slate-900/50 transition-all text-sm font-medium flex items-center justify-center gap-2">
+                        <button onClick={() => setIsAdding(true)} className="w-full py-3 border border-dashed border-slate-800 rounded-xl text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 hover:bg-slate-900/50 transition-all text-sm font-medium flex items-center justify-center gap-2 mb-4">
                             <Plus size={18} /> Register Another User
                         </button>
                     )}

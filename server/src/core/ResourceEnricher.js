@@ -68,6 +68,7 @@ export class ResourceEnricher {
     }
 
     getProfiles(resourceId) {
+        console.log(`[ResourceEnricher] getProfiles for '${resourceId}'. Available keys:`, Object.keys(this.authRegistry));
         // Fallback to 'default' if specific resource has no profiles, 
         // OR return both (resource specific prioritized)
         const specific = this.authRegistry[resourceId] || [];

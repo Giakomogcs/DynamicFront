@@ -212,7 +212,7 @@ function enrichBodySchema(requestBody, spec) {
                 // 🔥 FIX: Flatten double-nested arrays (Gemini doesn't support items.items)
                 // Check if items is itself an array type with nested items
                 while (items && typeof items === 'object' && items.type === 'array' && items.items) {
-                    console.warn(`[OpenAPI Enricher] ⚠️ Flattening double-nested array for property: ${key}`);
+                    // console.log(`[OpenAPI Enricher] Flattening nested array for property: ${key}`);
                     items = items.items;
 
                     // Handle nested tuple

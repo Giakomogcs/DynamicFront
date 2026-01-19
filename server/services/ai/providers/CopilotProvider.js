@@ -15,6 +15,10 @@ export class CopilotProvider {
         this.sessionEndpoint = null;
     }
 
+    getDefaultModel() {
+        return 'gpt-4';
+    }
+
     async listModels() {
         try {
             // Ensure we have a valid session token if possible
@@ -37,7 +41,12 @@ export class CopilotProvider {
             return [];
         } catch (e) {
             console.warn("[CopilotProvider] Failed to list models:", e.message);
-            return [];
+            // Fallback to static known models
+            return [
+                { name: 'copilot/gpt-4', displayName: '(Copilot) GPT-4', provider: 'copilot', description: 'GitHub Copilot GPT-4' },
+                { name: 'copilot/gpt-3.5-turbo', displayName: '(Copilot) GPT-3.5 Turbo', provider: 'copilot', description: 'GitHub Copilot GPT-3.5' },
+                { name: 'copilot/claude-3.5-sonnet', displayName: '(Copilot) Claude 3.5 Sonnet', provider: 'copilot', description: 'GitHub Copilot Claude 3.5 Sonnet' }
+            ];
         }
     }
 

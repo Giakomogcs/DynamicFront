@@ -210,6 +210,14 @@ class ModelManager {
             console.log(`[ModelManager] Forced fallback to ${provider.id}...`);
         }
 
+        // AUTOMATIC MODEL SWITCH: If we switched provider (or used fallback), check if it supports the requested model.
+        // If not (likely), switch to its default.
+        if (provider && provider.getDefaultModel && (!targetModel.includes(provider.id) && !targetModel.startsWith('gpt') && !targetModel.startsWith('claude'))) {
+                const newModel = provider.getDefaultModel();
+                console.log(`[ModelManager] ⚠️ Switching model from ${targetModel} to ${newModel} because provider is ${provider.id}`);
+                targetModel = newModel;
+        }
+
         try {
             const result = await this.executeWithRetry(provider, targetModel, input, config);
 

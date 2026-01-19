@@ -4,13 +4,19 @@ import { AIProvider } from '../AIProvider.js';
 export class GeminiProvider extends AIProvider {
     constructor(config) {
         super(config);
-        this.id = "gemini";
-        this.name = "Google Gemini";
+        this.apiKey = config.apiKey;
+        this.id = 'gemini';
+        this.name = 'Google Gemini';
+        this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
         if (!config.apiKey) {
             console.warn("[GeminiProvider] No API Key provided.");
         }
         this.genAI = new GoogleGenerativeAI(config.apiKey);
+    }
+
+    getDefaultModel() {
+        return 'gemini-2.0-flash';
     }
 
     async listModels() {

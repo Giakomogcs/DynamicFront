@@ -281,12 +281,27 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
             finalConfig.api.default = { type: 'none' };
         }
 
+        // Capture Auth Data from Test Result if available
+        let verificationAuthData = null;
+        if (testResult && testResult.success) {
+            // Check for flat authData
+            if (testResult.authData) {
+                verificationAuthData = testResult.authData;
+            } 
+            // Check for results array (profile based)
+            else if (testResult.results && Array.isArray(testResult.results)) {
+                const firstSuccess = testResult.results.find(r => r.success && r.authData);
+                if (firstSuccess) verificationAuthData = firstSuccess.authData;
+            }
+        }
+
         onSubmit({
             name: basicInfo.name,
             baseUrl: basicInfo.baseUrl.trim(),
             specUrl: basicInfo.docsMode === 'url' ? basicInfo.specUrl.trim() : undefined,
             docsContent: basicInfo.docsMode === 'text' ? basicInfo.docsContent : undefined,
-            authConfig: JSON.stringify(finalConfig)
+            authConfig: JSON.stringify(finalConfig),
+            verificationAuthData // Pass to backend
         });
     };
 

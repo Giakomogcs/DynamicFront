@@ -167,6 +167,12 @@ app.post('/api/resources/:id/auth-profiles', async (req, res) => {
     res.json(profile);
 });
 
+app.put('/api/resources/:id/auth-profiles/:profileId', async (req, res) => {
+    const updated = await resourceEnricher.updateProfile(req.params.id, req.params.profileId, req.body);
+    if (!updated) return res.status(404).json({ error: "Profile not found or update failed" });
+    res.json(updated);
+});
+
 app.delete('/api/resources/:id/auth-profiles/:profileId', async (req, res) => {
     await resourceEnricher.removeProfile(req.params.id, req.params.profileId);
     res.json({ success: true });

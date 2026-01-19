@@ -12,7 +12,8 @@
     "generate": "npm run prisma:generate --workspace=server",
     "migrate": "npm run prisma:migrate --workspace=server",
     "db:seed": "cd server && npx prisma db seed",
-    "dev": "npm run db:up && npm run generate && npm run migrate && npm run db:seed && concurrently \"npm run api --workspace=server\" \"npm run dev --workspace=client\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,magenta\"",
+    "dev": "bash scripts/dev.sh",
+    "dev:legacy": "npm run db:up && npm run generate && npm run migrate && npm run db:seed && concurrently \"npm run api --workspace=server\" \"npm run dev --workspace=client\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,magenta\"",
     "prisma:studio": "npx prisma studio --schema=./server/prisma/schema.prisma",
     "install:all": "npm install"
   },
