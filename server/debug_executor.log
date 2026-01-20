@@ -1,6 +1,5 @@
-[2026-01-15T18:34:43.566Z] Error: historyContent is not defined
-ReferenceError: historyContent is not defined
-    at ExecutorAgent.execute (file:///C:/Github/DynamicFront/server/agents/Executor.js:346:38)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async AgentOrchestrator.processRequest (file:///C:/Github/DynamicFront/server/agents/Orchestrator.js:106:33)
-    at async file:///C:/Github/DynamicFront/server/api_server.js:53:24
+[2026-01-20T14:08:30.846Z] Error: Cannot read properties of undefined (reading 'role')
+TypeError: Cannot read properties of undefined (reading 'role')
+    at GeminiProvider.generateContent (file:///C:/Github/DynamicFront/server/services/ai/providers/GeminiProvider.js:112:25)
+    at Object.fn (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:489:67)
+    at RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:533:40)

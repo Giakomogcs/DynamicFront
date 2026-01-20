@@ -1,8 +1,13 @@
+/**
+ * Executor Agent
+ * Executes tool calls with proper authentication
+ */
 import { modelManager } from '../services/ai/ModelManager.js';
-import { toolService } from '../services/toolService.js';
-import { getOriginalToolName } from '../ToolAdapter.js';
-import { resourceEnricher } from '../src/core/ResourceEnricher.js'; // Import Resource Access
 import fs from 'fs';
+import { toolService } from '../services/toolService.js';
+import { resourceEnricher } from '../src/core/ResourceEnricher.js';
+import { NoProfilesAvailableError } from '../src/errors/AuthErrors.js';
+import { getOriginalToolName } from '../ToolAdapter.js';
 
 export class ExecutorAgent {
     constructor() {
@@ -60,7 +65,7 @@ export class ExecutorAgent {
             // ROBUST FALLBACK: If Planner hallucinated an email (e.g. random admin@...), find a REAL admin profile
             if (!matchingProfile) {
                 console.warn(`[Executor] ⚠️ Planner email '${plannerAuthStrategy.email}' not found. Searching for valid fallback profile...`);
-                
+
                 // 1. Try to find a profile with the same Role if listed in strategy (not currently passed, but implied)
                 // 2. Fallback to any 'admin' profile if the strategy implies admin
                 if (plannerAuthStrategy.email && (plannerAuthStrategy.email.includes('admin') || plannerAuthStrategy.reason?.toLowerCase().includes('admin'))) {
@@ -72,8 +77,8 @@ export class ExecutorAgent {
 
                 // 3. Fallback to the first available profile if still nothing (better than nothing)
                 if (!matchingProfile && allProfiles.length > 0) {
-                     matchingProfile = allProfiles[0];
-                     console.log(`[Executor] 🔄 Fallback: Using first available profile '${matchingProfile.label}' as last resort.`);
+                    matchingProfile = allProfiles[0];
+                    console.log(`[Executor] 🔄 Fallback: Using first available profile '${matchingProfile.label}' as last resort.`);
                 }
             }
 
@@ -678,10 +683,27 @@ CRITICAL MULTI-AUTH RULES:
      */
     applyIntelligentFilters(toolName, args, userMessage, tools, location = null, authContext = null) {
         const filtered = { ...args };
-        const tool = tools.find(t => t.name === toolName);
+
+        // 1. Robust Tool Lookup (Direct -> Suffix -> Sanitized)
+        let tool = tools.find(t => t.name === toolName);
+
+        if (!tool) {
+            // Try matching by suffix (e.g. 'dn_auth...' matching 'api_...__dn_auth...')
+            tool = tools.find(t => toolName.endsWith(t.name) || (t.name.includes('__') && t.name.endsWith(toolName)));
+
+            if (tool) {
+                console.log(`[Executor] 🔄 Fuzzy matched tool definition: '${tool.name}' for '${toolName}'`);
+            }
+        }
 
         if (!tool || !tool.parameters || !tool.parameters.properties) {
-            return filtered;
+            // If still not found, check if it's an auth tool to allow injection regardless?
+            // No, we need parameters schema to be safe. But for auth tools we might want to force check.
+            if (toolName.includes('auth') || toolName.includes('session')) {
+                console.warn(`[Executor] ⚠️ Tool definition not found for '${toolName}', but proceeding for potential Auth Injection.`);
+            } else {
+                return filtered;
+            }
         }
 
         const params = tool.parameters.properties;
@@ -812,6 +834,10 @@ CRITICAL MULTI-AUTH RULES:
         // 4.2. AUTO-AUTH INJECTION (Sagaz Security)
         // If the tool is an Auth tool and parameters are missing, try to auto-inject from Resource Profile.
         if (toolName.includes('authcontroller_session') || toolName.includes('login') || toolName.includes('createsession')) {
+            console.log(`[Executor] 🔍 DEBUG: Auth tool detected! Tool: ${toolName}`);
+            console.log(`[Executor] 🔍 DEBUG: authContext =`, authContext);
+            console.log(`[Executor] 🔍 DEBUG: filtered args BEFORE injection =`, filtered);
+
             let resourceId = null;
             if (!toolName.includes('__') && tools) {
                 const match = tools.find(t => t.name.endsWith(toolName) || t.name === toolName);
@@ -863,19 +889,24 @@ CRITICAL MULTI-AUTH RULES:
                         continue; // Skip keys not in schema (e.g. don't send 'cnpj' to a login endpoint that only wants 'email'/'password')
                     }
 
-                    const currentVal = filtered[paramName];
-                    let shouldOverwrite = false;
-                    if (!currentVal) shouldOverwrite = true;
-                    else if (paramName === 'email' && !currentVal.includes('@')) shouldOverwrite = true;
-                    else if (paramName === 'user' && !currentVal.includes('@')) shouldOverwrite = true;
-                    else if (paramName === 'cnpj' && currentVal.length < 5) shouldOverwrite = true;
-                    if (toolName.includes('auth') || toolName.includes('session')) {
-                        if (paramName === 'email' || paramName === 'user') shouldOverwrite = true;
-                    }
-
-                    if (shouldOverwrite) {
+                    // 2. For AUTH tools: ALWAYS override existing values with profile credentials
+                    // This prevents LLM from hallucinating fake emails
+                    if (toolName.includes('auth') || toolName.includes('session') || toolName.includes('login')) {
                         filtered[paramName] = paramValue;
-                        console.log(`[Executor]    -> ✅ Injected '${paramName}'`);
+                        console.log(`[Executor]    -> ✅ FORCED injection '${paramName}' = ${paramName === 'password' ? '****' : paramValue}`);
+                    } else {
+                        // For non-auth tools, only inject if missing or invalid
+                        const currentVal = filtered[paramName];
+                        let shouldOverwrite = false;
+                        if (!currentVal) shouldOverwrite = true;
+                        else if (paramName === 'email' && !currentVal.includes('@')) shouldOverwrite = true;
+                        else if (paramName === 'user' && !currentVal.includes('@')) shouldOverwrite = true;
+                        else if (paramName === 'cnpj' && currentVal.length < 5) shouldOverwrite = true;
+
+                        if (shouldOverwrite) {
+                            filtered[paramName] = paramValue;
+                            console.log(`[Executor]    -> ✅ Injected '${paramName}'`);
+                        }
                     }
                 }
             }
