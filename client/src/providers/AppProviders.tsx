@@ -6,6 +6,7 @@
 import { ReactNode } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { SessionProvider } from '@/context/SessionContext';
 import { ToastContainer } from '@/components/common/ToastContainer';
 
 interface AppProvidersProps {
@@ -16,8 +17,10 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <AuthProvider>
       <ToastProvider>
-        {children}
-        <ToastContainer />
+        <SessionProvider>
+          {children}
+          <ToastContainer />
+        </SessionProvider>
       </ToastProvider>
     </AuthProvider>
   );
