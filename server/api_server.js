@@ -15,6 +15,7 @@ import { orchestrator } from './agents/Orchestrator.js';
 // Import routes
 import canvasRoutes from './routes/canvasRoutes.js';
 import widgetRoutes from './routes/widgetRoutes.js';
+import authRoutes from './routes/authRoutes.js'; // v2.0 Authentication
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,6 +28,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Routes
 app.use('/api/canvas', canvasRoutes);
 app.use('/api/widgets', widgetRoutes);
+app.use('/api/auth', authRoutes); // v2.0 Authentication routes
 
 // Initialize Gemini
 import { modelManager } from './services/ai/ModelManager.js';
