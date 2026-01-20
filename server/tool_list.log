@@ -1,0 +1,33 @@
+﻿[McpClient] Initializing connections to MCP Servers...
+[McpClient] Connecting to 'filesystem' via Stdio...
+[McpClient] Connected to 'filesystem'
+[McpClient] Loaded 14 tools from 'filesystem'
+[McpClient] Spawning API server 'api_55552e89-e63d-4362-b061-1077b8289eef'...
+[McpClient] Connecting to 'api_55552e89-e63d-4362-b061-1077b8289eef' via Stdio...
+[McpClient] Connected to 'api_55552e89-e63d-4362-b061-1077b8289eef'
+[McpClient] Loaded 69 tools from 'api_55552e89-e63d-4362-b061-1077b8289eef'
+[ToolService] Fetching all tools...
+14:06:06 [[34mdebug[39m]: Getting profiles for resource {"component":"ResourceEnricher","resourceId":"Default"}
+14:06:06 [[33mwarn[39m]: No profiles available for resource {"event":"NO_PROFILES","resourceId":"Default"}
+14:06:06 [[34mdebug[39m]: Getting profiles for resource {"component":"ResourceEnricher","resourceId":"filesystem"}
+14:06:06 [[33mwarn[39m]: No profiles available for resource {"event":"NO_PROFILES","resourceId":"filesystem"}
+14:06:06 [[34mdebug[39m]: Getting profiles for resource {"component":"ResourceEnricher","resourceId":"55552e89-e63d-4362-b061-1077b8289eef"}
+14:06:06 [[33mwarn[39m]: No profiles available for resource {"event":"NO_PROFILES","resourceId":"55552e89-e63d-4362-b061-1077b8289eef"}
+
+=== Found 5 Tools ===
+
+TOOL: api_55552e89-e63d-4362-b061-1077b8289eef__dn_dashboardcontroller_getcontractscapacity
+PARAMS: start_month, end_month, state, _authProfile
+---
+TOOL: api_55552e89-e63d-4362-b061-1077b8289eef__dn_dashboardunitadmcontroller_getactivecontractsbyunit
+PARAMS: start_month, end_month, _authProfile
+---
+TOOL: api_55552e89-e63d-4362-b061-1077b8289eef__dn_dashboardunitadmcontroller_getactivecontractsbyentrydate
+PARAMS: start_date, end_date, _authProfile
+---
+TOOL: api_55552e89-e63d-4362-b061-1077b8289eef__dn_dashboardunitadmcontroller_getexpiringcontracts
+PARAMS: start_date, end_date, _authProfile
+---
+TOOL: api_55552e89-e63d-4362-b061-1077b8289eef__dn_dashboardunitadmcontroller_getactivecontractstimeline
+PARAMS: start_month, end_month, _authProfile
+---

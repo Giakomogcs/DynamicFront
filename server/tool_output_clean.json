@@ -1,0 +1,27 @@
+﻿Initializing...
+14:02:02 [[32minfo[39m]: Loading profiles from database {"component":"ResourceEnricher"}
+14:02:02 [[32minfo[39m]: Profiles loaded {"event":"PROFILE_LOAD","resourceId":"all","profileCount":2}
+14:02:02 [[34mdebug[39m]: Loaded profiles for 2 resources {"component":"ResourceEnricher","resourceCount":2}
+[McpClient] Initializing connections to MCP Servers...
+[McpClient] Connecting to 'filesystem' via Stdio...
+[McpClient] Connected to 'filesystem'
+[McpClient] Loaded 14 tools from 'filesystem'
+[McpClient] Spawning API server 'api_55552e89-e63d-4362-b061-1077b8289eef'...
+[McpClient] Connecting to 'api_55552e89-e63d-4362-b061-1077b8289eef' via Stdio...
+[McpClient] Connected to 'api_55552e89-e63d-4362-b061-1077b8289eef'
+[McpClient] Loaded 69 tools from 'api_55552e89-e63d-4362-b061-1077b8289eef'
+Loading tools...
+[ToolService] Fetching all tools...
+14:02:10 [[34mdebug[39m]: Getting profiles for resource {"component":"ResourceEnricher","resourceId":"Default"}
+14:02:10 [[33mwarn[39m]: No profiles available for resource {"event":"NO_PROFILES","resourceId":"Default"}
+14:02:10 [[34mdebug[39m]: Getting profiles for resource {"component":"ResourceEnricher","resourceId":"filesystem"}
+14:02:10 [[33mwarn[39m]: No profiles available for resource {"event":"NO_PROFILES","resourceId":"filesystem"}
+14:02:10 [[34mdebug[39m]: Getting profiles for resource {"component":"ResourceEnricher","resourceId":"55552e89-e63d-4362-b061-1077b8289eef"}
+14:02:10 [[34mdebug[39m]: Found profiles for resource {"component":"ResourceEnricher","resourceId":"55552e89-e63d-4362-b061-1077b8289eef","profileCount":3}
+14:02:10 [[34mdebug[39m]: Getting profiles for resource {"component":"ResourceEnricher","resourceId":"55552e89-e63d-4362-b061-1077b8289eef"}
+14:02:10 [[34mdebug[39m]: Found profiles for resource {"component":"ResourceEnricher","resourceId":"55552e89-e63d-4362-b061-1077b8289eef","profileCount":3}
+Using Admin: admin
+Executing dn_contractscontroller_getactivecontractsbyunit...
+----- RESULT START -----
+Tool 'api_55552e89-e63d-4362-b061-1077b8289eef__dn_contractscontroller_getactivecontractsbyunit' not found.
+----- RESULT END -----

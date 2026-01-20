@@ -3,7 +3,7 @@ import { Pencil, Save, PlusCircle, Check, Plus, Replace } from 'lucide-react';
 
 export const CanvasHeader = ({ title, onTitleChange, onSave, onNewChat, isSaving, lastSavedAt, canvasMode, onModeChange }) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [tempTitle, setTempTitle] = useState(title);
+    const [tempTitle, setTempTitle] = useState(title || "");
 
     useEffect(() => {
         setTempTitle(title);
@@ -47,33 +47,11 @@ export const CanvasHeader = ({ title, onTitleChange, onSave, onNewChat, isSaving
             </div>
 
             <div className="flex items-center gap-3">
-                {/* Canvas Mode Toggle */}
-                {onModeChange && (
-                    <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg p-1">
-                        <button
-                            onClick={() => onModeChange('append')}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${canvasMode === 'append'
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'text-slate-400 hover:text-slate-200'
-                                }`}
-                            title="Add new widgets to existing ones"
-                        >
-                            <Plus size={12} />
-                            Append
-                        </button>
-                        <button
-                            onClick={() => onModeChange('replace')}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${canvasMode === 'replace'
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'text-slate-400 hover:text-slate-200'
-                                }`}
-                            title="Replace all widgets with new ones"
-                        >
-                            <Replace size={12} />
-                            Replace
-                        </button>
-                    </div>
-                )}
+                {/* Canvas Mode Toggle REMOVED - AI is now intelligent */}
+                {/* 
+                   Dynamic UI: The system will determine whether to append, replace, or update 
+                   based on the user request and context.
+                */}
 
                 <button
                     onClick={onNewChat}

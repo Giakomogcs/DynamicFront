@@ -1,0 +1,4 @@
+{
+  "fatal": "Cannot read properties of undefined (reading 'find')",
+  "stack": "TypeError: Cannot read properties of undefined (reading 'find')\n    at main (file:///C:/Github/DynamicFront/server/simple_test.js:10:32)"
+}

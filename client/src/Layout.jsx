@@ -7,7 +7,7 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent, onToggleSettings }) => {
+const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent, onToggleSettings, sessionStructure }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
 
@@ -55,61 +55,114 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                 </div>
 
                 <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden">
-                    <SidebarItem
-                        icon={<MessageSquareText size={20} />}
-                        label="Chat Canvas"
-                        isActive={activeTab === 'chat'}
-                        collapsed={collapsed}
-                        onClick={() => {
-                            setActiveTab('chat');
-                            setSidebarOpen(false);
-                        }}
-                    />
-                    <SidebarItem
-                        icon={<LayoutGrid size={20} />}
-                        label="My Resources"
-                        isActive={activeTab === 'resources'}
-                        collapsed={collapsed}
-                        onClick={() => {
-                            setActiveTab('resources');
-                            setSidebarOpen(false);
-                        }}
-                    />
-                    <SidebarItem
-                        icon={<Database size={20} />}
-                        label="Load Analysis"
-                        collapsed={collapsed}
-                        onClick={() => {
-                            onOpenLoadModal();
-                            setSidebarOpen(false);
-                        }}
-                    />
+                    {/* DYNAMIC SIDEBAR: PROJECT MODE */}
+                    {activeTab === 'project' && sessionStructure ? (
+                        <>
+                            <div className={cn(
+                                "pb-2 border-b border-slate-800 mb-2 transition-all duration-300",
+                                collapsed ? "opacity-0 h-0 p-0" : "opacity-100 px-3"
+                            )}>
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    Project
+                                </h3>
+                                <div className="text-sm font-medium text-slate-200 truncate mt-1">
+                                    {sessionStructure.title || "Untitled Project"}
+                                </div>
+                            </div>
 
-                    <div className={cn(
-                        "pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider transition-all duration-300 whitespace-nowrap overflow-hidden",
-                        collapsed ? "opacity-0 h-0 p-0" : "opacity-100 px-3"
-                    )}>
-                        Resources
-                    </div>
+                            {/* Render Project Pages */}
+                            {sessionStructure.canvases?.map(canvas => (
+                                <SidebarItem
+                                    key={canvas.id}
+                                    icon={<LayoutGrid size={20} />} // TODO: Use dynamic icon from canvas.icon map
+                                    label={canvas.title}
+                                    isActive={headerContent?.props?.activeSlug === canvas.slug}
+                                    collapsed={collapsed}
+                                    onClick={() => headerContent?.props?.onNavigatePage && headerContent.props.onNavigatePage(canvas.slug)}
+                                />
+                            ))}
 
-                    <SidebarItem
-                        icon={<CloudLightning size={20} />}
-                        label="Register API"
-                        collapsed={collapsed}
-                        onClick={() => {
-                            onRegisterApi();
-                            setSidebarOpen(false);
-                        }}
-                    />
-                    <SidebarItem
-                        icon={<Plus size={20} />} // Database + Plus implies "Add Database"
-                        label="Register Database"
-                        collapsed={collapsed}
-                        onClick={() => {
-                            onRegisterDb();
-                            setSidebarOpen(false);
-                        }}
-                    />
+                            <div className="my-4 border-t border-slate-800" />
+
+                            {/* Always show "Back to Projects" */}
+                            <SidebarItem
+                                icon={<ChevronLeft size={20} />}
+                                label="Back to Projects"
+                                isActive={false}
+                                collapsed={collapsed}
+                                onClick={() => setActiveTab('showcase')}
+                            />
+                        </>
+                    ) : (
+                        /* DEFAULT SIDEBAR: SHOWCASE MODE */
+                        <>
+                            <SidebarItem
+                                icon={<MessageSquareText size={20} />}
+                                label="Chat Canvas"
+                                isActive={activeTab === 'chat'}
+                                collapsed={collapsed}
+                                onClick={() => {
+                                    setActiveTab('chat');
+                                    setSidebarOpen(false);
+                                }}
+                            />
+                            <SidebarItem
+                                icon={<LayoutGrid size={20} />}
+                                label="Projects"
+                                isActive={activeTab === 'showcase'}
+                                collapsed={collapsed}
+                                onClick={() => {
+                                    setActiveTab('showcase');
+                                    setSidebarOpen(false);
+                                }}
+                            />
+                            <SidebarItem
+                                icon={<Database size={20} />}
+                                label="My Resources"
+                                isActive={activeTab === 'resources'}
+                                collapsed={collapsed}
+                                onClick={() => {
+                                    setActiveTab('resources');
+                                    setSidebarOpen(false);
+                                }}
+                            />
+                            <SidebarItem
+                                icon={<Cloud size={20} />}
+                                label="Load Analysis"
+                                collapsed={collapsed}
+                                onClick={() => {
+                                    onOpenLoadModal();
+                                    setSidebarOpen(false);
+                                }}
+                            />
+
+                            <div className={cn(
+                                "pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider transition-all duration-300 whitespace-nowrap overflow-hidden",
+                                collapsed ? "opacity-0 h-0 p-0" : "opacity-100 px-3"
+                            )}>
+                                Resources
+                            </div>
+
+                            <SidebarItem
+                                icon={<CloudLightning size={20} />}
+                                label="Register API"
+                                collapsed={collapsed}
+                                onClick={() => {
+                                    onRegisterApi();
+                                    setSidebarOpen(false);
+                                }}
+                            />
+                            <SidebarItem
+                                icon={<Plus size={20} />} // Database + Plus implies "Add Database"
+                                label="Register Database"
+                                collapsed={collapsed}
+                                onClick={() => {
+                                    onRegisterDb();
+                                    setSidebarOpen(false);
+                                }}
+                            />
+                        </>
+                    )}
                 </nav>
 
                 <div className="p-3 border-t border-slate-800 flex flex-col gap-2">

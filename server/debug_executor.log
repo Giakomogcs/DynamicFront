@@ -1,5 +1,11 @@
-[2026-01-20T14:08:30.846Z] Error: Cannot read properties of undefined (reading 'role')
+[2026-01-20T19:55:18.148Z] Error: Cannot read properties of undefined (reading 'role')
 TypeError: Cannot read properties of undefined (reading 'role')
     at GeminiProvider.generateContent (file:///C:/Github/DynamicFront/server/services/ai/providers/GeminiProvider.js:112:25)
     at Object.fn (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:489:67)
     at RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:533:40)
+    at file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:515:18
+    at new Promise (<anonymous>)
+    at RequestQueue.add (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:513:16)
+    at ModelManager.executeWithRetry (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:489:48)
+    at ModelManager.generateContent (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:222:39)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)

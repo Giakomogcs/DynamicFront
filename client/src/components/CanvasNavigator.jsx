@@ -109,7 +109,8 @@ const CanvasNavigator = ({ currentCanvasId, onNavigate }) => {
                                         elevation={isCurrent ? 4 : 0}
                                         sx={{
                                             borderColor: isCurrent ? 'primary.main' : 'divider',
-                                            borderWidth: isCurrent ? 2 : 1
+                                            borderWidth: isCurrent ? 2 : 1,
+                                            position: 'relative' // For absolute positioning of valid actions if needed, or just layout
                                         }}
                                     >
                                         <CardActionArea
@@ -129,19 +130,6 @@ const CanvasNavigator = ({ currentCanvasId, onNavigate }) => {
                                                             {canvas.title}
                                                         </Typography>
                                                     </Box>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            toggleFavorite(canvas.id);
-                                                        }}
-                                                    >
-                                                        {isFavorite ? (
-                                                            <StarIcon color="warning" fontSize="small" />
-                                                        ) : (
-                                                            <StarBorderIcon fontSize="small" />
-                                                        )}
-                                                    </IconButton>
                                                 </Box>
 
                                                 <Box mt={2} display="flex" gap={1}>
@@ -160,6 +148,22 @@ const CanvasNavigator = ({ currentCanvasId, onNavigate }) => {
                                                 </Box>
                                             </CardContent>
                                         </CardActionArea>
+                                        {/* Action Button moved OUTSIDE CardActionArea */}
+                                        <Box position="absolute" top={8} right={8} zIndex={10}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleFavorite(canvas.id);
+                                                }}
+                                            >
+                                                {isFavorite ? (
+                                                    <StarIcon color="warning" fontSize="small" />
+                                                ) : (
+                                                    <StarBorderIcon fontSize="small" />
+                                                )}
+                                            </IconButton>
+                                        </Box>
                                     </Card>
                                 </Grid>
                             );

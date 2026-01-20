@@ -61,18 +61,21 @@ export class DesignerAgent {
       if (canvasContext) {
          const { mode, widgets, messages } = canvasContext;
 
-         if (mode === 'append' && widgets && widgets.length > 0) {
-            contextInfo = `\n\nEXISTING CANVAS CONTEXT (APPEND MODE):
+         if ((mode === 'intelligent' || mode === 'append') && widgets && widgets.length > 0) {
+            contextInfo = `\n\nEXISTING CANVAS CONTEXT (INTELLIGENT MODE):
 - Current widgets on canvas: ${widgets.length}
 - Widget types: ${widgets.map(w => w.type).join(', ')}
+- Widget Identifiers/Titles: ${widgets.map(w => `"${w.title}"`).join(', ')}
 - Recent chat: ${messages?.slice(-3).map(m => m.text).join(' | ') || 'None'}
 
-IMPORTANT: You are in APPEND mode. The user wants to ADD to existing content, not replace it.
-- Build upon existing data
-- Reference previous widgets when relevant
-- Detect relationships with existing information
-- Avoid duplicating information already shown
-- Create complementary visualizations`;
+IMPORTANT - MERGE STRATEGY:
+You are in INTELLIGENT mode. The user may want to ADD to, UPDATE, or REPLACE the current canvas.
+- **DEFAULT**: ADD new widgets to the bottom.
+- **IF DATA MATCHES EXISTING**: UPDATE the existing widget (e.g. if "Schools Table" exists and new data is schools, RE-GENERATE the table with new data).
+- **IF CONTEXT SHIFTS**: You may REPLACE key widgets if they are no longer relevant.
+- **OUTPUT RULE**: You must output the *NEW* widgets. The System will Append them by default unless you provide a "ui_strategy" or similar (Phase 2), but for now, generate widgets that should be ADDED or REPLACED.
+- **CRITICAL**: If you are providing an updated version of a widget, ensure its Title matches so the system can potentially deduce updates (or the user sees it clearly).
+`;
          }
       }
 
@@ -92,12 +95,10 @@ Every screen must look like a built-for-purpose mini-application.
 WIDGET TYPES (Visual Hierarchy):
 
 1. **process**: { "type": "process", "title": "Execution Pipeline", "steps": [...] }
-   - ALWAYS start with this. show the journey.
+   - ALWAYS start with this if explaining a process.
 
 2. **stat**: { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%", "icon": "trending_up" }] }
    - EXTRACT KPIS from lists.
-   - If input is a list of 10 schools -> Stat: "Total Schools: 10".
-   - If input is orders -> Stat: "Total Value: $500".
    - MAKE UP meaningful stats from the raw data.
 
 3. **table**: { "type": "table", "title": "Main Data View", "data": [...], "actions": [] }
@@ -122,7 +123,8 @@ WIDGET TYPES (Visual Hierarchy):
 2. **KPIs ARE KING**: Always find at least 2 numbers to show in a 'stat' widget.
 3. **INTERACTIVITY**: Every table should ideally have an action.
 4. **DATA COMPLETENESS**: Show all data, but organize it visually.
-5. **NO DUPLICATES**: Check 'Input Data' vs 'Existing Canvas Context'. If you are just refreshing the same data, provide an 'insight' or 'stat' update, but DO NOT re-render large tables unless the data changed significantly.
+5. **INTELLIGENT UPDATES**: If the user asked to "update" or "change" something, generate the new version of that widget.
+6. **DATA SOURCE**: If you know which tool produced the data for a widget, add a "dataSource" field: { "tool": "tool_name", "args": {...} }.
 `;
 
       try {
@@ -170,7 +172,8 @@ WIDGET TYPES (Visual Hierarchy):
                // Find which tool provided data for this widget
                const toolStep = steps.find(s => s.tool);
 
-               if (toolStep && toolStep.tool) {
+               // Only apply auto-enrichment if LLM didn't provide it
+               if (toolStep && toolStep.tool && !widget.dataSource) {
                   widget.dataSource = {
                      tool: toolStep.tool,
                      authProfile: toolStep.authProfile || 'default',

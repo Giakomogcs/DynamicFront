@@ -4,10 +4,10 @@ import { Sparkles, LayoutDashboard } from 'lucide-react';
 import { CanvasNavigator } from './CanvasNavigator';
 import { ScreenSelector } from './ScreenSelector';
 
-export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction }) => {
+export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction, onRefresh }) => {
     // Screen State
     const [activeScreenId, setActiveScreenId] = useState('default');
-    
+
     // Group widgets by screen
     const screens = useMemo(() => {
         const groups = {
@@ -22,10 +22,10 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction }) => 
             if (!groups[screenId]) {
                 // If we discover a new screenId from backend, add it
                 // Ideally backend sends screen metadata, but inferring is fine for now
-                groups[screenId] = { 
-                    id: screenId, 
-                    name: widget.screenName || `Screen ${Object.keys(groups).length + 1}`, 
-                    widgets: [] 
+                groups[screenId] = {
+                    id: screenId,
+                    name: widget.screenName || `Screen ${Object.keys(groups).length + 1}`,
+                    widgets: []
                 };
             }
             groups[screenId].widgets.push(widget);
@@ -65,7 +65,7 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction }) => 
     return (
         <div className="flex-1 h-full flex flex-col bg-slate-950 overflow-hidden relative">
             {canvasId && <CanvasNavigator canvasId={canvasId} onNavigate={onNavigate} />}
-            
+
             {/* Scrollable Container - Moved padding here to fix scroll issue */}
             <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
                 <div className="max-w-7xl mx-auto space-y-6 pb-24"> {/* Added pb-24 for screen selector space */}
@@ -86,32 +86,27 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction }) => 
                                 ${widget.type === 'table' || widget.type === 'insight' || widget.type === 'expandable' ? 'col-span-1 lg:col-span-2' : 'col-span-1'}
                                 animate-fade-in
                             `}>
-                                <DynamicWidget 
-                                    {...widget} 
+                                <DynamicWidget
+                                    {...widget}
                                     onAction={onAction}
                                     onNavigateScreen={(targetScreenId) => setActiveScreenId(targetScreenId)}
+                                    onRefresh={onRefresh}
                                 />
                             </div>
                         ))}
 
-                        {loading && (
-                            <div className="col-span-1 lg:col-span-2 h-40 bg-slate-900/30 rounded-xl border border-slate-800/50 flex flex-col items-center justify-center animate-pulse">
-                                <Sparkles className="text-indigo-500/50 mb-3" size={32} />
-                                <span className="text-sm text-slate-400 font-medium">Generating widgets...</span>
-                            </div>
-                        )}
                     </div>
                 </div>
-            </div>
 
-            {/* Screen Selector - Only show if we have multiple screens or widgets to prompt creation (simulated) */}
-            {screens.length > 0 && (
-                <ScreenSelector 
-                    screens={screens} 
-                    activeScreenId={activeScreenId} 
-                    onSelectScreen={setActiveScreenId}
-                />
-            )}
+                {/* Screen Selector - Only show if we have multiple screens or widgets to prompt creation (simulated) */}
+                {screens.length > 0 && (
+                    <ScreenSelector
+                        screens={screens}
+                        activeScreenId={activeScreenId}
+                        onSelectScreen={setActiveScreenId}
+                    />
+                )}
+            </div>
         </div>
     );
 };

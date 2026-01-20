@@ -16,7 +16,8 @@ import { storageService } from './services/storageService.js';
 import { orchestrator } from './agents/Orchestrator.js';
 
 // Import routes
-import canvasRoutes from './routes/canvasRoutes.js';
+// Import routes
+import sessionRoutes from './routes/sessionRoutes.js';
 import widgetRoutes from './routes/widgetRoutes.js';
 
 const app = express();
@@ -34,8 +35,12 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use('/api/canvas', canvasRoutes);
+app.use('/api/sessions', sessionRoutes);
 app.use('/api/widgets', widgetRoutes);
+
+// Test Routes (Phase 1 Dev Only)
+import testRoutes from './routes/testRoutes.js';
+app.use('/api/test', testRoutes);
 
 // Initialize Gemini
 import { modelManager } from './services/ai/ModelManager.js';

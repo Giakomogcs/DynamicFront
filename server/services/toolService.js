@@ -3,6 +3,7 @@ import { registerTools, handleRegisterTool, processApiRegistration } from '../ha
 import { mcpClientService } from './mcpClientService.js';
 import { resourceEnricher } from '../src/core/ResourceEnricher.js';
 import { testConnection } from '../handlers/test_connection.js';
+import { pageManagerTool, handlePageManager } from '../tools/PageManager.js';
 
 export class ToolService {
     constructor() {
@@ -32,6 +33,10 @@ export class ToolService {
             tools.push(t);
             this.executionMap.set(t.name, { type: 'static', handler: handleRegisterTool });
         });
+
+        // 1.1 Page Manager Tool
+        tools.push(pageManagerTool);
+        this.executionMap.set(pageManagerTool.name, { type: 'static', handler: handlePageManager });
 
         // 1.5 MCP Client Tools (Filesystem, DBs, APIs - ALL via MCP now)
         try {
@@ -127,7 +132,7 @@ export class ToolService {
                 // If specUrl, authConfig, or baseUrl changed, Re-Process
                 console.log(`[UpdateResource] DEBUG: Checking for changes...`);
                 // console.log(`[UpdateResource] New AuthConfig length: ${data.authConfig?.length}`);
-                
+
                 let processedAuthData = data.verificationAuthData || null;
                 let finalAuthConfig = data.authConfig || current.authConfig;
 
@@ -149,144 +154,144 @@ export class ToolService {
                     // Preserve ID
                     delete updateData.idString;
                     processedAuthData = processed.authData;
-                    
+
                     // Cleanup internal before save
                     delete updateData.authData;
                 } else {
                     console.log(`[UpdateResource] No structural changes detected. Verifying Auth consistency...`);
                     // Even if no changes, we verify connection to get the User Data for profile creation
-                     if (finalAuthConfig && current.baseUrl && !processedAuthData) {
-                         try {
-                             const verifyResult = await testConnection(current.baseUrl, finalAuthConfig);
-                             
-                             // Handle both Flat Return and Array Return from testConnection
-                             if (verifyResult.success) {
-                                  if (verifyResult.results && Array.isArray(verifyResult.results)) {
-                                      const firstSuccess = verifyResult.results.find(r => r.success && r.authData);
-                                      if (firstSuccess) {
-                                          processedAuthData = firstSuccess.authData;
-                                          console.log(`[UpdateResource] Verification successful (Array). Captured Auth Data:`, JSON.stringify(processedAuthData).substring(0, 100));
-                                      }
-                                  } else if (verifyResult.authData) {
-                                      // Flat return case
-                                      processedAuthData = verifyResult.authData;
-                                      console.log(`[UpdateResource] Verification successful (Flat). Captured Auth Data:`, JSON.stringify(processedAuthData).substring(0, 100));
-                                  } else {
-                                      console.log(`[UpdateResource] Verification successful but NO AuthData found.`);
-                                  }
-                             }
-                         } catch (verifyErr) {
-                             console.warn("[UpdateResource] Background verification failed:", verifyErr);
-                         }
+                    if (finalAuthConfig && current.baseUrl && !processedAuthData) {
+                        try {
+                            const verifyResult = await testConnection(current.baseUrl, finalAuthConfig);
+
+                            // Handle both Flat Return and Array Return from testConnection
+                            if (verifyResult.success) {
+                                if (verifyResult.results && Array.isArray(verifyResult.results)) {
+                                    const firstSuccess = verifyResult.results.find(r => r.success && r.authData);
+                                    if (firstSuccess) {
+                                        processedAuthData = firstSuccess.authData;
+                                        console.log(`[UpdateResource] Verification successful (Array). Captured Auth Data:`, JSON.stringify(processedAuthData).substring(0, 100));
+                                    }
+                                } else if (verifyResult.authData) {
+                                    // Flat return case
+                                    processedAuthData = verifyResult.authData;
+                                    console.log(`[UpdateResource] Verification successful (Flat). Captured Auth Data:`, JSON.stringify(processedAuthData).substring(0, 100));
+                                } else {
+                                    console.log(`[UpdateResource] Verification successful but NO AuthData found.`);
+                                }
+                            }
+                        } catch (verifyErr) {
+                            console.warn("[UpdateResource] Background verification failed:", verifyErr);
+                        }
                     }
                 }
 
                 // --- AUTO CREATE AUTH PROFILE ON UPDATE (ALWAYS CHECK) ---
                 if (finalAuthConfig) {
                     try {
-                            const parsed = JSON.parse(finalAuthConfig);
-                            const auth = parsed.api?.default || parsed;
-                            let hasCreds = false;
-                            let label = "Updated User";
-                            let role = "user";
+                        const parsed = JSON.parse(finalAuthConfig);
+                        const auth = parsed.api?.default || parsed;
+                        let hasCreds = false;
+                        let label = "Updated User";
+                        let role = "user";
 
-                            console.log(`[UpdateResource] Auto-checking profile creation. Auth Type: ${auth.type}`);
+                        console.log(`[UpdateResource] Auto-checking profile creation. Auth Type: ${auth.type}`);
 
-                            // Try to extract from Auth Config
-                            if (auth.username || auth.email) {
-                                hasCreds = true;
-                                label = auth.username || auth.email;
-                            } else if (auth.loginParams && auth.loginParams.some(p => p.value)) {
-                                hasCreds = true;
-                                const emailParam = auth.loginParams.find(p => p.key.includes('email') || p.key.includes('user'));
-                                if (emailParam) label = emailParam.value;
-                                console.log(`[UpdateResource] Found Login Param Value: ${label}`);
-                            } else if (auth.token && auth.type === 'bearer') {
-                                hasCreds = true;
-                                label = "Bearer User";
+                        // Try to extract from Auth Config
+                        if (auth.username || auth.email) {
+                            hasCreds = true;
+                            label = auth.username || auth.email;
+                        } else if (auth.loginParams && auth.loginParams.some(p => p.value)) {
+                            hasCreds = true;
+                            const emailParam = auth.loginParams.find(p => p.key.includes('email') || p.key.includes('user'));
+                            if (emailParam) label = emailParam.value;
+                            console.log(`[UpdateResource] Found Login Param Value: ${label}`);
+                        } else if (auth.token && auth.type === 'bearer') {
+                            hasCreds = true;
+                            label = "Bearer User";
+                        }
+
+                        // Enrich with AuthData from verification
+                        if (processedAuthData) {
+                            const ad = processedAuthData;
+                            if (ad.role || ad.type || (ad.user && ad.user.role)) {
+                                role = ad.role || ad.type || ad.user.role;
                             }
-
-                            // Enrich with AuthData from verification
-                            if (processedAuthData) {
-                                const ad = processedAuthData;
-                                if (ad.role || ad.type || (ad.user && ad.user.role)) {
-                                    role = ad.role || ad.type || ad.user.role;
-                                }
-                                if (ad.name || ad.username || (ad.user && ad.user.name)) {
-                                    label = ad.name || ad.username || ad.user.name;
-                                    if (role !== 'user') label += ` (${role})`;
-                                }
-                                // If we have strong auth data, enable saving even if config params seemed empty
-                                if (ad.id || ad.email || ad.name) hasCreds = true;
+                            if (ad.name || ad.username || (ad.user && ad.user.name)) {
+                                label = ad.name || ad.username || ad.user.name;
+                                if (role !== 'user') label += ` (${role})`;
                             }
-                            
-                            console.log(`[UpdateResource] HasCreds: ${hasCreds}, Label: ${label}`);
+                            // If we have strong auth data, enable saving even if config params seemed empty
+                            if (ad.id || ad.email || ad.name) hasCreds = true;
+                        }
 
-                            if (hasCreds) {
-                                // Check if profile already exists for this Label to avoid dupes?
-                                const existingProfiles = resourceEnricher.getProfiles(id);
-                                const isDuplicate = existingProfiles.some(p => p.label === label); 
-                                
-                                if (!isDuplicate) {
-                                    console.log(`[Update] Auto-creating auth profile for ${current.name} (ID: ${id})...`);
-                                    
-                                    // SANITIZE CREDENTIALS
-                                    let cleanCredentials = {};
-                                    if (auth.type === 'basic') {
-                                        if (auth.loginParams && Array.isArray(auth.loginParams)) {
-                                            auth.loginParams.forEach(p => {
-                                                if (p.key && p.value) cleanCredentials[p.key] = p.value;
-                                            });
-                                        }
-                                    } else if (auth.type === 'bearer') {
-                                        cleanCredentials.token = auth.token;
-                                    } else if (auth.type === 'apiKey') {
-                                        cleanCredentials.apiKey = auth.apiKey?.value || auth.value; 
-                                        cleanCredentials.paramName = auth.apiKey?.paramName || auth.paramName;
-                                    } else {
-                                        if (auth.username) cleanCredentials.username = auth.username;
-                                        if (auth.password) cleanCredentials.password = auth.password;
-                                        if (Object.keys(cleanCredentials).length === 0) cleanCredentials = auth;
+                        console.log(`[UpdateResource] HasCreds: ${hasCreds}, Label: ${label}`);
+
+                        if (hasCreds) {
+                            // Check if profile already exists for this Label to avoid dupes?
+                            const existingProfiles = resourceEnricher.getProfiles(id);
+                            const isDuplicate = existingProfiles.some(p => p.label === label);
+
+                            if (!isDuplicate) {
+                                console.log(`[Update] Auto-creating auth profile for ${current.name} (ID: ${id})...`);
+
+                                // SANITIZE CREDENTIALS
+                                let cleanCredentials = {};
+                                if (auth.type === 'basic') {
+                                    if (auth.loginParams && Array.isArray(auth.loginParams)) {
+                                        auth.loginParams.forEach(p => {
+                                            if (p.key && p.value) cleanCredentials[p.key] = p.value;
+                                        });
                                     }
-                                    
-                                    // Add enriched data
-                                    if (auth.cnpj) cleanCredentials.cnpj = auth.cnpj;
-                                    if (auth.companyId) cleanCredentials.companyId = auth.companyId;
-
-                                    await resourceEnricher.addProfile(id, {
-                                        label,
-                                        role,
-                                        credentials: cleanCredentials
-                                    });
+                                } else if (auth.type === 'bearer') {
+                                    cleanCredentials.token = auth.token;
+                                } else if (auth.type === 'apiKey') {
+                                    cleanCredentials.apiKey = auth.apiKey?.value || auth.value;
+                                    cleanCredentials.paramName = auth.apiKey?.paramName || auth.paramName;
                                 } else {
-                                    console.log(`[Update] Profile '${label}' already exists. Skipping auto-creation.`);
+                                    if (auth.username) cleanCredentials.username = auth.username;
+                                    if (auth.password) cleanCredentials.password = auth.password;
+                                    if (Object.keys(cleanCredentials).length === 0) cleanCredentials = auth;
                                 }
+
+                                // Add enriched data
+                                if (auth.cnpj) cleanCredentials.cnpj = auth.cnpj;
+                                if (auth.companyId) cleanCredentials.companyId = auth.companyId;
+
+                                await resourceEnricher.addProfile(id, {
+                                    label,
+                                    role,
+                                    credentials: cleanCredentials
+                                });
+                            } else {
+                                console.log(`[Update] Profile '${label}' already exists. Skipping auto-creation.`);
+                            }
                         }
                     } catch (profileErr) {
-                            console.warn("[Update] Failed to auto-create profile (non-fatal):", profileErr);
+                        console.warn("[Update] Failed to auto-create profile (non-fatal):", profileErr);
                     }
                 }
-                
-                const updated = await prisma.verifiedApi.update({
-                     where: { idString: id },
-                     data: updateData
-                 });
 
-                 // Refresh MCP Server for this API
-                 if (data.specUrl || data.baseUrl || data.authConfig) {
-                     // We need to re-spawn the server with new config
-                     try {
+                const updated = await prisma.verifiedApi.update({
+                    where: { idString: id },
+                    data: updateData
+                });
+
+                // Refresh MCP Server for this API
+                if (data.specUrl || data.baseUrl || data.authConfig) {
+                    // We need to re-spawn the server with new config
+                    try {
                         const { mcpClientService } = await import('./mcpClientService.js');
-                        await mcpClientService.spawnApiServer(updated); 
+                        await mcpClientService.spawnApiServer(updated);
                         // Force tool cache refresh
                         const toolService = (await import('./toolService.js')).toolService;
-                        await toolService.getAllTools(true); 
-                     } catch (e) {
-                         console.error("[UpdateResource] Failed to reload MCP server:", e);
-                     }
-                 }
+                        await toolService.getAllTools(true);
+                    } catch (e) {
+                        console.error("[UpdateResource] Failed to reload MCP server:", e);
+                    }
+                }
 
-                 return updated;
+                return updated;
             }
 
             if (type === 'db') {

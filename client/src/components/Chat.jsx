@@ -113,9 +113,10 @@ export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed,
                 <div ref={bottomRef} />
                 {isProcessing && (
                     <div className="flex justify-start animate-fade-in px-4 pb-4">
-                        <div className="bg-slate-800 text-slate-200 p-3 rounded-2xl rounded-tl-none animate-pulse flex items-center gap-2 w-fit">
-                            <Sparkles size={14} className="text-indigo-400" />
-                            <span className="text-xs font-medium text-indigo-200">Analyzing...</span>
+                        <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-800/50 rounded-2xl rounded-tl-none border border-slate-700/50">
+                            <span className="size-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                            <span className="size-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                            <span className="size-1.5 bg-indigo-500 rounded-full animate-bounce" />
                         </div>
                     </div>
                 )}

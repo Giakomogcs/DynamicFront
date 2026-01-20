@@ -9,13 +9,14 @@ import { ToastProvider } from './components/ui/Toast';
 
 import { Canvas } from './components/Canvas';
 import { CanvasHeader } from './components/CanvasHeader';
+import { ShowcaseView } from './components/ShowcaseView';
 
 
 function AppContent() {
   const [messages, setMessages] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [modalType, setModalType] = useState(null); // 'api' | 'db' | null
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('showcase');
   const [location, setLocation] = useState(null);
 
   // New State: Active Widgets for Canvas and Layout Mode
@@ -23,6 +24,10 @@ function AppContent() {
   const [layoutMode, setLayoutMode] = useState('center'); // 'center' | 'workspace'
 
   // Canvas State
+  const [sessionId, setSessionId] = useState(null); // New: Track Session ID
+  const [sessionStructure, setSessionStructure] = useState(null); // Phase 3: Project Structure
+  const [activeSlug, setActiveSlug] = useState(null); // Track current slug (e.g. 'home')
+
   const [canvasId, setCanvasId] = useState(null);
   const [canvasTitle, setCanvasTitle] = useState("New Analysis");
   const [lastSaved, setLastSaved] = useState(null);
@@ -101,7 +106,8 @@ function AppContent() {
       const payload = {
         title: curTitle !== undefined ? curTitle : canvasTitle,
         widgets: curWidgets !== undefined ? curWidgets : activeWidgets,
-        messages: curMessages !== undefined ? curMessages : messages
+        messages: curMessages !== undefined ? curMessages : messages,
+        groupId: sessionId // Pass Session ID
       };
 
       let url = 'http://localhost:3000/api/canvases';
@@ -137,6 +143,7 @@ function AppContent() {
       const res = await fetch(`http://localhost:3000/api/canvases/${id}`);
       const data = await res.json();
       setCanvasId(data.id);
+      setSessionId(data.groupId || null); // Load Session ID
       setCanvasTitle(data.title);
       setActiveWidgets(data.widgets || []);
       setMessages(data.messages || []); // Load saved messages
@@ -159,6 +166,7 @@ function AppContent() {
 
   const handleCreateNewCanvas = () => {
     setCanvasId(null);
+    setSessionId(null); // Reset session
     setCanvasTitle("New Analysis");
     setActiveWidgets([]);
     setMessages([]);
@@ -270,12 +278,13 @@ function AppContent() {
 
     try {
       // 2. Call Backend API
-      // Build canvas context for incremental mode
-      const canvasContext = canvasMode === 'append' && canvasId ? {
-        mode: canvasMode,
-        widgets: activeWidgets,
+      // INTELLIGENT UI: Always send current context.
+      // The Backend will decide whether to keep, update, or remove widgets.
+      const canvasContext = {
+        mode: 'intelligent', // New Mode
+        widgets: activeWidgets, // Send ALL current widgets
         messages: messages
-      } : null;
+      };
 
       const response = await fetch('http://localhost:3000/api/chat', {
         method: 'POST',
@@ -285,7 +294,8 @@ function AppContent() {
           history: messages,
           location, // Send location context
           model: selectedModel,
-          canvasContext // Send canvas context for incremental mode
+          sessionId: sessionId, // Pass current Session ID
+          canvasContext // Full Context
         }),
         signal: controller.signal
       });
@@ -304,15 +314,16 @@ function AppContent() {
       };
       setMessages(prev => [...prev, botMsg]);
 
-      // 4. Update Canvas with new widgets
-      if (data.widgets && data.widgets.length > 0) {
-        if (canvasMode === 'append') {
-          // Append mode: add new widgets to existing ones
-          setActiveWidgets(prev => [...prev, ...data.widgets]);
-        } else {
-          // Replace mode: replace all widgets
-          setActiveWidgets(data.widgets);
-        }
+      // 4. Update Canvas - INTELLIGENT UPDATE
+      // If backend returns widgets, it means "This is the NEW state".
+      // We trust the backend to have included old widgets if they should remain.
+      // This supports Reordering, Deletion, and Updates implicitly.
+      if (data.widgets) {
+        // Check if explicit null/empty to clear? No, usually empty array means 'no change' or 'clear'?
+        // Protocol:
+        // - If data.widgets is MISSING/undefined -> NO CHANGE.
+        // - If data.widgets is Array -> FULL REPLACE (New State).
+        setActiveWidgets(data.widgets);
       }
 
       // Auto-save after successful response
@@ -439,7 +450,7 @@ function AppContent() {
             <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
             <div className="absolute top-full left-0 mt-2 w-72 max-h-[500px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl shadow-xl shadow-black/50 z-50 p-2 custom-scrollbar">
               {Object.keys(groupedModels).length === 0 && <div className="p-3 text-slate-500 text-xs text-center">Loading models...</div>}
-              
+
               {Object.entries(groupedModels).map(([provider, providerModels]) => (
                 <div key={provider} className="mb-2 last:mb-0">
                   <div className="px-2 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-900/50 sticky top-0 backdrop-blur-sm">
@@ -502,6 +513,102 @@ function AppContent() {
     }
   };
 
+  const handleWidgetRefresh = async (dataSource) => {
+    console.log("[App] Refreshing widget with source:", dataSource);
+    if (!dataSource || !dataSource.tool) return;
+
+    const prompt = `[SYSTEM: Refresh data. Execute tool '${dataSource.tool}' with args: ${JSON.stringify(dataSource.params || {})}. Update the relevant widgets.]`;
+
+    // We display a small "Refreshing..." message in chat
+    const userDisplayMsg = { role: 'user', text: `🔄 Refreshing data (${dataSource.tool})...` };
+    setMessages(prev => [...prev, userDisplayMsg]);
+
+    await handleSendMessage(prompt, true);
+  };
+
+
+  // --- Session / Showcase Handlers ---
+  const handleSelectSession = async (sessionId) => {
+    // Auto-Save current work before switching if we have a valid canvas and are currently editing
+    if (canvasId && activeTab === 'project' && activeWidgets.length > 0) {
+      console.log("Auto-saving before navigation...");
+      await saveCanvas(); // Await save
+    }
+
+    setIsProcessing(true);
+    try {
+      // Set Session ID immediately
+      setSessionId(sessionId);
+
+      // Phase 3: Fetch Structure (Project Mode)
+      // Use the specific /structure endpoint (or fall back to standard GET if aliased)
+      const res = await fetch(`http://localhost:3000/api/sessions/${sessionId}/structure`);
+      if (!res.ok) throw new Error("Failed to load session structure");
+
+      const structure = await res.json();
+      setSessionStructure(structure);
+
+      // Find Entry Point (Home Page)
+      const homeCanvas = structure.canvases?.find(c => c.isHome) ||
+        structure.canvases?.find(c => c.slug === 'home') ||
+        structure.canvases?.[0]; // Fallback
+
+      if (homeCanvas) {
+        await loadCanvas(homeCanvas.id); // Re-use existing loadCanvas logic
+        setActiveTab('project'); // Switch to Project Mode (which includes Chat)
+        setActiveSlug(homeCanvas.slug);
+      } else {
+        // Session has no canvases?
+        alert("Empty session (no pages).");
+        // Create one? or show empty state?
+      }
+
+    } catch (e) {
+      console.error(e);
+      alert("Error loading session");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Phase 3: Navigate Page by Slug
+  const handleNavigatePage = async (slug) => {
+    if (!sessionStructure) return;
+    const target = sessionStructure.canvases?.find(c => c.slug === slug);
+
+    if (target) {
+      // Auto-save current
+      if (activeWidgets.length > 0) await saveCanvas();
+
+      // Load target
+      await loadCanvas(target.id);
+      setActiveSlug(slug);
+    } else {
+      console.error("Page not found:", slug);
+    }
+  };
+
+  const handleCreateSession = async () => {
+    setIsProcessing(true);
+    try {
+      // Create new session via API
+      const res = await fetch('http://localhost:3000/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: "New Project" }) // Server might handle conversationId
+      });
+      const session = await res.json();
+
+      // Refresh list? No, we select it immediately
+      await handleSelectSession(session.id);
+
+    } catch (e) {
+      console.error(e);
+      alert("Failed to create session");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const [showSettings, setShowSettings] = useState(false);
 
@@ -513,15 +620,18 @@ function AppContent() {
       onRegisterDb={() => setModalType('db')}
       onOpenLoadModal={() => setShowLoadModal(true)}
       onToggleSettings={() => setShowSettings(true)}
+      sessionStructure={sessionStructure} // Pass structure
       headerContent={
         <ModelSelector
           models={visibleModels}
           selected={selectedModel}
           onSelect={setSelectedModel}
+          activeSlug={activeSlug} // Pass current slug
+          onNavigatePage={handleNavigatePage} // Pass handler
         />
       }
     >
-      {activeTab === 'chat' && (
+      {(activeTab === 'chat' || activeTab === 'project') && (
         <div className="flex h-full w-full overflow-hidden">
           {/* Sidebar Chat */}
           <div
@@ -570,6 +680,7 @@ function AppContent() {
                 canvasId={canvasId}
                 onNavigate={loadCanvas}
                 onAction={handleWidgetAction}
+                onRefresh={handleWidgetRefresh}
               />
             </div>
           )}
@@ -579,6 +690,12 @@ function AppContent() {
         <ResourcesView
           key={resourcesVersion}
           onEdit={(type, data) => handleEditResource(type, data)}
+        />
+      )}
+      {activeTab === 'showcase' && (
+        <ShowcaseView
+          onSelectSession={handleSelectSession}
+          onCreateSession={handleCreateSession}
         />
       )}
 

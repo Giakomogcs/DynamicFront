@@ -85,10 +85,9 @@ export class GeminiProvider extends AIProvider {
         // Handle Chat History (Array) vs Single Prompt (String)
         let result;
         if (Array.isArray(input)) {
-            // Check if last message is user/function
-            // Gemini startChat history expects everything EXCEPT the last message usually? 
-            // Actually sendMessage takes the new input.
-            // But we can also use model.generateContent with a multi-turn array if formatted correctly (content: [...])
+            if (input.length === 0) {
+                return await model.generateContent("Hello");
+            }
 
             // Easier: Convert to history + last message
             const history = input.slice(0, -1).map(msg => ({
@@ -106,6 +105,8 @@ export class GeminiProvider extends AIProvider {
             // We might need to handle tool outputs specifically.
 
             const lastMsg = input[input.length - 1];
+            if (!lastMsg) return await model.generateContent("...");
+
             const chat = model.startChat({ history });
 
             // If last message is tool outputs, it's specific

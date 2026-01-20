@@ -57,20 +57,64 @@ model AuthProfile {
   updatedAt   DateTime @updatedAt
 }
 
+// ========================================
+// APP BUILDER ARCHITECTURE (Phase 1)
+// ========================================
+
+model Session {
+  id             String   @id @default(uuid())
+  conversationId String   @unique // One session per chat conversation
+  title          String?  // Auto-named: "Analysis June 2024"
+  description    String?  // Project summary
+  metadata       Json?    // Extensibility
+  userId         String?  // Future multi-user
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  canvases       Canvas[]
+}
+
 model Canvas {
   id             String   @id @default(uuid())
-  conversationId String
+  
+  // App Builder Fields
+  sessionId      String?
+  session        Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  route          String?  // e.g. "/dashboard", "/details/SP" (Legacy? Keep for now)
+  slug           String?  // URL-friendly ID: "home", "settings"
+  isHome         Boolean  @default(false)
+  icon           String?  // Lucide icon name
+
+  type           String   @default("dashboard") // "dashboard", "form", "list", "modal"
+  
   title          String?
-  theme          Json     // { primary, entities, colors }
-  layoutType     String   @default("dashboard")
-  messages       Json?
+  theme          Json?    // { primary, entities, colors }
+  layoutType     String   @default("grid")
+  
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   
   widgets        Widget[]
+  versions       CanvasVersion[]
+  
   outgoingLinks  NavigationLink[] @relation("FromCanvas")
   incomingLinks  NavigationLink[] @relation("ToCanvas")
 }
+
+model CanvasVersion {
+  id        String   @id @default(uuid())
+  canvasId  String
+  canvas    Canvas   @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  
+  snapshot  Json     // Full copy of widgets/layout/theme
+  changeLog String?  // "Added Map Widget", "Changed to Dark Mode"
+  createdAt DateTime @default(now())
+}
+
+// ========================================
+// STRATEGIC REASONING & TEMPLATES (Phase 2 - POC)
+// ========================================
 
 model Widget {
   id        String   @id @default(uuid())
@@ -79,6 +123,7 @@ model Widget {
   type      String   // "chart", "table", "form"
   title     String?
   config    Json     // content, data source
+  dataSource Json?   // { tool: "get_contracts", args: {}, refreshInterval: 60 }
   position  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -93,22 +138,6 @@ model NavigationLink {
   label        String
   type         String @default("sidebar") // "sidebar", "button"
   createdAt    DateTime @default(now())
-}
-
-
-// ========================================
-// CANVAS INTELLIGENCE (Phase 1 - POC)
-// ========================================
-
-model CanvasGroup {
-  id              String   @id @default(uuid())
-  conversationId  String
-  name            String?
-  description     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([conversationId])
 }
 
 // ========================================

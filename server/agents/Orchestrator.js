@@ -11,6 +11,9 @@ import { canvasContextAnalyzer } from '../src/core/CanvasContextAnalyzer.js';
 import { authStrategyManager } from '../src/auth/AuthStrategyManager.js';
 
 // Phase 2: Strategic Reasoning
+import { routerAgent } from './Router.js';
+
+// Phase 2: Strategic Reasoning
 import { strategicAgent } from '../src/agents/StrategicAgent.js';
 import { templateCache } from '../src/cache/TemplateCache.js';
 
@@ -23,6 +26,24 @@ export class AgentOrchestrator {
 
     async processRequest(userMessage, history, modelName = null, location = null, canvasContext = null) {
         console.log(`\n=== [Orchestrator] New Request: "${userMessage?.substring(0, 50)}..." ===`);
+
+        // PHASE 0: ROUTING (New Phase 2)
+        // Check if this is a navigation intent before planning tools
+        if (canvasContext && canvasContext.sessionId) { // Only route if in a session
+            const routing = await routerAgent.analyzeRequest(userMessage, 'home', canvasContext.sessionId); // TODO: pass real current slug
+            console.log(`[Orchestrator] Router Intent: ${routing.intent}`);
+
+            if (routing.intent === 'NAVIGATE' && routing.targetSlug) {
+                console.log(`[Orchestrator] 🚀 Fast-tracking Navigation to: ${routing.targetSlug}`);
+                return {
+                    text: `Navigating to ${routing.targetSlug}...`,
+                    action: 'navigate_canvas',
+                    targetSlug: routing.targetSlug,
+                    widgets: []
+                };
+            }
+        }
+
         if (canvasContext) {
             console.log(`[Orchestrator] Canvas Context: Mode=${canvasContext.mode}, Widgets=${canvasContext.widgets?.length || 0}`);
         }
@@ -234,11 +255,10 @@ export class AgentOrchestrator {
 
         let canvasDecision = null;
         try {
-            canvasDecision = await canvasGroupManager.createOrUpdateCanvas(
-                'current-conversation', // TODO: usar conversationId real
+            canvasDecision = await canvasGroupManager.decideCanvasAction(
                 userMessage,
-                canvasContext ? [canvasContext] : [],
-                modelName
+                { primary: 'General' }, // Fallback theme if analyzer didn't run
+                canvasContext ? [canvasContext] : []
             );
 
             console.log(`[Orchestrator] Canvas Decision: ${canvasDecision.action.toUpperCase()}`);

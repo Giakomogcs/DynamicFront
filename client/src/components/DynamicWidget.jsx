@@ -4,12 +4,12 @@ import {
     BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts';
 import { ExpandableWidget } from './ExpandableWidget';
-import { ExternalLink, Play, ArrowRight, MousePointer2 } from 'lucide-react';
+import { ExternalLink, Play, ArrowRight, MousePointer2, RefreshCw } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-export const DynamicWidget = ({ type, data, config, title, sections, items, steps, content, sentiment, actions, onAction, onNavigateScreen }) => {
-    
+export const DynamicWidget = ({ type, data, config, title, sections, items, steps, content, sentiment, actions, dataSource, onAction, onNavigateScreen, onRefresh }) => {
+
     // --- Helper: Render Action Buttons ---
     const renderActions = (actionList) => {
         if (!actionList || actionList.length === 0) return null;
@@ -22,8 +22,8 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
                         onClick={() => onAction && onAction(action)}
                         className={`
                              flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                             ${action.style === 'primary' 
-                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' 
+                             ${action.style === 'primary'
+                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
                                 : action.style === 'link'
                                     ? 'text-indigo-400 hover:text-indigo-300 hover:underline px-0'
                                     : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'}
@@ -35,6 +35,19 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
                     </button>
                 ))}
             </div>
+        );
+    };
+
+    const renderRefreshButton = () => {
+        if (!dataSource || !onRefresh) return null;
+        return (
+            <button
+                onClick={() => onRefresh(dataSource)}
+                className="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded transition-colors"
+                title={`Refresh Data (Tool: ${dataSource.tool})`}
+            >
+                <RefreshCw size={14} />
+            </button>
         );
     };
 
@@ -51,14 +64,17 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
             <div className="w-full h-80 bg-slate-900/50 rounded-xl border border-slate-800 p-4 my-4 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                     <h4 className="text-sm font-medium text-slate-400">{config?.title || 'Data Visualization'}</h4>
-                    {config?.navigationTarget && (
-                        <button
-                            onClick={() => onNavigateScreen && onNavigateScreen(config.navigationTarget)}
-                            className="text-xs bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-2 py-1 rounded border border-indigo-500/20 transition-colors"
-                        >
-                            View Details →
-                        </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {renderRefreshButton()}
+                        {config?.navigationTarget && (
+                            <button
+                                onClick={() => onNavigateScreen && onNavigateScreen(config.navigationTarget)}
+                                className="text-xs bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-2 py-1 rounded border border-indigo-500/20 transition-colors"
+                            >
+                                View Details →
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="flex-1 min-h-0">
                     <ResponsiveContainer width="100%" height="100%">
@@ -93,13 +109,13 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
     }
 
     if (type === 'table') {
-        // Simple table rendering logic. Real impl would use TanStack table hooks properly for columns.
         const columns = Object.keys(data[0] || {}).map(key => ({ header: key, accessorKey: key }));
 
         return (
             <div className="w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 my-4 flex flex-col">
                 <div className="p-4 border-b border-slate-800/50 flex justify-between items-center bg-slate-800/20">
-                     <h4 className="text-sm font-semibold text-slate-200">{title || "Data Table"}</h4>
+                    <h4 className="text-sm font-semibold text-slate-200">{title || "Data Table"}</h4>
+                    {renderRefreshButton()}
                 </div>
                 <div className="overflow-x-auto max-h-[400px]">
                     <table className="w-full text-sm text-left text-slate-400">
@@ -125,6 +141,11 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
     if (type === 'stat') {
         return (
             <div className="my-4">
+                {dataSource && (
+                    <div className="flex justify-end mb-2">
+                        {renderRefreshButton()}
+                    </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {data.map((stat, i) => (
                         <div key={i} className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
@@ -138,7 +159,7 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
                         </div>
                     ))}
                 </div>
-                 {renderActions(widgetActions)}
+                {renderActions(widgetActions)}
             </div>
         );
     }
@@ -156,9 +177,12 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
                     <div className="w-24 h-24 bg-indigo-500 rounded-full blur-3xl" />
                 </div>
 
-                <h4 className="text-lg font-semibold text-indigo-300 mb-4 flex items-center gap-2">
-                    {title || "Key Insights"}
-                </h4>
+                <div className="flex justify-between items-start mb-4">
+                    <h4 className="text-lg font-semibold text-indigo-300 flex items-center gap-2">
+                        {title || "Key Insights"}
+                    </h4>
+                    {renderRefreshButton()}
+                </div>
 
                 <div className="space-y-3">
                     {content && Array.isArray(content) ? (
@@ -174,7 +198,7 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
                         </p>
                     )}
                 </div>
-                 {renderActions(widgetActions)}
+                {renderActions(widgetActions)}
             </div>
         );
     }
@@ -189,7 +213,10 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
 
         return (
             <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-6 my-4">
-                <h4 className="text-lg font-semibold text-white mb-4">{title || 'Process'}</h4>
+                <div className="flex justify-between items-start mb-4">
+                    <h4 className="text-lg font-semibold text-white">{title || 'Process'}</h4>
+                    {renderRefreshButton()}
+                </div>
                 <div className="space-y-3">
                     {steps && steps.map((step, i) => (
                         <div key={i} className="flex items-start gap-3">
@@ -203,7 +230,7 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
                         </div>
                     ))}
                 </div>
-                 {renderActions(widgetActions)}
+                {renderActions(widgetActions)}
             </div>
         );
     }
@@ -215,7 +242,10 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
     if (type === 'comparison') {
         return (
             <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-6 my-4">
-                <h4 className="text-lg font-semibold text-white mb-4">{title || 'Comparison'}</h4>
+                <div className="flex justify-between items-start mb-4">
+                    <h4 className="text-lg font-semibold text-white">{title || 'Comparison'}</h4>
+                    {renderRefreshButton()}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {items && items.map((item, i) => (
                         <div key={i} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
@@ -231,11 +261,10 @@ export const DynamicWidget = ({ type, data, config, title, sections, items, step
                         </div>
                     ))}
                 </div>
-                 {renderActions(widgetActions)}
+                {renderActions(widgetActions)}
             </div>
         );
     }
 
     return null;
 };
-
