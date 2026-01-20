@@ -309,7 +309,8 @@ export async function executeApiTool(toolExecConfig, args, toolSchema = null) {
     const fetchOptions = {
         method: method.toUpperCase(),
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json; charset=utf-8',
+            'Accept-Charset': 'utf-8'
         }
     };
 

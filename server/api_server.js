@@ -1,3 +1,6 @@
+// Configure UTF-8 encoding FIRST
+import './src/utils/utf8-config.js';
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 import express from 'express';
 import cors from 'cors';
@@ -23,6 +26,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Ensure UTF-8 for all responses
+app.use((req, res, next) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    next();
+});
 
 // Routes
 app.use('/api/canvas', canvasRoutes);

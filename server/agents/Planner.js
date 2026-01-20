@@ -1,6 +1,8 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 import fs from 'fs';
 import { resourceEnricher } from '../src/core/ResourceEnricher.js';
+import { PlannerOutputSchema } from '../src/schemas/PlannerOutput.schema.js';
+import { NoProfilesAvailableError } from '../src/errors/AuthErrors.js';
 
 export class PlannerAgent {
     constructor() { }
@@ -211,6 +213,58 @@ INSTRUCTIONS:
             if (start !== -1 && end !== -1) return JSON.parse(text.substring(start, end + 1));
         } catch (e) { return null; }
         return null;
+    }
+
+    /**
+     * Extract resource IDs from tool names
+     * @param {Array} tools - Array of tool objects
+     * @returns {Array<string>} Array of unique resource IDs
+     */
+    _extractResourcesFromTools(tools) {
+        const resources = new Set();
+        tools.forEach(tool => {
+            // Tool names format: "api_resourceId__controller_action"
+            if (tool.name.includes('__')) {
+                const parts = tool.name.split('__');
+                if (parts[0].startsWith('api_')) {
+                    // Extract the resource ID (UUID) from api_uuid format
+                    const resourceId = parts[0].replace('api_', '');
+                    resources.add(resourceId);
+                }
+            }
+        });
+        return Array.from(resources);
+    }
+
+    /**
+     * Validate plan output with Zod schema
+     * @param {Object} planOutput - Raw plan output from LLM
+     * @returns {Object} Validated plan
+     * @throws {Error} If validation fails
+     */
+    async _validatePlan(planOutput) {
+        try {
+            const validated = PlannerOutputSchema.parse(planOutput);
+
+            // If auth_strategy is present, validate profile belongs to resource
+            if (validated.auth_strategy) {
+                await resourceEnricher.validateProfileBelongsToResource(
+                    validated.auth_strategy.profileId,
+                    validated.auth_strategy.resourceId
+                );
+                console.log(
+                    `[Planner] ✓ Auth strategy validated: ${validated.auth_strategy.profileId} for ${validated.auth_strategy.resourceId}`
+                );
+            }
+
+            return validated;
+        } catch (error) {
+            if (error.issues && Array.isArray(error.issues)) {
+                console.error('[Planner] Schema validation failed:', error.issues);
+                throw new Error(`Plan validation failed: ${error.issues.map(e => e.message).join(', ')}`);
+            }
+            throw error;
+        }
     }
 }
 

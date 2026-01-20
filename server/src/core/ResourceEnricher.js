@@ -4,6 +4,12 @@
  * NOW BACKED BY POSTGRESQL (Prisma).
  */
 import prisma from '../../registry.js';
+import { log } from '../utils/logger.js';
+import {
+    ProfileNotFoundError,
+    ProfileMismatchError,
+    NoProfilesAvailableError
+} from '../errors/AuthErrors.js';
 
 export class ResourceEnricher {
     constructor() {
@@ -17,7 +23,7 @@ export class ResourceEnricher {
      */
     async loadProfiles() {
         try {
-            console.log("[ResourceEnricher] Loading profiles from Database...");
+            log.info('Loading profiles from database', { component: 'ResourceEnricher' });
             const resources = await prisma.resource.findMany({
                 include: { authProfiles: true }
             });
@@ -40,9 +46,17 @@ export class ResourceEnricher {
                 this.authRegistry['default'] = this.authRegistry['default_registry'];
             }
 
-            console.log(`[ResourceEnricher] Loaded profiles for ${Object.keys(this.authRegistry).length} resources.`);
+            log.auth.profileLoaded('all', resources.length);
+            log.debug(`Loaded profiles for ${resources.length} resources`, {
+                component: 'ResourceEnricher',
+                resourceCount: resources.length
+            });
         } catch (e) {
-            console.error("[ResourceEnricher] Failed to load profiles from DB:", e);
+            log.error('Failed to load profiles from database', {
+                component: 'ResourceEnricher',
+                error: e.message,
+                stack: e.stack
+            });
             // Non-fatal? System continues without profiles.
             this.authRegistry = {};
         }
@@ -67,18 +81,107 @@ export class ResourceEnricher {
         return all;
     }
 
+    /**
+     * Get profiles for SPECIFIC resource only (no fallback)
+     * @param {string} resourceId - Resource identifier
+     * @returns {Array} Array of profiles for this resource (empty if none)
+     */
     getProfiles(resourceId) {
-        console.log(`[ResourceEnricher] getProfiles for '${resourceId}'. Available keys:`, Object.keys(this.authRegistry));
-        // Fallback to 'default' if specific resource has no profiles, 
-        // OR return both (resource specific prioritized)
-        const specific = this.authRegistry[resourceId] || [];
-        const defaults = this.authRegistry['default'] || [];
+        log.debug(`Getting profiles for resource`, {
+            component: 'ResourceEnricher',
+            resourceId
+        });
 
-        // Return unique list (by ID)
-        const map = new Map();
-        defaults.forEach(p => map.set(p.id, p));
-        specific.forEach(p => map.set(p.id, p)); // Overrides default
-        return Array.from(map.values());
+        const profiles = this.authRegistry[resourceId] || [];
+
+        if (profiles.length === 0) {
+            log.auth.noProfilesAvailable(resourceId);
+        } else {
+            log.debug(`Found profiles for resource`, {
+                component: 'ResourceEnricher',
+                resourceId,
+                profileCount: profiles.length
+            });
+        }
+
+        return profiles;
+    }
+
+    /**
+     * NOVO: Valida que perfil pertence ao resource específico
+     * @param {string} profileId - Profile UUID
+     * @param {string} resourceId - Expected resource identifier
+     * @throws {ProfileNotFoundError} Se perfil não existe
+     * @throws {ProfileMismatchError} Se perfil pertence a outro resource
+     * @returns {Promise<Object>} Profile object if valid
+     */
+    async validateProfileBelongsToResource(profileId, resourceId) {
+        const profile = await prisma.authProfile.findUnique({
+            where: { id: profileId },
+            include: { resource: true }
+        });
+
+        if (!profile) {
+            throw new ProfileNotFoundError(resourceId, profileId);
+        }
+
+        if (profile.resource.name !== resourceId) {
+            throw new ProfileMismatchError(
+                profileId,
+                resourceId,
+                profile.resource.name
+            );
+        }
+
+        log.auth.validationSuccess(profile.id, resourceId);
+        log.debug('Profile validated successfully', {
+            component: 'ResourceEnricher',
+            profileLabel: profile.label,
+            resourceId
+        });
+
+        return profile;
+    }
+
+    /**
+     * NOVO: Obter profile ou falhar explicitamente
+     * @param {string} resourceId - Resource identifier
+     * @param {string|null} preferredRole - Optional preferred role
+     * @throws {NoProfilesAvailableError} Se não houver perfis
+     * @returns {Object} Selected profile
+     */
+    getProfileOrFail(resourceId, preferredRole = null) {
+        const profiles = this.getProfiles(resourceId);
+
+        if (profiles.length === 0) {
+            throw new NoProfilesAvailableError(resourceId);
+        }
+
+        // Se há role preferencial, tentar encontrar
+        if (preferredRole) {
+            const match = profiles.find(p => p.role === preferredRole);
+            if (match) {
+                log.auth.profileSelected(match.id, resourceId, match.label);
+                log.debug('Selected profile with preferred role', {
+                    component: 'ResourceEnricher',
+                    profileLabel: match.label,
+                    role: match.role,
+                    resourceId
+                });
+                return match;
+            }
+        }
+
+        // Retornar primeiro disponível
+        const selected = profiles[0];
+        log.auth.profileSelected(selected.id, resourceId, selected.label);
+        log.debug('Selected first available profile', {
+            component: 'ResourceEnricher',
+            profileLabel: selected.label,
+            role: selected.role,
+            resourceId
+        });
+        return selected;
     }
 
     async addProfile(resourceId, profile) {

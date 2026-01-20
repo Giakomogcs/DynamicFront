@@ -10,7 +10,12 @@
         "api": "node --watch api_server.js",
         "dev": "node --watch index.js",
         "prisma:generate": "prisma generate",
-        "prisma:migrate": "prisma migrate dev"
+        "prisma:migrate": "prisma migrate dev",
+        "test": "vitest run tests/**/*.test.js",
+        "test:unit": "vitest run tests/unit",
+        "test:integration": "vitest run tests/integration",
+        "test:e2e": "vitest run tests/e2e",
+        "test:watch": "vitest watch"
     },
     "dependencies": {
         "@google/generative-ai": "^0.24.1",
@@ -25,6 +30,8 @@
         "zod": "^3.22.4"
     },
     "devDependencies": {
-        "prisma": "^5.10.2"
+        "prisma": "^5.10.2",
+        "vitest": "^1.2.0",
+        "winston": "^3.19.0"
     }
 }
