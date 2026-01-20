@@ -4,12 +4,26 @@ import { GroqProvider } from './providers/GroqProvider.js';
 import { OpenAIProvider } from './providers/OpenAIProvider.js';
 import { AnthropicProvider } from './providers/AnthropicProvider.js';
 import { XAIProvider } from './providers/XAIProvider.js';
+import { CopilotProvider } from './providers/CopilotProvider.js';
+import { GenericOpenAIProvider } from './providers/GenericOpenAIProvider.js';
 
 class ModelManager {
     constructor() {
         this.providers = new Map();
         this.isInitialized = false;
         this.requestQueue = new RequestQueue(60);
+
+        // Provider Health Tracking
+        this.providerHealth = new Map(); // providerId -> { available: bool, lastError: Date, failCount: number }
+
+        // Usage Metrics
+        this.metrics = {
+            totalRequests: 0,
+            successfulRequests: 0,
+            failedRequests: 0,
+            failoverCount: 0,
+            providerUsage: new Map() // providerId -> count
+        };
     }
 
     async init() {
@@ -17,29 +31,77 @@ class ModelManager {
 
         const settings = await this.loadSettings();
 
-        // Safe loading of keys
-        this.registerProvider(new GeminiProvider({
-            apiKey: settings.GEMINI_API_KEY || process.env.GEMINI_API_KEY
-        }));
+        this.settings = settings; // Store for runtime access (e.g. failover check)
 
-        this.registerProvider(new GroqProvider({
-            apiKey: settings.GROQ_API_KEY || process.env.GROQ_API_KEY
-        }));
+        // DYNAMIC PROVIDER REGISTRATION
+        const providerConfigs = [
+            { Provider: GeminiProvider, key: 'GEMINI_API_KEY', name: 'Gemini', id: 'gemini' },
+            { Provider: GroqProvider, key: 'GROQ_API_KEY', name: 'Groq', id: 'groq' },
+            { Provider: OpenAIProvider, key: 'OPENAI_API_KEY', name: 'OpenAI', id: 'openai' },
+            { Provider: AnthropicProvider, key: 'ANTHROPIC_API_KEY', name: 'Anthropic', id: 'anthropic' },
+            { Provider: XAIProvider, key: 'XAI_API_KEY', name: 'xAI', id: 'xai' },
+            { Provider: CopilotProvider, key: 'GITHUB_COPILOT_TOKEN', name: 'Copilot', id: 'copilot' }
+        ];
 
-        this.registerProvider(new OpenAIProvider({
-            apiKey: settings.OPENAI_API_KEY || process.env.OPENAI_API_KEY
-        }));
+        let availableCount = 0;
 
-        this.registerProvider(new AnthropicProvider({
-            apiKey: settings.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY
-        }));
+        // Helper to check if provider is globally enabled (default true)
+        const isProviderEnabled = (id) => {
+            const settingKey = `PROVIDER_ENABLED_${id.toUpperCase()}`;
+            return settings[settingKey] !== false; // Default true if undefined
+        };
 
-        this.registerProvider(new XAIProvider({
-            apiKey: settings.XAI_API_KEY || process.env.XAI_API_KEY
-        }));
+        // LOCAL LLM REGISTRATION
+        if (settings.LM_STUDIO_URL && isProviderEnabled('lmstudio')) {
+            this.registerProvider(new GenericOpenAIProvider({
+                id: 'lmstudio',
+                name: 'LM Studio',
+                baseUrl: settings.LM_STUDIO_URL,
+                apiKey: 'lm-studio'
+            }));
+            console.log(`[ModelManager] ✅ LM Studio provider registered at ${settings.LM_STUDIO_URL}`);
+            availableCount++;
+        }
+
+        if (settings.OLLAMA_URL && isProviderEnabled('ollama')) {
+            this.registerProvider(new GenericOpenAIProvider({
+                id: 'ollama',
+                name: 'Ollama',
+                baseUrl: settings.OLLAMA_URL,
+                apiKey: 'ollama'
+            }));
+            console.log(`[ModelManager] ✅ Ollama provider registered at ${settings.OLLAMA_URL}`);
+            availableCount++;
+        }
+
+        for (const { Provider, key, name, id } of providerConfigs) {
+            // PRIORITIZE DB SETTINGS: If setting exists (even if empty), use it. Only fallback to ENV if setting is undefined.
+            let apiKey = settings[key];
+            if (apiKey === undefined || apiKey === null) {
+                apiKey = process.env[key];
+            } else if (apiKey.trim() === "") {
+                // If user deliberately saved empty string, treat it as disabled/missing, do not fallback to ENV.
+                apiKey = undefined;
+            }
+
+            const enabled = isProviderEnabled(id);
+
+            if (apiKey && apiKey.length > 10 && enabled) { // Basic validation + Enabled Check
+                this.registerProvider(new Provider({ apiKey }));
+                console.log(`[ModelManager] ✅ ${name} provider registered`);
+                availableCount++;
+            } else {
+                if (!enabled) console.log(`[ModelManager] 🚫 ${name} provider disabled by user setting.`);
+                else console.warn(`[ModelManager] ⚠️ ${name} provider skipped (no API key)`);
+            }
+        }
+
+        if (availableCount === 0) {
+            console.warn('[ModelManager] WARN: No AI providers available! Chat will fail.');
+        }
 
         this.isInitialized = true;
-        console.log("[ModelManager] Initialized.");
+        console.log(`[ModelManager] Initialized with ${availableCount} providers.`);
     }
 
     async reload() {
@@ -83,13 +145,43 @@ class ModelManager {
     }
 
     getProviderForModel(modelName) {
-        if (!modelName) return this.providers.get('gemini');
-        if (modelName.startsWith('gemini')) return this.providers.get('gemini');
-        if (modelName.includes('llama') || modelName.includes('mixtral') || modelName.includes('gemma')) return this.providers.get('groq');
-        if (modelName.startsWith('gpt') || modelName.startsWith('o1')) return this.providers.get('openai');
-        if (modelName.startsWith('claude')) return this.providers.get('anthropic');
-        if (modelName.includes('grok')) return this.providers.get('xai');
-        return this.providers.get('gemini');
+        if (!modelName) {
+            // Return first available healthy provider
+            for (const provider of this.providers.values()) {
+                if (this.isProviderHealthy(provider.id)) return provider;
+            }
+            return this.providers.values().next().value;
+        }
+
+        // Provider detection map
+        const detectionMap = [
+            { pattern: /^gemini/i, providerId: 'gemini' },
+            { pattern: /llama|mixtral|gemma/i, providerId: 'groq' },
+            { pattern: /^gpt|^o1/i, providerId: 'openai' },
+            { pattern: /^claude/i, providerId: 'anthropic' },
+            { pattern: /grok/i, providerId: 'xai' },
+            { pattern: /^copilot/i, providerId: 'copilot' },
+            { pattern: /local|lm-studio/i, providerId: 'lmstudio' },
+            { pattern: /ollama/i, providerId: 'ollama' }
+        ];
+
+        for (const { pattern, providerId } of detectionMap) {
+            if (pattern.test(modelName)) {
+                const provider = this.providers.get(providerId);
+                if (provider) return provider;
+
+                console.warn(`[ModelManager] Model ${modelName} matched ${providerId} but provider not available`);
+            }
+        }
+
+        // Fallback: If model name matches a provider ID partially (e.g. "lmstudio/my-model")
+        if (modelName.includes('lmstudio')) return this.providers.get('lmstudio');
+        if (modelName.includes('ollama')) return this.providers.get('ollama');
+
+        // Fallback: Return first available provider
+        const fallback = this.providers.values().next().value;
+        console.warn(`[ModelManager] Could not detect provider for ${modelName}, using fallback: ${fallback?.id}`);
+        return fallback;
     }
 
     async generateContentWithFailover(input, config = {}) {
@@ -103,82 +195,294 @@ class ModelManager {
 
     async generateContent(input, config = {}) {
         await this.init();
+        this.recordMetric('request');
 
         let targetModel = config.model || "gemini-2.0-flash";
         let provider = this.getProviderForModel(targetModel);
 
         console.log(`[ModelManager] Generating content with ${targetModel} (Provider: ${provider?.id})...`);
 
+        if (!provider) {
+            console.error(`No provider available for model ${targetModel}`);
+            // Try a forced fallback?
+            provider = this.providers.values().next().value;
+            if (!provider) throw new Error(`No providers available at all.`);
+            console.log(`[ModelManager] Forced fallback to ${provider.id}...`);
+        }
+
+        // AUTOMATIC MODEL SWITCH: If we switched provider (or used fallback), check if it supports the requested model.
+        // If not (likely), switch to its default.
+        if (provider && provider.getDefaultModel && (!targetModel.includes(provider.id) && !targetModel.startsWith('gpt') && !targetModel.startsWith('claude'))) {
+                const newModel = provider.getDefaultModel();
+                console.log(`[ModelManager] ⚠️ Switching model from ${targetModel} to ${newModel} because provider is ${provider.id}`);
+                targetModel = newModel;
+        }
+
         try {
-            return await this.executeWithRetry(provider, targetModel, input, config);
+            const result = await this.executeWithRetry(provider, targetModel, input, config);
+
+            // SUCCESS: Mark provider as healthy
+            this.markProviderHealthy(provider.id);
+            this.recordMetric('success', provider.id);
+
+            return result;
         } catch (primaryError) {
             console.warn(`[ModelManager] Primary execution failed for ${targetModel}. Error: ${primaryError.message}`);
-            
+
+            // Mark provider as unhealthy
+            this.markProviderUnhealthy(provider.id, primaryError);
+
             // Check if 429 using robust check
             if (this.isRateLimitOrQuota(primaryError)) {
                 console.warn(`[ModelManager] ⚠️ ${targetModel} hit Rate Limit/Quota. Initiating Failover...`);
 
                 const failoverPlan = this.getFailoverPlan(targetModel);
-                if (failoverPlan.length === 0) console.warn("[ModelManager] No failover plan found.");
+                if (failoverPlan.length === 0) {
+                    console.warn("[ModelManager] No failover plan found.");
+                    this.recordMetric('failure');
+                    throw primaryError;
+                }
 
                 for (const fallback of failoverPlan) {
                     console.log(`[ModelManager] 🔄 Failing over to: ${fallback.model} (${fallback.providerId})`);
+                    this.recordMetric('failover');
+
                     try {
                         const fallbackProvider = this.providers.get(fallback.providerId);
                         if (!fallbackProvider) continue;
 
-                        return await this.executeWithRetry(fallbackProvider, fallback.model, input, { ...config, model: fallback.model });
+                        const result = await this.executeWithRetry(fallbackProvider, fallback.model, input, { ...config, model: fallback.model });
+
+                        // SUCCESS: Mark fallback provider as healthy
+                        this.markProviderHealthy(fallbackProvider.id);
+                        this.recordMetric('success', fallbackProvider.id);
+
+                        return result;
                     } catch (fbError) {
                         console.warn(`[ModelManager] Fallback (${fallback.model}) failed:`, fbError.message);
+                        this.markProviderUnhealthy(fallback.providerId, fbError);
                         continue;
                     }
                 }
             } else {
-                 console.warn("[ModelManager] Error was not identified as Rate Limit/Quota. Rethrowing.");
+                console.warn("[ModelManager] Error was not identified as Rate Limit/Quota. Rethrowing.");
             }
+
+            this.recordMetric('failure');
             throw primaryError;
         }
     }
 
-    getFailoverPlan(failedModel) {
+    getFailoverPlan(failedModel, errorType = 'rate_limit') {
+        // CHECK IF FAILOVER IS GLOBALLY ENABLED
+        if (this.settings?.FAILOVER_ENABLED === false) {
+            console.warn("[ModelManager] Failover is disabled in settings.");
+            return [];
+        }
+
         const plan = [];
-        // Gemini Failover
+
+        // STRATEGY: Diversify across providers to avoid hitting same quota
+        // Priority: Free/High Quota → Paid/Lower Quota → Premium
+
+        // 1. GEMINI FAILOVER
         if (failedModel.includes('gemini')) {
-            if (failedModel !== 'gemini-2.0-flash') plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash' });
-            plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash-lite' });
-            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile' });
+            // Try other Gemini models first
+            if (failedModel !== 'gemini-1.5-flash') {
+                plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
+            }
+            if (failedModel !== 'gemini-2.0-flash-lite') {
+                plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash-lite', tier: 'free' });
+            }
+
+            // Switch to Groq (Fast, Free Tier)
+            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
+            plan.push({ providerId: 'groq', model: 'llama-3.1-8b-instant', tier: 'free' });
+
+            // Switch to OpenAI (Paid, but reliable)
+            plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
+
+            // Switch to Anthropic (Premium, high quota)
+            plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
+
+            // Last resort: xAI Grok
+            plan.push({ providerId: 'xai', model: 'grok-beta', tier: 'paid' });
         }
-        // Llama/Groq Failover
+
+        // 2. GROQ FAILOVER
         else if (['llama', 'mixtral'].some(k => failedModel.includes(k))) {
-            plan.push({ providerId: 'groq', model: 'llama-3.1-8b-instant' });
-            plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash' });
+            // Try smaller Groq model
+            if (failedModel !== 'llama-3.1-8b-instant') {
+                plan.push({ providerId: 'groq', model: 'llama-3.1-8b-instant', tier: 'free' });
+            }
+
+            // Switch to Gemini
+            plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
+            plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash-lite', tier: 'free' });
+
+            // OpenAI
+            plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
+
+            // Anthropic
+            plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
+
+            // xAI
+            plan.push({ providerId: 'xai', model: 'grok-beta', tier: 'paid' });
         }
-        // OpenAI Failover (NEW)
+
+        // 3. OPENAI FAILOVER
         else if (['gpt', 'o1'].some(k => failedModel.includes(k))) {
-            // Fallback to Gemini 2.0 Flash (Fast and Capable)
-            plan.push({ providerId: 'gemini', model: 'gemini-2.0-flash' });
-            // Fallback to Groq Llama 3.3
-            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile' });
+            // Try cheaper OpenAI model
+            if (failedModel !== 'gpt-3.5-turbo') {
+                plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
+            }
+
+            // Switch to free tiers
+            plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
+            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
+
+            // Anthropic (similar quality)
+            plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
+
+            // xAI
+            plan.push({ providerId: 'xai', model: 'grok-beta', tier: 'paid' });
         }
-        return plan;
+
+        // 4. ANTHROPIC FAILOVER
+        else if (failedModel.includes('claude')) {
+            // Try cheaper Claude model
+            if (failedModel !== 'claude-3-haiku-20240307') {
+                plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
+            }
+
+            // Switch to OpenAI (similar quality)
+            plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
+
+            // Free tiers
+            plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
+            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
+
+            // xAI
+            plan.push({ providerId: 'xai', model: 'grok-beta', tier: 'paid' });
+        }
+
+        // 5. XAI FAILOVER
+        else if (failedModel.includes('grok')) {
+            // Switch to other providers
+            plan.push({ providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' });
+            plan.push({ providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' });
+            plan.push({ providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' });
+            plan.push({ providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' });
+        }
+
+        // UNIVERSAL FALLBACK: If no specific plan, try all providers
+        if (plan.length === 0) {
+            plan.push(
+                { providerId: 'gemini', model: 'gemini-1.5-flash', tier: 'free' },
+                { providerId: 'groq', model: 'llama-3.3-70b-versatile', tier: 'free' },
+                { providerId: 'openai', model: 'gpt-3.5-turbo', tier: 'paid' },
+                { providerId: 'anthropic', model: 'claude-3-haiku-20240307', tier: 'paid' },
+                { providerId: 'xai', model: 'grok-beta', tier: 'paid' },
+                { providerId: 'copilot', model: 'copilot/gpt-4', tier: 'paid' }
+            );
+        }
+
+        // FILTER: Remove unhealthy providers from plan
+        return plan.filter(entry => {
+            const healthy = this.isProviderHealthy(entry.providerId);
+            if (!healthy) {
+                console.log(`[ModelManager] ⚠️ Skipping ${entry.providerId}/${entry.model} - Provider marked unhealthy`);
+            }
+            return healthy;
+        });
     }
 
     isRateLimitOrQuota(error) {
         try {
             const msg = (error.message || JSON.stringify(error) || "").toLowerCase();
             const status = error.status || error.statusCode || 0;
-            
+
             // Check for 429 in various forms including Google's specific errors
+            // ALSO check for Network/Connection errors (fetch failed) to trigger failover
             return status === 429 ||
                 msg.includes("429") ||
                 msg.includes("quota") ||
                 msg.includes("too many requests") ||
                 msg.includes("rate limit") ||
                 msg.includes("resource_exhausted") ||
-                msg.includes("insufficient_quota"); // OpenAI usage limit
+                msg.includes("insufficient_quota") || // OpenAI usage limit
+                msg.includes("fetch failed") ||        // Node/Undici network error
+                msg.includes("econnrefused") ||        // Connection refused
+                msg.includes("etimedout") ||           // Timeout
+                msg.includes("network error");         // Generic
         } catch (e) {
             return false;
         }
+    }
+
+    // Provider Health Monitoring Methods
+    markProviderUnhealthy(providerId, error) {
+        const health = this.providerHealth.get(providerId) || { available: true, failCount: 0 };
+        health.available = false;
+        health.lastError = new Date();
+        health.failCount++;
+        health.errorMessage = error.message;
+
+        this.providerHealth.set(providerId, health);
+
+        console.log(`[ModelManager] ❌ Provider ${providerId} marked unhealthy (fail count: ${health.failCount})`);
+
+        // Auto-recover after 5 minutes
+        setTimeout(() => {
+            console.log(`[ModelManager] 🔄 Attempting to recover provider: ${providerId}`);
+            this.markProviderHealthy(providerId);
+        }, 5 * 60 * 1000);
+    }
+
+    markProviderHealthy(providerId) {
+        const health = this.providerHealth.get(providerId) || {};
+        health.available = true;
+        health.lastError = null;
+        health.failCount = 0; // Reset fail count on success
+        this.providerHealth.set(providerId, health);
+    }
+
+    isProviderHealthy(providerId) {
+        const health = this.providerHealth.get(providerId);
+        if (!health) return true; // Assume healthy if no data
+
+        // If provider failed more than 3 times in a row, mark as unhealthy
+        if (health.failCount > 3) return false;
+
+        return health.available;
+    }
+
+    // Metrics Tracking Methods
+    recordMetric(type, providerId = null) {
+        if (type === 'request') {
+            this.metrics.totalRequests++;
+        } else if (type === 'success') {
+            this.metrics.successfulRequests++;
+        } else if (type === 'failure') {
+            this.metrics.failedRequests++;
+        } else if (type === 'failover') {
+            this.metrics.failoverCount++;
+        }
+
+        if (providerId) {
+            const count = this.metrics.providerUsage.get(providerId) || 0;
+            this.metrics.providerUsage.set(providerId, count + 1);
+        }
+    }
+
+    getMetrics() {
+        const total = this.metrics.totalRequests || 1; // Avoid division by zero
+        return {
+            ...this.metrics,
+            successRate: (this.metrics.successfulRequests / total * 100).toFixed(2) + '%',
+            failoverRate: (this.metrics.failoverCount / total * 100).toFixed(2) + '%',
+            providerUsage: Object.fromEntries(this.metrics.providerUsage)
+        };
     }
 
     async executeWithRetry(provider, model, input, config) {
@@ -188,6 +492,7 @@ class ModelManager {
 
         // Let's return a "UniversalResponse" object that has getters to match Gemini behavior for backward compat
         return {
+            usedModel: model,
             response: {
                 text: () => result.text,
                 functionCalls: () => result.toolCalls || []

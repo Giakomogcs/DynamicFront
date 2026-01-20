@@ -1,5 +1,5 @@
 import { AIProvider } from '../AIProvider.js';
-import { convertGeminiToolsToAnthropic, convertAnthropicToolsToGemini } from './utils/ToolMapper.js';
+import { convertStandardToolsToAnthropic, convertAnthropicToolsToStandard } from './utils/GenericToolMapper.js';
 
 export class AnthropicProvider extends AIProvider {
     constructor(config) {
@@ -58,7 +58,7 @@ export class AnthropicProvider extends AIProvider {
 
         // Tool Support
         if (options.tools && options.tools.length > 0) {
-            const anthropicTools = convertGeminiToolsToAnthropic(options.tools);
+            const anthropicTools = convertStandardToolsToAnthropic(options.tools);
             if (anthropicTools.length > 0) {
                 body.tools = anthropicTools;
             }
@@ -86,7 +86,7 @@ export class AnthropicProvider extends AIProvider {
         const textContent = data.content.find(c => c.type === 'text');
 
         // Extract Tool Calls using Mapper
-        const toolCalls = convertAnthropicToolsToGemini(data.content);
+        const toolCalls = convertAnthropicToolsToStandard(data.content);
 
         return {
             text: textContent ? textContent.text : "",

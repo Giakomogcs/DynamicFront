@@ -1,0 +1,29 @@
+[
+  {
+    "intent": "mostrar escolas senai",
+    "originalQuery": "mostrar escolas senai",
+    "steps": [
+      {
+        "tool": "dn_schoolscontroller_getschools",
+        "params": {},
+        "purpose": ""
+      }
+    ],
+    "resultMetadata": {
+      "dataCount": 1,
+      "dataStructure": {
+        "type": "object",
+        "fields": [
+          "id"
+        ],
+        "sampleCount": 1
+      },
+      "toolsUsed": [
+        "dn_schoolscontroller_getschools"
+      ]
+    },
+    "successCount": 1,
+    "lastUsed": 1768571610401,
+    "createdAt": 1768571610401
+  }
+]

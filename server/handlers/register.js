@@ -2,6 +2,7 @@ import prisma from '../registry.js';
 import { validateApiSpec } from './api.js';
 import { validateDbConnection } from './db.js';
 import { generateApiToolsFromDocs } from './api_generator.js';
+import { resourceEnricher } from '../src/core/ResourceEnricher.js'; // Added import
 
 export const registerTools = [
     {
@@ -35,10 +36,14 @@ export const registerTools = [
 
 import { testConnection } from './test_connection.js';
 
-export async function processApiRegistration(name, specUrl, baseUrl, authConfigString, docsContent) {
+export async function processApiRegistration(name, specUrl, baseUrl, authConfigString, docsContent, clientAuthData = null) {
     let toolConfigString = null;
     let authConfig = {};
-    try { authConfig = JSON.parse(authConfigString || "{}"); } catch { }
+    try {
+        authConfig = JSON.parse(authConfigString || "{}");
+        console.log(`[Register] Auth Config Keys: ${Object.keys(authConfig).join(', ')}`);
+        if (authConfig.docs) console.log(`[Register] Docs Auth Keys: ${Object.keys(authConfig.docs).join(', ')}`);
+    } catch { }
 
     // Extract docs auth profile if it exists (for 401 Spec URLs)
     const docsAuth = authConfig.docs || null;
@@ -92,8 +97,9 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
         }
     }
 
-    // --- CONNECTION TEST VERIFICATION ---
-    if (effectiveBaseUrl) {
+// --- CONNECTION TEST VERIFICATION ---
+    let verificationAuthData = clientAuthData || null;
+    if (effectiveBaseUrl && !verificationAuthData) {
         console.log(`[Register] Verifying connection to ${effectiveBaseUrl}...`);
         const testResult = await testConnection(effectiveBaseUrl, authConfig);
         if (!testResult.success) {
@@ -101,12 +107,15 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
                 ? testResult.results.map(r => `${r.profile}: ${r.message}`).join(', ')
                 : testResult.message;
 
-            // Allow 404 on root (some APIs don't have root endpoint) if explicitly handled by testConnection (it returns success=true for 404 but message mentions it)
-            // But testConnection logic says: if response.ok return success, else return false (except 404 check)
-            // Wait, testConnection.js lines 95-96 handles 404 as success=true. So if success=false, it really failed (401, 500, network error).
             throw new Error(`Connection Verification Failed: ${msg}`);
         }
         console.log(`[Register] Connection verified successfully.`);
+        
+        // Capture Auth Data from the first successful result if available
+        if (testResult.results && testResult.results.length > 0) {
+            const firstSuccess = testResult.results.find(r => r.success && r.authData);
+            if (firstSuccess) verificationAuthData = firstSuccess.authData;
+        }
     } else {
         console.warn(`[Register] Could not determine Base URL. Skipping connection test.`);
     }
@@ -116,16 +125,128 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
         specUrl: specUrl || "RAW_TEXT",
         baseUrl: effectiveBaseUrl || baseUrl || "",
         authConfig: authConfigString || "{}",
-        toolConfig: toolConfigString
+        toolConfig: toolConfigString,
+        authData: verificationAuthData
     };
 }
 
 export async function handleRegisterTool(name, args) {
     if (name === 'register_api') {
         try {
-            const data = await processApiRegistration(args.name, args.specUrl, args.baseUrl, args.authConfig, args.docsContent);
+            const data = await processApiRegistration(args.name, args.specUrl, args.baseUrl, args.authConfig, args.docsContent, args.verificationAuthData);
 
-            const newApi = await prisma.verifiedApi.create({ data });
+            const newApi = await prisma.verifiedApi.create({ 
+                data: {
+                    name: data.name,
+                    specUrl: data.specUrl,
+                    baseUrl: data.baseUrl,
+                    authConfig: data.authConfig, // Don't save Internal fields like 'authData' or 'toolConfig' here if validation strict? 
+                    // Prisma create expects specific fields. 
+                    // verifiedApi schema likely has name, specUrl, baseUrl, authConfig, toolConfig.
+                    toolConfig: data.toolConfig
+                }
+            });
+
+            // --- AUTO CREATE AUTH PROFILE ---
+            if (data.authConfig) {
+                 try {
+                     const parsed = JSON.parse(data.authConfig);
+                     // Create a helper to get the actual auth object (handle nested { api: { default: ... } })
+                     const auth = parsed.api?.default || parsed;
+
+                     // Check if there's actual credentials to save
+                     let hasCreds = false;
+                     let label = "Initial User";
+                     let role = "user";
+                     
+                     // Try to extract from Auth Config
+                     if (auth.username || auth.email) {
+                         hasCreds = true;
+                         label = auth.username || auth.email;
+                     } else if (auth.loginParams && auth.loginParams.some(p => p.value)) {
+                         hasCreds = true;
+                         // Find email-like param
+                         const emailParam = auth.loginParams.find(p => p.key.includes('email') || p.key.includes('user'));
+                         if (emailParam) label = emailParam.value;
+                     } else if (auth.token && auth.type === 'bearer') {
+                         hasCreds = true;
+                         label = "Bearer User";
+                     }
+
+                     // Enrich with AuthData from verification (REAL Role/Name)
+                     if (data.authData) {
+                         const ad = data.authData;
+                         console.log(`[Register] Using Auth Data for Profile:`, JSON.stringify(ad));
+                         
+                         if (ad.role || ad.type || (ad.user && ad.user.role)) {
+                             role = ad.role || ad.type || ad.user.role;
+                         }
+                         if (ad.name || ad.username || (ad.user && ad.user.name)) {
+                             label = ad.name || ad.username || ad.user.name;
+                             // Append role nicely
+                             if (role !== 'user') label += ` (${role})`;
+                         }
+                         
+                         // Sync Credentials from AuthData if available (e.g. detected CNPJ/Company)
+                         if (ad.cnpj) auth.cnpj = ad.cnpj;
+                         if (ad.companyId) auth.companyId = ad.companyId;
+
+                         // If we have strong auth data (like a name/email/id), we effectively have crdentials/identity to save
+                         if (ad.id || ad.email || ad.name) hasCreds = true;
+                     }
+
+                     if (hasCreds) {
+                         console.log(`[Register] Auto-creating auth profile for ${newApi.name}...`);
+                         
+                         // Check for duplicates (even though it's a new API, maybe the resource name existed or re-registering?)
+                         // Usually new API = no profiles. But good practice.
+                         const existingProfiles = resourceEnricher.getProfiles(newApi.idString); 
+                         const isDuplicate = existingProfiles.some(p => p.label === label);
+
+                         if (!isDuplicate) {
+                            // SANITIZE CREDENTIALS
+                            // We don't want to save the entire config (urls, tokens paths) as "credentials"
+                            let cleanCredentials = {};
+                            
+                            if (auth.type === 'basic') {
+                                if (auth.loginParams && Array.isArray(auth.loginParams)) {
+                                    // Extract simple k/v pairs
+                                    auth.loginParams.forEach(p => {
+                                        if (p.key && p.value) cleanCredentials[p.key] = p.value;
+                                    });
+                                }
+                            } else if (auth.type === 'bearer') {
+                                cleanCredentials.token = auth.token;
+                            } else if (auth.type === 'apiKey') {
+                                cleanCredentials.apiKey = auth.apiKey.value; // Store value, maybe paramName too if needed
+                                cleanCredentials.paramName = auth.apiKey.paramName;
+                            } else {
+                                // Default fallback (e.g. simple username/password basic)
+                                if (auth.username) cleanCredentials.username = auth.username;
+                                if (auth.password) cleanCredentials.password = auth.password;
+                                // If nothing extracted but we have other properties, maybe keep them?
+                                // Ideally we want to avoid saving nested objects like 'api' or 'docs'
+                                if (Object.keys(cleanCredentials).length === 0) cleanCredentials = auth;
+                            }
+
+                            // Add enriched data if useful and simple
+                            if (auth.cnpj) cleanCredentials.cnpj = auth.cnpj;
+                            if (auth.companyId) cleanCredentials.companyId = auth.companyId;
+
+                            await resourceEnricher.addProfile(newApi.idString, {
+                                label,
+                                role,
+                                credentials: cleanCredentials
+                            });
+                         } else {
+                            console.log(`[Register] Profile '${label}' already exists. Skipping auto-creation.`);
+                         }
+                    }
+                 } catch (profileErr) {
+                     console.warn("[Register] Failed to auto-create profile (non-fatal):", profileErr);
+                 }
+            }
+
             return {
                 content: [{ type: "text", text: `Successfully registered API '${newApi.name}'. ${data.toolConfig ? "Tools were auto-generated from documentation." : "OpenAPI spec detected."}` }]
             };

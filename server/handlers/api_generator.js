@@ -1,4 +1,4 @@
-import { geminiManager } from '../config/gemini.js';
+import { modelManager } from '../services/ai/ModelManager.js';
 
 // No manual init - usage is inside function via manager
 
@@ -98,7 +98,7 @@ export async function generateApiToolsFromDocs(name, url, authConfigString, rawC
     6. Return ONLY valid JSON.
     `;
 
-  const result = await geminiManager.generateContentWithFailover(prompt);
+  const result = await modelManager.generateContentWithFailover(prompt);
   const response = await result.response;
   let text = response.text();
 

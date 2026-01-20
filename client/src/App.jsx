@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './Layout';
 import { Chat } from './components/Chat';
 import { ResourcesView } from './components/ResourcesView';
 import { SettingsView } from './components/SettingsView';
 import { Modal, RegisterApiForm, RegisterDbForm } from './components/RegistrationModal';
+import { ToastProvider } from './components/ui/Toast';
 
 import { Canvas } from './components/Canvas';
 import { CanvasHeader } from './components/CanvasHeader';
 
 
-function App() {
+function AppContent() {
   const [messages, setMessages] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [modalType, setModalType] = useState(null); // 'api' | 'db' | null
   const [activeTab, setActiveTab] = useState('chat');
   const [location, setLocation] = useState(null);
 
-  // New State: Active Widgets for Canvas and Layout Mode
   // New State: Active Widgets for Canvas and Layout Mode
   const [activeWidgets, setActiveWidgets] = useState([]);
   const [layoutMode, setLayoutMode] = useState('center'); // 'center' | 'workspace'
@@ -27,6 +28,46 @@ function App() {
   const [lastSaved, setLastSaved] = useState(null);
   const [savedCanvases, setSavedCanvases] = useState([]);
   const [showLoadModal, setShowLoadModal] = useState(false);
+  const [canvasMode, setCanvasMode] = useState('append'); // 'append' | 'replace'
+  const [chatCollapsed, setChatCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Resize Handlers
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      // Limit width between 300px and 1200px
+      const newWidth = Math.min(Math.max(e.clientX - 64, 300), 1200);
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none'; // Prevent text selection
+    } else {
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
 
 
   // Get User Location on Mount
@@ -54,12 +95,13 @@ function App() {
     }
   };
 
-  const saveCanvas = async (curTitle, curWidgets) => {
+  const saveCanvas = async (curTitle, curWidgets, curMessages) => {
     setIsProcessing(true);
     try {
       const payload = {
-        title: curTitle || canvasTitle,
-        widgets: curWidgets || activeWidgets
+        title: curTitle !== undefined ? curTitle : canvasTitle,
+        widgets: curWidgets !== undefined ? curWidgets : activeWidgets,
+        messages: curMessages !== undefined ? curMessages : messages
       };
 
       let url = 'http://localhost:3000/api/canvases';
@@ -97,9 +139,9 @@ function App() {
       setCanvasId(data.id);
       setCanvasTitle(data.title);
       setActiveWidgets(data.widgets || []);
+      setMessages(data.messages || []); // Load saved messages
       setLastSaved(data.updatedAt);
       setLayoutMode('workspace');
-      setMessages([{ role: 'model', text: `Loaded canvas: ${data.title}` }]); // Reset chat
       setShowLoadModal(false);
     } catch (e) {
       console.error("Load failed", e);
@@ -125,18 +167,45 @@ function App() {
     setShowLoadModal(false);
   };
 
+  const handleDeleteCanvas = async (id, title) => {
+    if (!confirm(`Tem certeza que deseja deletar o canvas "${title}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/canvases/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        // If deleting current canvas, reset to new canvas
+        if (canvasId === id) {
+          handleCreateNewCanvas();
+        }
+        // Refresh canvas list
+        fetchCanvases();
+      } else {
+        alert('Falha ao deletar canvas');
+      }
+    } catch (e) {
+      console.error("Delete failed", e);
+      alert('Erro ao deletar canvas');
+    }
+  };
+
 
   // Fetch Models & Settings
   const [availableModels, setAvailableModels] = useState([]);
   const [enabledModels, setEnabledModels] = useState(null); // null = load yet
   const [selectedModel, setSelectedModel] = useState("");
 
-  useEffect(() => {
-    // Parallel fetch
-    Promise.all([
-      fetch('http://localhost:3000/api/models').then(r => r.json()),
-      fetch('http://localhost:3000/api/settings').then(r => r.json())
-    ]).then(([modelsData, settingsData]) => {
+  const refreshModels = useCallback(async () => {
+    try {
+      const [modelsData, settingsData] = await Promise.all([
+        fetch('http://localhost:3000/api/models').then(r => r.json()),
+        fetch('http://localhost:3000/api/settings').then(r => r.json())
+      ]);
+
       const models = Array.isArray(modelsData) ? modelsData : (modelsData.models || []);
       const defaultModel = modelsData.defaultModel;
 
@@ -151,32 +220,34 @@ function App() {
       setEnabledModels(enabled);
       setAvailableModels(models);
 
-      // Determine selection
-      // Filter first
+      // Determine selection logic
       const visibleModels = models.filter(m => enabled.includes(m.name));
 
-      if (defaultModel && visibleModels.find(m => m.name === defaultModel)) {
-        setSelectedModel(defaultModel);
-      } else if (visibleModels.length > 0) {
-        setSelectedModel(visibleModels[0].name);
-      } else if (models.length > 0) {
-        // Fallback if user disabled everything (shouldn't happen ideally)
-        setSelectedModel(models[0].name);
+      // If currently selected model is still valid, keep it.
+      // Otherwise, switch to default or first available.
+      if (!selectedModel || !visibleModels.find(m => m.name === selectedModel)) {
+        if (defaultModel && visibleModels.find(m => m.name === defaultModel)) {
+          setSelectedModel(defaultModel);
+        } else if (visibleModels.length > 0) {
+          setSelectedModel(visibleModels[0].name); // Fallback to first
+        }
       }
-    }).catch(err => console.error("Failed to fetch initial data", err));
+    } catch (err) {
+      console.error("Failed to fetch models", err);
+    }
+  }, [selectedModel]);
 
-    // Debug log
-    console.log("[App] Mounted / Initial Fetch");
-
-    return () => console.log("[App] Unmounted");
-  }, []); // Run on mount
+  // Initial Load
+  useEffect(() => {
+    refreshModels();
+  }, []);
 
   // Computed visible models
   const visibleModels = availableModels.filter(m => !enabledModels || enabledModels.includes(m.name));
 
   const abortControllerRef = React.useRef(null);
 
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = async (text, isSystemHidden = false) => {
     // Switch to workspace mode on first message
     if (layoutMode === 'center') setLayoutMode('workspace');
 
@@ -189,13 +260,23 @@ function App() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    // 1. Add User Message
-    const userMsg = { role: 'user', text };
-    setMessages(prev => [...prev, userMsg]);
+    // 1. Add User Message (Only if NOT hidden, otherwise we already added a placeholder or don't want to show raw system prompt)
+    if (!isSystemHidden) {
+      const userMsg = { role: 'user', text };
+      setMessages(prev => [...prev, userMsg]);
+    }
+
     setIsProcessing(true);
 
     try {
       // 2. Call Backend API
+      // Build canvas context for incremental mode
+      const canvasContext = canvasMode === 'append' && canvasId ? {
+        mode: canvasMode,
+        widgets: activeWidgets,
+        messages: messages
+      } : null;
+
       const response = await fetch('http://localhost:3000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,7 +284,8 @@ function App() {
           message: text,
           history: messages,
           location, // Send location context
-          model: selectedModel
+          model: selectedModel,
+          canvasContext // Send canvas context for incremental mode
         }),
         signal: controller.signal
       });
@@ -222,9 +304,20 @@ function App() {
       };
       setMessages(prev => [...prev, botMsg]);
 
-      // 4. Update Canvas with new widgets if any
+      // 4. Update Canvas with new widgets
       if (data.widgets && data.widgets.length > 0) {
-        setActiveWidgets(data.widgets);
+        if (canvasMode === 'append') {
+          // Append mode: add new widgets to existing ones
+          setActiveWidgets(prev => [...prev, ...data.widgets]);
+        } else {
+          // Replace mode: replace all widgets
+          setActiveWidgets(data.widgets);
+        }
+      }
+
+      // Auto-save after successful response
+      if (canvasId) {
+        setTimeout(() => saveCanvas(), 1000);
       }
 
     } catch (error) {
@@ -247,6 +340,11 @@ function App() {
       abortControllerRef.current = null;
       setIsProcessing(false);
     }
+  };
+
+  const handleEditMessage = (index) => {
+    // Remove the message at index and all subsequent messages
+    setMessages(prev => prev.slice(0, index));
   };
 
   // --- Resource Management (Create / Update) ---
@@ -314,6 +412,17 @@ function App() {
     const [isOpen, setIsOpen] = useState(false);
     const selectedModelObj = models.find(m => m.name === selected) || { displayName: 'Select Model', name: '' };
 
+    // Group models by provider
+    const groupedModels = React.useMemo(() => {
+      const groups = {};
+      models.forEach(m => {
+        const provider = m.provider || 'Other';
+        if (!groups[provider]) groups[provider] = [];
+        groups[provider].push(m);
+      });
+      return groups;
+    }, [models]);
+
     return (
       <div className="relative z-50">
         <button
@@ -328,28 +437,73 @@ function App() {
         {isOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-            <div className="absolute top-full left-0 mt-2 w-64 max-h-80 overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl shadow-xl shadow-black/50 z-50 p-1">
-              <div className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Available Models</div>
-              {models.map(m => (
-                <button
-                  key={m.name}
-                  onClick={() => { onSelect(m.name); setIsOpen(false); }}
-                  className={`
-                    w-full text-left px-3 py-2 rounded-lg text-sm mb-1 flex flex-col
-                    ${selected === m.name ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-300 hover:bg-slate-800'}
-                  `}
-                >
-                  <span className="font-medium">{m.displayName?.replace('models/', '')}</span>
-                  <span className="text-[10px] text-slate-500 truncate">{m.name}</span>
-                </button>
+            <div className="absolute top-full left-0 mt-2 w-72 max-h-[500px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl shadow-xl shadow-black/50 z-50 p-2 custom-scrollbar">
+              {Object.keys(groupedModels).length === 0 && <div className="p-3 text-slate-500 text-xs text-center">Loading models...</div>}
+              
+              {Object.entries(groupedModels).map(([provider, providerModels]) => (
+                <div key={provider} className="mb-2 last:mb-0">
+                  <div className="px-2 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-900/50 sticky top-0 backdrop-blur-sm">
+                    {provider}
+                  </div>
+                  <div className="space-y-0.5">
+                    {providerModels.map(m => (
+                      <button
+                        key={m.name}
+                        onClick={() => { onSelect(m.name); setIsOpen(false); }}
+                        className={`
+                          w-full text-left px-3 py-2 rounded-lg text-sm flex flex-col transition-colors
+                          ${selected === m.name ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-300 hover:bg-slate-800 border border-transparent'}
+                        `}
+                      >
+                        <span className="font-medium truncate">{m.displayName?.replace(new RegExp(`${provider}[/\\s]*`, 'i'), '')}</span>
+                        <span className="text-[10px] text-slate-500 truncate opacity-60">{m.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
-              {models.length === 0 && <div className="p-3 text-slate-500 text-xs text-center">Loading models...</div>}
             </div>
           </>
         )}
       </div>
     );
   };
+
+  // --- Widget Interaction Handler ---
+  const handleWidgetAction = async (action) => {
+    console.log("[App] Widget Action:", action);
+
+    if (action.type === 'navigate_canvas') {
+      if (action.canvasId) {
+        // Switch to existing canvas
+        await loadCanvas(action.canvasId);
+      } else {
+        // Create new canvas
+        handleCreateNewCanvas();
+        // Maybe set a title if provided? 
+        if (action.title) setCanvasTitle(action.title);
+      }
+    } else if (action.type === 'tool_call') {
+      // Trigger AI execution via "hidden" user message or explicit system prompt
+      // We want the AI to execute the tool.
+      // Best way: Send a message that forces the tool call.
+      const prompt = `[SYSTEM: User clicked "${action.label}". Execute tool '${action.tool}' with args: ${JSON.stringify(action.args)}]`;
+
+      // We display a cleaner message to the user
+      const userDisplayMsg = { role: 'user', text: `Clicked: ${action.label}` };
+      setMessages(prev => [...prev, userDisplayMsg]);
+
+      // But we send the System Prompt to the backend handling logic
+      // Reuse handleSendMessage but with modified 'text' payload? 
+      // handleSendMessage expects text and adds it to UI. We need to decouple.
+
+      // Let's modify handleSendMessage to allow "hidden" prompt
+      await handleSendMessage(prompt, true);
+    }
+  };
+
+
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <Layout
@@ -358,6 +512,7 @@ function App() {
       onRegisterApi={() => setModalType('api')}
       onRegisterDb={() => setModalType('db')}
       onOpenLoadModal={() => setShowLoadModal(true)}
+      onToggleSettings={() => setShowSettings(true)}
       headerContent={
         <ModelSelector
           models={visibleModels}
@@ -369,16 +524,31 @@ function App() {
       {activeTab === 'chat' && (
         <div className="flex h-full w-full overflow-hidden">
           {/* Sidebar Chat */}
-          <div className={`
-                 transition-all duration-500 ease-in-out border-r border-slate-800 bg-slate-950 flex flex-col
-                 ${layoutMode === 'center' ? 'w-full max-w-3xl mx-auto border-r-0' : 'w-[400px] shrink-0'}
-             `}>
+          <div
+            className={`
+                 transition-all duration-75 ease-out bg-slate-950 flex flex-col relative
+                 ${layoutMode === 'center' ? 'w-full transition-all duration-300 ease-in-out' : (chatCollapsed ? 'w-12 shrink-0 transition-all duration-300 ease-in-out' : 'shrink-0')}
+             `}
+            style={{ width: layoutMode === 'workspace' && !chatCollapsed ? sidebarWidth : undefined }}
+          >
             <Chat
               messages={messages}
               onSendMessage={handleSendMessage}
               isProcessing={isProcessing}
               onStop={handleStopGeneration}
+              collapsed={chatCollapsed && layoutMode === 'workspace'}
+              onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
+              onEditMessage={handleEditMessage}
+              showControls={layoutMode === 'workspace'}
             />
+
+            {/* Drag Handle - Only in Workspace mode and not collapsed */}
+            {layoutMode === 'workspace' && !chatCollapsed && (
+              <div
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-500/50 z-50 transition-colors"
+                onMouseDown={handleMouseDown}
+              />
+            )}
           </div>
 
           {/* Main Canvas Area - Hidden in Center Mode */}
@@ -386,13 +556,21 @@ function App() {
             <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative">
               <CanvasHeader
                 title={canvasTitle}
-                onTitleChange={(newTitle) => { setCanvasTitle(newTitle); saveCanvas(newTitle, null); }}
+                onTitleChange={(newTitle) => { setCanvasTitle(newTitle); saveCanvas(newTitle, null, null); }}
                 onSave={() => saveCanvas()}
                 onNewChat={handleNewChat}
                 isSaving={isProcessing}
                 lastSavedAt={lastSaved}
+                canvasMode={canvasMode}
+                onModeChange={setCanvasMode}
               />
-              <Canvas widgets={activeWidgets} loading={isProcessing} />
+              <Canvas
+                widgets={activeWidgets}
+                loading={isProcessing}
+                canvasId={canvasId}
+                onNavigate={loadCanvas}
+                onAction={handleWidgetAction}
+              />
             </div>
           )}
         </div>
@@ -403,7 +581,25 @@ function App() {
           onEdit={(type, data) => handleEditResource(type, data)}
         />
       )}
-      {activeTab === 'settings' && <SettingsView />}
+
+      {/* Settings Modal Overlay */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[60] flex justify-end transition-opacity duration-300">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+            onClick={() => setShowSettings(false)}
+          />
+
+          {/* Side Panel */}
+          <div className="relative w-full max-w-2xl bg-slate-950 border-l border-slate-800 shadow-2xl h-full transform transition-transform duration-300 animate-in slide-in-from-right shadow-black/50">
+            <SettingsView
+              onSettingsChanged={refreshModels}
+              onClose={() => setShowSettings(false)}
+            />
+          </div>
+        </div>
+      )}
 
       <Modal
         isOpen={!!modalType}
@@ -441,14 +637,36 @@ function App() {
           </button>
           <div className="max-h-60 overflow-y-auto space-y-2">
             {savedCanvases.map(c => (
-              <button
+              <div
                 key={c.id}
-                onClick={() => loadCanvas(c.id)}
-                className="w-full text-left p-3 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex justify-between items-center"
+                className="flex items-center gap-2 p-3 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors"
               >
-                <span>{c.title}</span>
-                <span className="text-xs text-slate-500">{new Date(c.updatedAt).toLocaleDateString()}</span>
-              </button>
+                <button
+                  onClick={() => loadCanvas(c.id)}
+                  className="flex-1 text-left flex justify-between items-center"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-slate-200">{c.title}</span>
+                    <span className="text-xs text-slate-500">
+                      {new Date(c.updatedAt).toLocaleDateString()} • {c.widgetCount} widgets • {c.messageCount} messages
+                    </span>
+                  </div>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCanvas(c.id, c.title);
+                  }}
+                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                  title="Delete canvas"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
             ))}
             {savedCanvases.length === 0 && <p className="text-slate-500 text-center py-4">No saved canvases</p>}
           </div>
@@ -459,4 +677,14 @@ function App() {
   );
 }
 
+// Wrapper for Toast Provider
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
+  );
+}
+
 export default App;
+

@@ -20,6 +20,7 @@ export async function testConnection(baseUrl, authConfig) {
     const testSingleProfile = async (profileName, profileId, auth) => {
         let url = baseUrl.trim().replace(/\/$/, '');
         const headers = { 'Content-Type': 'application/json' };
+        let loginData = null; // Declare in wider scope
 
         try {
             // Login Flow Support (Token Exchange)
@@ -56,7 +57,7 @@ export async function testConnection(baseUrl, authConfig) {
                     return { profile: profileName, success: false, message: `Login Failed (${loginRes.status})`, detail: t.substring(0, 200) };
                 }
 
-                const loginData = await loginRes.json();
+                loginData = await loginRes.json(); // Assign to outer variable
                 const tokenPath = auth.tokenPath || 'access_token';
                 let token = tokenPath.split('.').reduce((obj, key) => obj?.[key], loginData);
 
@@ -64,8 +65,8 @@ export async function testConnection(baseUrl, authConfig) {
                 if (!token) {
                     const candidateKeys = ['access_token', 'token', 'accessToken', 'jwt', 'id_token', 'key'];
                     for (const key of candidateKeys) {
-                        if (loginData[key]) { token = loginData[key]; break; }
-                        if (loginData.data && loginData.data[key]) { token = loginData.data[key]; break; }
+                         if (loginData[key]) { token = loginData[key]; break; }
+                         if (loginData.data && loginData.data[key]) { token = loginData.data[key]; break; }
                     }
                 }
 
@@ -91,7 +92,8 @@ export async function testConnection(baseUrl, authConfig) {
             // Actual Test Request
             const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(5000) });
             if (response.ok) {
-                return { profile: profileName, success: true, message: `Connected (Status: ${response.status})` };
+                console.log(`[TestConnection] DEBUG: AuthData present? ${!!loginData}`);
+                return { profile: profileName, success: true, message: `Connected (Status: ${response.status})`, authData: loginData };
             } else {
                 if (response.status === 404) {
                     return { profile: profileName, success: true, message: `Server reachable (404 on root), but auth accepted.` };

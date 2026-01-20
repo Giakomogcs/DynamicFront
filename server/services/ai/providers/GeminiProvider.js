@@ -4,13 +4,19 @@ import { AIProvider } from '../AIProvider.js';
 export class GeminiProvider extends AIProvider {
     constructor(config) {
         super(config);
-        this.id = "gemini";
-        this.name = "Google Gemini";
+        this.apiKey = config.apiKey;
+        this.id = 'gemini';
+        this.name = 'Google Gemini';
+        this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
         if (!config.apiKey) {
             console.warn("[GeminiProvider] No API Key provided.");
         }
         this.genAI = new GoogleGenerativeAI(config.apiKey);
+    }
+
+    getDefaultModel() {
+        return 'gemini-2.0-flash';
     }
 
     async listModels() {
@@ -44,17 +50,19 @@ export class GeminiProvider extends AIProvider {
         }
         if (options.tools) {
             let mappedTools = options.tools;
-            
+
             // Map inputSchema -> parameters (MCP to Gemini)
             if (Array.isArray(options.tools)) {
                 mappedTools = options.tools.map(t => {
                     // Check if t is a tool object (not functionDeclarations wrapper)
                     if (t.name && (t.inputSchema || t.parameters)) {
-                        return {
+                        const tool = {
                             name: t.name,
                             description: t.description,
                             parameters: t.inputSchema || t.parameters
                         };
+                        // CRITICAL: Sanitize schema to remove invalid fields
+                        return this._sanitizeToolSchema(tool);
                     }
                     return t;
                 });
@@ -63,9 +71,9 @@ export class GeminiProvider extends AIProvider {
             // Check if tools are already in Gemini format (should have functionDeclarations)
             // If it's a flat array of tools (like OpenAI format), wrap it.
             if (Array.isArray(mappedTools) && mappedTools.length > 0 && !mappedTools[0].functionDeclarations) {
-                 modelConfig.tools = [{ functionDeclarations: mappedTools }];
+                modelConfig.tools = [{ functionDeclarations: mappedTools }];
             } else {
-                 modelConfig.tools = mappedTools;
+                modelConfig.tools = mappedTools;
             }
         }
         if (options.jsonMode) {
@@ -137,6 +145,39 @@ export class GeminiProvider extends AIProvider {
         }
 
         return stdResponse;
+    }
+
+    /**
+     * Sanitize tool schema for Gemini API compatibility
+     * Gemini expects 'required' as an array at schema level, not in each property
+     */
+    _sanitizeToolSchema(tool) {
+        if (!tool.parameters) return tool;
+
+        const sanitized = { ...tool };
+
+        // Deep clone parameters to avoid mutation
+        sanitized.parameters = JSON.parse(JSON.stringify(tool.parameters));
+
+        // Remove 'required' field from individual properties (Gemini doesn't accept this)
+        if (sanitized.parameters.properties) {
+            const cleanProps = {};
+            for (const [key, value] of Object.entries(sanitized.parameters.properties)) {
+                const cleanProp = { ...value };
+                // Remove invalid fields that Gemini rejects
+                delete cleanProp.required;
+                cleanProps[key] = cleanProp;
+            }
+            sanitized.parameters.properties = cleanProps;
+        }
+
+        // Ensure 'required' is an array at the schema root level (if it exists)
+        if (sanitized.parameters.required && !Array.isArray(sanitized.parameters.required)) {
+            // If it's a boolean or other type, remove it
+            delete sanitized.parameters.required;
+        }
+
+        return sanitized;
     }
 
     _mapRole(role) {

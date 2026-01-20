@@ -1,5 +1,5 @@
 import { AIProvider } from '../AIProvider.js';
-import { convertGeminiToolsToOpenAI, convertOpenAIToolsToGemini } from './utils/ToolMapper.js';
+import { convertStandardToolsToOpenAI, convertOpenAIToolsToStandard } from './utils/GenericToolMapper.js';
 
 export class GroqProvider extends AIProvider {
     constructor(config) {
@@ -60,7 +60,7 @@ export class GroqProvider extends AIProvider {
         }
 
         if (options.tools && options.tools.length > 0) {
-            const openAITools = convertGeminiToolsToOpenAI(options.tools);
+            const openAITools = convertStandardToolsToOpenAI(options.tools);
             if (openAITools.length > 0) {
                 body.tools = openAITools;
                 // FORCE tool usage if tools are provided. This prevents "I would do this..." responses.
@@ -93,7 +93,7 @@ export class GroqProvider extends AIProvider {
 
         return {
             text: choice.message.content,
-            toolCalls: convertOpenAIToolsToGemini(choice.message.tool_calls), // OpenAI format -> Gemini format
+            toolCalls: convertOpenAIToolsToStandard(choice.message.tool_calls), // OpenAI format -> Standard format
             usage: data.usage
         };
     }

@@ -1,5 +1,5 @@
 import { AIProvider } from '../AIProvider.js';
-import { convertGeminiToolsToOpenAI, convertOpenAIToolsToGemini } from './utils/ToolMapper.js';
+import { convertStandardToolsToOpenAI, convertOpenAIToolsToStandard } from './utils/GenericToolMapper.js';
 
 export class OpenAIProvider extends AIProvider {
     constructor(config) {
@@ -60,7 +60,7 @@ export class OpenAIProvider extends AIProvider {
 
         // Tool Support
         if (options.tools && options.tools.length > 0) {
-            const openAITools = convertGeminiToolsToOpenAI(options.tools);
+            const openAITools = convertStandardToolsToOpenAI(options.tools);
             if (openAITools.length > 0) {
                 body.tools = openAITools;
                 body.tool_choice = "auto";
@@ -89,7 +89,7 @@ export class OpenAIProvider extends AIProvider {
 
         return {
             text: choice.message.content,
-            toolCalls: convertOpenAIToolsToGemini(choice.message.tool_calls),
+            toolCalls: convertOpenAIToolsToStandard(choice.message.tool_calls),
             usage: data.usage
         };
     }

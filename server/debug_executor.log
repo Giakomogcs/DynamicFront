@@ -1,11 +1,6 @@
-[2026-01-08T23:44:36.188Z] Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [400 Bad Request] * GenerateContentRequest.tools[0].function_declarations[15].parameters.properties[schoolsCnpj].items.items: missing field.
-
-Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [400 Bad Request] * GenerateContentRequest.tools[0].function_declarations[15].parameters.properties[schoolsCnpj].items.items: missing field.
-
-    at handleResponseNotOk (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/node_modules/@google/generative-ai/dist/index.mjs:432:11)
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async makeRequest (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/node_modules/@google/generative-ai/dist/index.mjs:401:9)
-    at async generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/node_modules/@google/generative-ai/dist/index.mjs:865:22)
-    at async ChatSession.sendMessage (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/node_modules/@google/generative-ai/dist/index.mjs:1208:9)
-    at async GeminiProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/providers/GeminiProvider.js:114:26)
-    at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/ModelManager.js:228:29)
+[2026-01-15T18:34:43.566Z] Error: historyContent is not defined
+ReferenceError: historyContent is not defined
+    at ExecutorAgent.execute (file:///C:/Github/DynamicFront/server/agents/Executor.js:346:38)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async AgentOrchestrator.processRequest (file:///C:/Github/DynamicFront/server/agents/Orchestrator.js:106:33)
+    at async file:///C:/Github/DynamicFront/server/api_server.js:53:24

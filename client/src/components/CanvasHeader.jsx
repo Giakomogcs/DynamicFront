@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Save, PlusCircle, Check } from 'lucide-react';
+import { Pencil, Save, PlusCircle, Check, Plus, Replace } from 'lucide-react';
 
-export const CanvasHeader = ({ title, onTitleChange, onSave, onNewChat, isSaving, lastSavedAt }) => {
+export const CanvasHeader = ({ title, onTitleChange, onSave, onNewChat, isSaving, lastSavedAt, canvasMode, onModeChange }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [tempTitle, setTempTitle] = useState(title);
 
@@ -47,6 +47,34 @@ export const CanvasHeader = ({ title, onTitleChange, onSave, onNewChat, isSaving
             </div>
 
             <div className="flex items-center gap-3">
+                {/* Canvas Mode Toggle */}
+                {onModeChange && (
+                    <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg p-1">
+                        <button
+                            onClick={() => onModeChange('append')}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${canvasMode === 'append'
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                            title="Add new widgets to existing ones"
+                        >
+                            <Plus size={12} />
+                            Append
+                        </button>
+                        <button
+                            onClick={() => onModeChange('replace')}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${canvasMode === 'replace'
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                            title="Replace all widgets with new ones"
+                        >
+                            <Replace size={12} />
+                            Replace
+                        </button>
+                    </div>
+                )}
+
                 <button
                     onClick={onNewChat}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors border border-slate-800"

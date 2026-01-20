@@ -14,6 +14,7 @@ model VerifiedApi {
   specUrl     String?  // Optional: URL to Swagger/OpenAPI spec
   authConfig  String?  // JSON string storing auth details (e.g. { "type": "bearer", "token": "..." })
   toolConfig  String?  // JSON string storing the Tools definition (OpenAPI generated or LLM generated)
+  isEnabled   Boolean  @default(true) // Toggle to enable/disable this resource
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -23,6 +24,7 @@ model VerifiedDb {
   name              String
   connectionString  String // connection string to the external DB
   type              String // 'postgres', 'mysql', etc.
+  isEnabled         Boolean @default(true) // Toggle to enable/disable this resource
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -30,4 +32,169 @@ model VerifiedDb {
 model SystemSetting {
   key   String @id
   value String // JSON value
+}
+
+model Resource {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g. "schools_db"
+  type        String   // "API", "DB"
+  config      Json?    // BaseURL, etc.
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  authProfiles AuthProfile[]
+}
+
+model AuthProfile {
+  id          String   @id @default(uuid())
+  resourceId  String
+  resource    Resource @relation(fields: [resourceId], references: [id])
+  label       String
+  role        String
+  credentials Json     // { email: "...", password: "..." }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Canvas {
+  id             String   @id @default(uuid())
+  conversationId String
+  title          String?
+  theme          Json     // { primary, entities, colors }
+  layoutType     String   @default("dashboard")
+  messages       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  widgets        Widget[]
+  outgoingLinks  NavigationLink[] @relation("FromCanvas")
+  incomingLinks  NavigationLink[] @relation("ToCanvas")
+}
+
+model Widget {
+  id        String   @id @default(uuid())
+  canvasId  String
+  canvas    Canvas   @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  type      String   // "chart", "table", "form"
+  title     String?
+  config    Json     // content, data source
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NavigationLink {
+  id           String @id @default(uuid())
+  fromCanvasId String
+  toCanvasId   String
+  fromCanvas   Canvas @relation("FromCanvas", fields: [fromCanvasId], references: [id], onDelete: Cascade)
+  toCanvas     Canvas @relation("ToCanvas", fields: [toCanvasId], references: [id], onDelete: Cascade)
+  label        String
+  type         String @default("sidebar") // "sidebar", "button"
+  createdAt    DateTime @default(now())
+}
+
+
+// ========================================
+// CANVAS INTELLIGENCE (Phase 1 - POC)
+// ========================================
+
+model CanvasGroup {
+  id              String   @id @default(uuid())
+  conversationId  String
+  name            String?
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([conversationId])
+}
+
+// ========================================
+// STRATEGIC REASONING & TEMPLATES (Phase 2 - POC)
+// ========================================
+
+model ExecutionTemplate {
+  id                  String   @id @default(uuid())
+  name                String
+  queryPatterns       String[] // Patterns regex ou keywords
+  
+  // Strategy
+  toolSequence        String[] // ["auth", "getCompanyProfile"]
+  processingLogic     String   // "group_by_region", "aggregate", etc.
+  widgetTypes         String[] // ["stat", "table", "chart"]
+  authRequired        Boolean  @default(false)
+  
+  // Metrics
+  successRate         Float    @default(1.0)
+  avgExecutionTimeMs  Int
+  usageCount          Int      @default(0)
+  
+  // Metadata
+  metadata            Json?
+  
+  createdAt           DateTime @default(now())
+  lastUsedAt          DateTime @default(now())
+  
+  executions          ExecutionLog[]
+  
+  @@index([successRate])
+  @@index([name])
+}
+
+model ExecutionLog {
+  id              String   @id @default(uuid())
+  templateId      String?
+  template        ExecutionTemplate? @relation(fields: [templateId], references: [id])
+  
+  userMessage     String
+  toolsCalled     String[]
+  success         Boolean
+  executionTimeMs Int
+  dataQuality     Float?   // 0-1 score de completeness
+  
+  errorType       String?  // "EMPTY_RESULT", "AUTH_FAILED", etc.
+  adaptationUsed  String?  // Qual estratégia foi usada
+  
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  
+  @@index([templateId])
+  @@index([success])
+  @@index([createdAt])
+}
+
+// ========================================
+// SEMANTIC ANALYSIS (Phase 3 - POC)
+// ========================================
+
+model ResourceSemantics {
+  id            String   @id @default(uuid())
+  resourceId    String   @unique
+  domain        String   // "Healthcare", "Education"
+  subDomains    String[] // ["Courses", "Certifications"]
+  entities      Json     // [{ name: "Course", role: "primary" }]
+  workflows     Json     // [{ name: "Find Course", steps: [...] }]
+  relationships Json     // [{ from: "Company", to: "Course" }]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([domain])
+  @@index([resourceId])
+}
+
+model EntityRelation {
+  id           String   @id @default(uuid())
+  fromEntity   String
+  toEntity     String
+  relationType String   // "has_many", "belongs_to"
+  viaParam     String?  // "schoolCnpj", etc.
+  strength     Float    // 0-1 confidence
+  
+  createdAt    DateTime @default(now())
+  
+  @@index([fromEntity])
+  @@index([toEntity])
 }

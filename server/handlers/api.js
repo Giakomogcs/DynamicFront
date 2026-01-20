@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { validateAndCoerceParams, generateAIErrorMessage } from '../utils/paramValidator.js';
+import { enrichParameterSchema, enrichBodySchema } from '../utils/openapiEnricher.js';
 
 /**
  * Validates and fetches an OpenAPI spec from a URL
@@ -159,89 +161,37 @@ export async function getApiTools(api) {
                     const operationId = operation.operationId || `${method}_${pathSuffix}`;
                     const toolName = `${api.name.toLowerCase().replace(/\s+/g, '_')}_${operationId}`.toLowerCase();
 
-// ... Inside getApiTools loop ...
-                    
+                    // ... Inside getApiTools loop ...
+
                     // Flatten Parameters for Better LLM Compatibility
                     const flatProperties = {};
                     const requiredParams = [];
 
-                    // 1. Path Params
+                    // 1. Path and Query Params (Enriched with examples)
                     if (operation.parameters) {
                         operation.parameters.forEach(p => {
                             if (p.in === 'path' || p.in === 'query') {
-                                flatProperties[p.name] = {
-                                    type: p.schema?.type || "string",
-                                    description: p.description
-                                };
+                                flatProperties[p.name] = enrichParameterSchema(p, spec);
                                 if (p.required) requiredParams.push(p.name);
                             }
                         });
                     }
 
-                    // 2. Body Params?
-                    // Simplified: specific keys if defined, or just 'body' object
-                    // 2. Body Params
-                    // Support parsing application/json body schema to top-level args (Flattened)
-                    if (operation.requestBody && operation.requestBody.content && operation.requestBody.content['application/json']) {
-                        let schema = operation.requestBody.content['application/json'].schema;
-                        
-                        // Resolve Reference if present
-                        if (schema && schema.$ref) {
-                            const refPath = schema.$ref.replace('#/', '').split('/');
-                            let resolved = spec;
-                            for (const part of refPath) {
-                                resolved = resolved && resolved[part];
+                    // 2. Body Params (Enriched with examples and nested structures)
+                    if (operation.requestBody) {
+                        const enrichedBody = enrichBodySchema(operation.requestBody, spec);
+
+                        for (const [key, prop] of Object.entries(enrichedBody)) {
+                            flatProperties[key] = prop;
+                            // Check internal flag from Enricher
+                            if (prop._isRequired) {
+                                requiredParams.push(key);
+                                delete prop._isRequired; // Cleanup internal flag
                             }
-                            if (resolved) schema = resolved;
-                        }
-
-                        if (schema && schema.properties) {
-                            for (const [key, prop] of Object.entries(schema.properties)) {
-                                flatProperties[key] = {
-                                    type: prop.type || "string",
-                                    description: prop.description,
-                                    nullable: prop.nullable,
-                                    enum: prop.enum
-                                };
-
-                                // Handle Array Items
-                                if (prop.type === 'array') {
-                                    let items = prop.items;
-                                    
-                                    if (!items) {
-                                        // Fallback if spec is missing items
-                                        items = { type: "string" }; 
-                                    } else if (items.$ref) {
-                                        // Resolve Ref in Items
-                                        const refPath = items.$ref.replace('#/', '').split('/');
-                                        let resolved = spec;
-                                        for (const part of refPath) {
-                                            resolved = resolved && resolved[part];
-                                        }
-                                        if (resolved) items = resolved;
-                                    }
-                                    
-                                    // Sanitize Items: Remove boolean required, internal refs
-                                    const sanitizedItems = { type: items.type || "string" };
-                                    
-                                    // CRITICAL FIX: If items is ALSO an array (nested array), Gemini often chokes if spec is weird.
-                                    // Flatten nested arrays to 'object' to allow any structure and bypass validation errors.
-                                    if (sanitizedItems.type === 'array') {
-                                        sanitizedItems.type = 'object';
-                                        sanitizedItems.description = 'List of items (Nested structure)';
-                                        delete sanitizedItems.items; // Remove recursive requirement
-                                    } else if (items.properties) {
-                                         sanitizedItems.type = "object";
-                                    }
-                                    
-                                    if (items.enum) sanitizedItems.enum = items.enum;
-
-                                    flatProperties[key].items = sanitizedItems;
-                                }
-
-                                if (schema.required && Array.isArray(schema.required) && schema.required.includes(key)) {
-                                    requiredParams.push(key);
-                                }
+                            // Fallback for legacy
+                            else if (prop.required === true) {
+                                requiredParams.push(key);
+                                delete prop.required; // Cleanup invalid schema
                             }
                         }
                     }
@@ -254,9 +204,27 @@ export async function getApiTools(api) {
                         nullable: true
                     };
 
+                    // SEMANTIC BOOST: Append key parameters to description to help Planner find this tool
+                    const paramSummary = Object.keys(flatProperties).length > 0
+                        ? ` (Parameters: ${Object.keys(flatProperties).slice(0, 8).join(', ')}${Object.keys(flatProperties).length > 8 ? '...' : ''})`
+                        : '';
+
+                    // DOMAIN CONTEXT LINKING
+                    // Extract "Controller" from operationId to give a strong hint about the domain (e.g. "Schools" vs "Companies")
+                    // operationId is usually "CompaniesController_GetSenaiUnits" or "get_api_v1_schools" etc.
+                    let domainContext = "";
+                    if (operationId.includes('Controller')) {
+                        const match = operationId.match(/([a-zA-Z0-9]+)Controller/);
+                        if (match) domainContext = `[Domain: ${match[1].toUpperCase()}] `;
+                    } else if (toolName.includes('_')) {
+                        // Fallback: use first part of tool name as domain
+                        const parts = toolName.split('_');
+                        if (parts.length > 2) domainContext = `[Domain: ${parts[1].toUpperCase()}] `;
+                    }
+
                     tools.push({
                         name: toolName,
-                        description: operation.summary || operation.description || `Call ${method.toUpperCase()} ${path}`,
+                        description: domainContext + (operation.summary || operation.description || `Call ${method.toUpperCase()} ${path}`) + paramSummary,
                         inputSchema: {
                             type: "object",
                             properties: flatProperties,
@@ -271,7 +239,7 @@ export async function getApiTools(api) {
                             auth: globalAuth,
                             profiles: profiles,
                             // Flag to tell executor to re-pack params? No, executor needs to handle flat params.
-                            flatParams: true 
+                            flatParams: true
                         }
                     });
                 }
@@ -287,7 +255,7 @@ export async function getApiTools(api) {
 /**
  * Executes an API Tool Call
  */
-export async function executeApiTool(toolExecConfig, args) {
+export async function executeApiTool(toolExecConfig, args, toolSchema = null) {
     const { method, path, baseUrl, profiles, flatParams } = toolExecConfig;
     let auth = toolExecConfig.auth;
 
@@ -297,19 +265,35 @@ export async function executeApiTool(toolExecConfig, args) {
 
     let url = baseUrl ? baseUrl.replace(/\/$/, '') + path : path;
 
+    // UNIVERSAL PARAMETER VALIDATION & TYPE COERCION
+    let validatedArgs = args;
+    if (toolSchema && toolSchema.inputSchema) {
+        try {
+            validatedArgs = validateAndCoerceParams(args, toolSchema.inputSchema);
+            console.log(`[API Exec] ✅ Parameters validated and coerced`);
+        } catch (error) {
+            console.error(`[API Exec] ❌ Parameter validation failed:`, error.message);
+            const aiErrorMsg = generateAIErrorMessage(error, toolSchema.inputSchema);
+            return {
+                content: [{ type: "text", text: aiErrorMsg }],
+                isError: true
+            };
+        }
+    }
+
     // Handle Params (Flat or Legacy)
     let params = {};
-    const dynamicHeaders = args._headers || {};
+    const dynamicHeaders = validatedArgs._headers || {};
 
     if (flatParams) {
         // Exclude internal keys
-        for (const [k, v] of Object.entries(args)) {
-            if (k !== '_authProfile' && k !== '_headers') {
+        for (const [k, v] of Object.entries(validatedArgs)) {
+            if (k !== '_authProfile' && k !== '_headers' && k !== '_retried') {
                 params[k] = v;
             }
         }
     } else {
-        params = args.params || {};
+        params = validatedArgs.params || {};
     }
 
     let finalUrl = url;
@@ -339,31 +323,52 @@ export async function executeApiTool(toolExecConfig, args) {
                 const cleanLoginUrl = auth.loginUrl.trim();
                 const loginFullUrl = cleanLoginUrl.startsWith('http') ? cleanLoginUrl : `${baseUrl.trim().replace(/\/$/, '')}${cleanLoginUrl.startsWith('/') ? '' : '/'}${cleanLoginUrl}`;
 
+                console.log(`[API Exec] Authenticating via ${loginFullUrl}...`);
+
+                // Build login body from configured parameters
                 let loginBody = {};
                 if (auth.loginParams && Array.isArray(auth.loginParams)) {
+                    // NEW: Map configured params to auth profile credentials
                     auth.loginParams.forEach(p => {
-                        if (p.key) loginBody[p.key] = p.value || '';
+                        if (p.key) {
+                            // Try to get value from profile credentials first
+                            // If value is explicitly set in loginParams, use that
+                            // Otherwise, look for matching key in credentials
+                            if (p.value !== undefined && p.value !== null && p.value !== '') {
+                                loginBody[p.key] = p.value;
+                            } else {
+                                // Look for the key in auth credentials
+                                // Common mappings: email -> email, user -> user, username -> user, etc.
+                                const credValue = auth[p.key] || auth.credentials?.[p.key];
+                                if (credValue) {
+                                    loginBody[p.key] = credValue;
+                                } else {
+                                    console.warn(`[API Exec] Missing credential for param '${p.key}'`);
+                                    loginBody[p.key] = '';
+                                }
+                            }
+                        }
                     });
                 } else {
-                    // Legacy
+                    // Legacy: Use username/password keys
                     const userKey = auth.usernameKey || 'username';
                     const passKey = auth.passwordKey || 'password';
-                    loginBody[userKey] = auth.username;
-                    loginBody[passKey] = auth.password;
+                    loginBody[userKey] = auth.username || auth.credentials?.username;
+                    loginBody[passKey] = auth.password || auth.credentials?.password;
 
                     if (auth.extraBody) {
                         try { Object.assign(loginBody, JSON.parse(auth.extraBody)); } catch (e) { }
                     }
                 }
 
-                console.log(`[API Exec] Authenticating via ${loginFullUrl}...`);
+                console.log(`[API Exec] Login body keys: ${Object.keys(loginBody).join(', ')}`);
+
                 const loginRes = await fetch(loginFullUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(loginBody),
                     signal: AbortSignal.timeout(5000)
                 });
-
                 if (loginRes.ok) {
                     const loginData = await loginRes.json();
                     let tokenPath = auth.tokenPath || 'access_token';
@@ -468,6 +473,30 @@ export async function executeApiTool(toolExecConfig, args) {
 
         let data;
         try { data = JSON.parse(text); } catch { data = text; }
+
+        // --- SMART RETRY: HANDLE ACCENTS/DIACRITICS ---
+        // If result is EMPTY ARRAY and request had accents, retry with normalized text.
+        // E.g. User sent "São Caetano", API returned [], retry with "Sao Caetano".
+        if (Array.isArray(data) && data.length === 0 && !validatedArgs._retried) {
+            const hasDetailedParams = Object.values(params).some(val => typeof val === 'string' && /[^\u0000-\u007F]/.test(val));
+            if (hasDetailedParams) {
+                console.log(`[API Exec] ⚠️ Zero results found for query with accents. Retrying with normalization...`);
+
+                // Recursive Call with NORMALISED params
+                const normalizedArgs = JSON.parse(JSON.stringify(validatedArgs));
+                normalizedArgs._retried = true; // Prevent infinite loop
+
+                // Normalize strings in params
+                for (const key of Object.keys(normalizedArgs)) {
+                    if (typeof normalizedArgs[key] === 'string') {
+                        normalizedArgs[key] = normalizedArgs[key].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    }
+                }
+
+                console.log(`[API Exec] 🔄 Retrying with:`, JSON.stringify(normalizedArgs));
+                return executeApiTool(toolExecConfig, normalizedArgs, toolSchema);
+            }
+        }
 
         return {
             content: [{ type: "text", text: JSON.stringify(data) }]

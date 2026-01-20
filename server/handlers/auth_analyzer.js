@@ -1,4 +1,4 @@
-import { geminiManager } from '../config/gemini.js';
+import { modelManager } from '../services/ai/ModelManager.js';
 
 /**
  * Fetches content from a URL (helper copied from api_generator to avoid circular deps for now)
@@ -210,17 +210,18 @@ export async function analyzeAuthFromDocs(docsUrl, docsContent, docsAuth = null)
     }
 
     **RULES:**
-    1. **Login/Session Endpoint**: If there is a POST endpoint to exchange credentials for a token, set "type" to "basic" (returns token) or "session" (cookie). Populate "loginParams".
+    1. **Login Flow (Token Exchange)**: If there is a POST endpoint to exchange credentials for a token, set "type" to "basic". This is critical. Do NOT set it to "bearer" just because the token is used as a Bearer token later. "basic" implies "Login Flow" here.
     2. **API Key**: If the docs say "Include X-API-KEY header" or "pass api_key in query", set "type": "apiKey", and fill "paramName" (e.g. 'X-API-KEY') and "paramLocation" ('header' or 'query').
-    3. **Bearer Token (Static)**: If it just says "Use Bearer token in Authorization header" requiring a manual token (no login endpoint), set "type": "bearer".
+    3. **Static Bearer Token**: If it just says "Use Bearer token in Authorization header" requiring a manual token (no login endpoint), ONLY THEN set "type": "bearer".
     4. **Smart Config**: If there are static fields (like 'grant_type'), set "type": "hidden" and "value" in loginParams.
     5. **Token Path**: Return ONLY the dot-notation path (e.g. "data.token", "access_token").
     6. **Roles**: Look for enums, descriptions of user types, or permission scopes.
-    7. Return ONLY valid JSON.
+    7. **NO HALLUCINATIONS**: Only include loginParams that are EXPLICITLY listed in the documentation's request body schema. Do NOT assume a 'password' field exists if the docs only show 'email'. If the API uses a magic link or code sent to email, it might only have 'email'.
+    8. Return ONLY valid JSON.
     `;
 
     try {
-        const result = await geminiManager.generateContentWithFailover(prompt);
+        const result = await modelManager.generateContentWithFailover(prompt);
         const responseText = await result.response.text();
 
         // Clean and Parse JSON
@@ -233,7 +234,37 @@ export async function analyzeAuthFromDocs(docsUrl, docsContent, docsAuth = null)
         }
 
         const jsonStr = cleanJson.substring(firstBrace, lastBrace + 1);
-        const config = JSON.parse(jsonStr);
+        let config = JSON.parse(jsonStr);
+
+        // --- POST PROCESSING & VALIDATION ---
+        
+        // 1. Force 'basic' if login params are detected (Heuristic fix for AI confusing Bearer usage with Login Flow)
+        if (config.loginUrl && config.loginParams && config.loginParams.length > 0) {
+             if (config.type === 'bearer') {
+                 console.log("[AuthAnalyzer] ⚠️ Detected Login Params but type was 'bearer'. Forcing 'basic' (Login Flow).");
+                 config.type = 'basic';
+             }
+        }
+
+        // 2. Ensure Login URL is Absolute
+        if (config.loginUrl && !config.loginUrl.startsWith('http') && docsUrl) {
+            try {
+                // Ensure docsUrl is the base
+                const urlObj = new URL(docsUrl);
+                // If loginUrl starts with /, append to origin. Otherwise resolve relative.
+                if (config.loginUrl.startsWith('/')) {
+                    config.loginUrl = `${urlObj.origin}${config.loginUrl}`;
+                } else {
+                     // Try to resolve relative to docs path? Or just assume base?
+                     // Safest is Origin + / + path if path doesn't have leading slash, or just append.
+                     // Let's use URL constructor to be safe
+                     config.loginUrl = new URL(config.loginUrl, urlObj.origin).toString();
+                }
+                console.log(`[AuthAnalyzer] Resolved Login URL: ${config.loginUrl}`);
+            } catch (e) {
+                console.warn("[AuthAnalyzer] Failed to resolve absolute Login URL:", e);
+            }
+        }
 
         console.log("[AuthAnalyzer] AI Identified Config:", config);
         return config;
