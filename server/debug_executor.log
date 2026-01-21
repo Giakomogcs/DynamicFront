@@ -1,11 +1,7 @@
-[2026-01-20T19:55:18.148Z] Error: Cannot read properties of undefined (reading 'role')
-TypeError: Cannot read properties of undefined (reading 'role')
-    at GeminiProvider.generateContent (file:///C:/Github/DynamicFront/server/services/ai/providers/GeminiProvider.js:112:25)
-    at Object.fn (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:489:67)
-    at RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:533:40)
-    at file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:515:18
-    at new Promise (<anonymous>)
-    at RequestQueue.add (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:513:16)
-    at ModelManager.executeWithRetry (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:489:48)
-    at ModelManager.generateContent (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:222:39)
+[2026-01-21T18:10:02.588Z] Error: Cannot read properties of undefined (reading 'parameters')
+TypeError: Cannot read properties of undefined (reading 'parameters')
+    at ExecutorAgent.applyIntelligentFilters (file:///C:/Github/DynamicFront/server/agents/Executor.js:727:29)
+    at ExecutorAgent.execute (file:///C:/Github/DynamicFront/server/agents/Executor.js:316:51)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async AgentOrchestrator.processRequest (file:///C:/Github/DynamicFront/server/agents/Orchestrator.js:238:31)
+    at async file:///C:/Github/DynamicFront/server/api_server.js:75:24

@@ -97,7 +97,7 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
         }
     }
 
-// --- CONNECTION TEST VERIFICATION ---
+    // --- CONNECTION TEST VERIFICATION ---
     let verificationAuthData = clientAuthData || null;
     if (effectiveBaseUrl && !verificationAuthData) {
         console.log(`[Register] Verifying connection to ${effectiveBaseUrl}...`);
@@ -110,7 +110,7 @@ export async function processApiRegistration(name, specUrl, baseUrl, authConfigS
             throw new Error(`Connection Verification Failed: ${msg}`);
         }
         console.log(`[Register] Connection verified successfully.`);
-        
+
         // Capture Auth Data from the first successful result if available
         if (testResult.results && testResult.results.length > 0) {
             const firstSuccess = testResult.results.find(r => r.success && r.authData);
@@ -135,79 +135,99 @@ export async function handleRegisterTool(name, args) {
         try {
             const data = await processApiRegistration(args.name, args.specUrl, args.baseUrl, args.authConfig, args.docsContent, args.verificationAuthData);
 
-            const newApi = await prisma.verifiedApi.create({ 
-                data: {
-                    name: data.name,
-                    specUrl: data.specUrl,
-                    baseUrl: data.baseUrl,
-                    authConfig: data.authConfig, // Don't save Internal fields like 'authData' or 'toolConfig' here if validation strict? 
-                    // Prisma create expects specific fields. 
-                    // verifiedApi schema likely has name, specUrl, baseUrl, authConfig, toolConfig.
-                    toolConfig: data.toolConfig
-                }
-            });
+            // Check if API already exists by specUrl or baseUrl
+            let existingApi = null;
+            if (data.specUrl && data.specUrl !== "RAW_TEXT") {
+                existingApi = await prisma.verifiedApi.findFirst({ where: { specUrl: data.specUrl } });
+            } else if (data.baseUrl) {
+                existingApi = await prisma.verifiedApi.findFirst({ where: { baseUrl: data.baseUrl } });
+            }
+
+            let newApi;
+            if (existingApi) {
+                console.log(`[Register] Updating existing API: ${existingApi.name} (ID: ${existingApi.idString})`);
+                newApi = await prisma.verifiedApi.update({
+                    where: { idString: existingApi.idString },
+                    data: {
+                        name: data.name,
+                        baseUrl: data.baseUrl,
+                        authConfig: data.authConfig,
+                        toolConfig: data.toolConfig
+                    }
+                });
+            } else {
+                newApi = await prisma.verifiedApi.create({
+                    data: {
+                        name: data.name,
+                        specUrl: data.specUrl,
+                        baseUrl: data.baseUrl,
+                        authConfig: data.authConfig,
+                        toolConfig: data.toolConfig
+                    }
+                });
+            }
 
             // --- AUTO CREATE AUTH PROFILE ---
             if (data.authConfig) {
-                 try {
-                     const parsed = JSON.parse(data.authConfig);
-                     // Create a helper to get the actual auth object (handle nested { api: { default: ... } })
-                     const auth = parsed.api?.default || parsed;
+                try {
+                    const parsed = JSON.parse(data.authConfig);
+                    // Create a helper to get the actual auth object (handle nested { api: { default: ... } })
+                    const auth = parsed.api?.default || parsed;
 
-                     // Check if there's actual credentials to save
-                     let hasCreds = false;
-                     let label = "Initial User";
-                     let role = "user";
-                     
-                     // Try to extract from Auth Config
-                     if (auth.username || auth.email) {
-                         hasCreds = true;
-                         label = auth.username || auth.email;
-                     } else if (auth.loginParams && auth.loginParams.some(p => p.value)) {
-                         hasCreds = true;
-                         // Find email-like param
-                         const emailParam = auth.loginParams.find(p => p.key.includes('email') || p.key.includes('user'));
-                         if (emailParam) label = emailParam.value;
-                     } else if (auth.token && auth.type === 'bearer') {
-                         hasCreds = true;
-                         label = "Bearer User";
-                     }
+                    // Check if there's actual credentials to save
+                    let hasCreds = false;
+                    let label = "Initial User";
+                    let role = "user";
 
-                     // Enrich with AuthData from verification (REAL Role/Name)
-                     if (data.authData) {
-                         const ad = data.authData;
-                         console.log(`[Register] Using Auth Data for Profile:`, JSON.stringify(ad));
-                         
-                         if (ad.role || ad.type || (ad.user && ad.user.role)) {
-                             role = ad.role || ad.type || ad.user.role;
-                         }
-                         if (ad.name || ad.username || (ad.user && ad.user.name)) {
-                             label = ad.name || ad.username || ad.user.name;
-                             // Append role nicely
-                             if (role !== 'user') label += ` (${role})`;
-                         }
-                         
-                         // Sync Credentials from AuthData if available (e.g. detected CNPJ/Company)
-                         if (ad.cnpj) auth.cnpj = ad.cnpj;
-                         if (ad.companyId) auth.companyId = ad.companyId;
+                    // Try to extract from Auth Config
+                    if (auth.username || auth.email) {
+                        hasCreds = true;
+                        label = auth.username || auth.email;
+                    } else if (auth.loginParams && auth.loginParams.some(p => p.value)) {
+                        hasCreds = true;
+                        // Find email-like param
+                        const emailParam = auth.loginParams.find(p => p.key.includes('email') || p.key.includes('user'));
+                        if (emailParam) label = emailParam.value;
+                    } else if (auth.token && auth.type === 'bearer') {
+                        hasCreds = true;
+                        label = "Bearer User";
+                    }
 
-                         // If we have strong auth data (like a name/email/id), we effectively have crdentials/identity to save
-                         if (ad.id || ad.email || ad.name) hasCreds = true;
-                     }
+                    // Enrich with AuthData from verification (REAL Role/Name)
+                    if (data.authData) {
+                        const ad = data.authData;
+                        console.log(`[Register] Using Auth Data for Profile:`, JSON.stringify(ad));
 
-                     if (hasCreds) {
-                         console.log(`[Register] Auto-creating auth profile for ${newApi.name}...`);
-                         
-                         // Check for duplicates (even though it's a new API, maybe the resource name existed or re-registering?)
-                         // Usually new API = no profiles. But good practice.
-                         const existingProfiles = resourceEnricher.getProfiles(newApi.idString); 
-                         const isDuplicate = existingProfiles.some(p => p.label === label);
+                        if (ad.role || ad.type || (ad.user && ad.user.role)) {
+                            role = ad.role || ad.type || ad.user.role;
+                        }
+                        if (ad.name || ad.username || (ad.user && ad.user.name)) {
+                            label = ad.name || ad.username || ad.user.name;
+                            // Append role nicely
+                            if (role !== 'user') label += ` (${role})`;
+                        }
 
-                         if (!isDuplicate) {
+                        // Sync Credentials from AuthData if available (e.g. detected CNPJ/Company)
+                        if (ad.cnpj) auth.cnpj = ad.cnpj;
+                        if (ad.companyId) auth.companyId = ad.companyId;
+
+                        // If we have strong auth data (like a name/email/id), we effectively have crdentials/identity to save
+                        if (ad.id || ad.email || ad.name) hasCreds = true;
+                    }
+
+                    if (hasCreds) {
+                        console.log(`[Register] Auto-creating auth profile for ${newApi.name}...`);
+
+                        // Check for duplicates (even though it's a new API, maybe the resource name existed or re-registering?)
+                        // Usually new API = no profiles. But good practice.
+                        const existingProfiles = resourceEnricher.getProfiles(newApi.idString);
+                        const isDuplicate = existingProfiles.some(p => p.label === label);
+
+                        if (!isDuplicate) {
                             // SANITIZE CREDENTIALS
                             // We don't want to save the entire config (urls, tokens paths) as "credentials"
                             let cleanCredentials = {};
-                            
+
                             if (auth.type === 'basic') {
                                 if (auth.loginParams && Array.isArray(auth.loginParams)) {
                                     // Extract simple k/v pairs
@@ -238,13 +258,13 @@ export async function handleRegisterTool(name, args) {
                                 role,
                                 credentials: cleanCredentials
                             });
-                         } else {
+                        } else {
                             console.log(`[Register] Profile '${label}' already exists. Skipping auto-creation.`);
-                         }
+                        }
                     }
-                 } catch (profileErr) {
-                     console.warn("[Register] Failed to auto-create profile (non-fatal):", profileErr);
-                 }
+                } catch (profileErr) {
+                    console.warn("[Register] Failed to auto-create profile (non-fatal):", profileErr);
+                }
             }
 
             return {
@@ -260,13 +280,30 @@ export async function handleRegisterTool(name, args) {
             // Validate connection
             await validateDbConnection(args.connectionString);
 
-            const newDb = await prisma.verifiedDb.create({
-                data: {
-                    name: args.name,
-                    connectionString: args.connectionString,
-                    type: args.type
-                }
+            // Check if DB already exists
+            const existingDb = await prisma.verifiedDb.findFirst({
+                where: { connectionString: args.connectionString }
             });
+
+            let newDb;
+            if (existingDb) {
+                console.log(`[Register] Updating existing DB: ${existingDb.name} (ID: ${existingDb.idString})`);
+                newDb = await prisma.verifiedDb.update({
+                    where: { idString: existingDb.idString },
+                    data: {
+                        name: args.name,
+                        type: args.type
+                    }
+                });
+            } else {
+                newDb = await prisma.verifiedDb.create({
+                    data: {
+                        name: args.name,
+                        connectionString: args.connectionString,
+                        type: args.type
+                    }
+                });
+            }
             return {
                 content: [{ type: "text", text: `Successfully registered DB '${newDb.name}' (ID: ${newDb.idString}).` }]
             };

@@ -31,47 +31,39 @@ export class AgentOrchestrator {
         // Check if this is a navigation intent before planning tools
         if (canvasContext && canvasContext.sessionId) { // Only route if in a session
             const currentSlug = canvasContext.activeSlug || 'home'; // Ensure App.jsx sends this
-            const routing = await routerAgent.analyzeRequest(userMessage, currentSlug, canvasContext.sessionId); 
+            const routing = await routerAgent.analyzeRequest(userMessage, currentSlug, canvasContext.sessionId);
             console.log(`[Orchestrator] Router Intent: ${routing.intent}`);
 
             if (routing.intent === 'NAVIGATE' && routing.targetSlug) {
-                console.log(`[Orchestrator] 🚀 Fast-tracking Navigation to: ${routing.targetSlug}`);
-                return {
-                    text: `Navigating to ${routing.targetSlug}...`,
-                    action: 'navigate_canvas',
-                    targetSlug: routing.targetSlug,
-                    widgets: []
+                console.log(`[Orchestrator] 🚀 Navigation Intent: ${routing.targetSlug}. Proceeding with execution.`);
+                // PHASE 0.5: Simulate being on target page for Planner
+                canvasContext = {
+                    ...canvasContext,
+                    activeSlug: routing.targetSlug,
+                    forceNavigationSlug: routing.targetSlug // Store for final action
                 };
+
+                // Do NOT return early. Continue to Plan/Execute.
             }
 
             if (routing.intent === 'CREATE_PAGE') {
                 console.log(`[Orchestrator] 🆕 Router suggests creating NEW PAGE: ${routing.pageTitle}`);
-                
-                // Create the new canvas in the database
-                const { storageService } = await import('../services/storageService.js');
-                
-                const newId = crypto.randomUUID();
-                const newCanvas = await storageService.saveCanvas(
-                    newId,
-                    routing.pageTitle || "New Page",
-                    [],
-                    [],
-                    canvasContext.sessionId
-                );
-
-                if (!newCanvas) {
-                     return {
-                        text: "Failed to create the new page. Please try again.",
-                        action: 'none'
-                     };
-                }
-
-                return {
-                    text: `Creating new page "${newCanvas.title || 'New Page'}"...`,
-                    action: 'navigate_canvas',
-                    targetSlug: newCanvas.slug, // Use the real slug from DB
-                    widgets: newCanvas.widgets || []
+                // PHASE 0.5: Set intent to force new page creation AFTER execution
+                // We do NOT return early anymore. We want to PLAN and EXECUTE to get data for this new page.
+                canvasContext = {
+                    ...canvasContext,
+                    forceNewPage: true,
+                    newPageTitle: routing.pageTitle
                 };
+            }
+        }
+
+        if (canvasContext && canvasContext.sessionId) {
+            console.log(`[Orchestrator] 🌐 Fetching Session Context for ${canvasContext.sessionId}...`);
+            const sessionContext = await this._getSessionContext(canvasContext.sessionId, canvasContext.canvasId);
+            if (sessionContext) {
+                canvasContext.siblings = sessionContext;
+                console.log(`[Orchestrator] ✅ Found ${sessionContext.length} sibling pages.`);
             }
         }
 
@@ -100,7 +92,9 @@ export class AgentOrchestrator {
 
         // 2. PLAN (with canvas analysis context)
         console.log("[Orchestrator] Step 2: Planning tool usage...");
-        const plan = await plannerAgent.plan(userMessage, allMcpTools, location, modelName, history, canvasAnalysis);
+        // 2. PLAN (with canvas analysis context)
+        console.log("[Orchestrator] Step 2: Planning tool usage...");
+        const plan = await plannerAgent.plan(userMessage, allMcpTools, location, modelName, history, canvasAnalysis, canvasContext);
 
         // PERSISTENCE: If Planner switched models (failover), update global modelName
         if (plan.usedModel) {
@@ -285,34 +279,36 @@ export class AgentOrchestrator {
         console.log("[Orchestrator] Step 3.5: Analyzing canvas decision (merge vs create)...");
 
         let canvasDecision = null;
-        
+
         // CHECK ROUTING INTENT (New Phase 3 Logic)
-        // If Router explicitly said UPDATE_CURRENT, or we have a context, we should try to MERGE.
-        if (canvasContext && canvasContext.sessionId) {
-             const currentSlug = canvasContext.activeSlug || 'home';
-             // Re-check intent if we have it locally (we don't persist 'routing' variable from Phase 0 except logs)
-             // Ideally we should pass 'routing' down. But for now, let's look at the action.
-             // If user said "nessa pagina" (this page), Router likely classified as UPDATE_CURRENT or EXECUTE on current slug.
-             
-             // Simplification: If we are in Intelligent Mode and have an active canvas, 
-             // and the user didn't ask for a new page (CREATE_PAGE was handled up top),
-             // then we FORCE MERGE to the current canvas ID.
-             
-             console.log(`[Orchestrator] 🧠 Smart Context: Preserving current canvas ${canvasContext.canvasId}`);
-             canvasDecision = {
-                 action: 'merge',
-                 targetCanvasId: canvasContext.canvasId,
-                 reason: 'router_update_current_intent'
-             };
+        if (canvasContext && canvasContext.forceNewPage) {
+            console.log(`[Orchestrator] 🆕 Forced New Page: ${canvasContext.newPageTitle}`);
+            canvasDecision = {
+                action: 'create',
+                title: canvasContext.newPageTitle,
+                reason: 'router_create_page_intent'
+            };
+        } else if (canvasContext && canvasContext.sessionId) {
+            const currentSlug = canvasContext.activeSlug || 'home';
+            // Simplification: If we are in Intelligent Mode and have an active canvas, 
+            // and the user didn't ask for a new page (CREATE_PAGE was handled up top),
+            // then we FORCE MERGE to the current canvas ID.
+
+            console.log(`[Orchestrator] 🧠 Smart Context: Preserving current canvas ${canvasContext.canvasId}`);
+            canvasDecision = {
+                action: 'merge',
+                targetCanvasId: canvasContext.canvasId,
+                reason: 'router_update_current_intent'
+            };
         } else {
             // Fallback to legacy Theme-Based Decision
             try {
                 canvasDecision = await canvasGroupManager.decideCanvasAction(
                     userMessage,
-                    { primary: 'General' }, 
+                    { primary: 'General' },
                     canvasContext ? [canvasContext] : []
                 );
-    
+
                 console.log(`[Orchestrator] Canvas Decision: ${canvasDecision?.action?.toUpperCase()}`);
             } catch (error) {
                 console.warn(`[Orchestrator] Canvas decision failed: ${error.message}, defaulting to create`);
@@ -338,6 +334,78 @@ export class AgentOrchestrator {
             );
             console.log("=== [Orchestrator] Process Complete ===\n");
 
+            // 5. SERVER-SIDE PERSISTENCE (Robustness)
+            console.log("[Orchestrator] Step 5: Persisting results to database...");
+
+            let targetCanvasId = canvasContext?.canvasId;
+            let targetTitle = null;
+            let isNewPage = false;
+            let targetSlug = null;
+
+            // Determine Target Canvas
+            if (canvasContext && canvasContext.forceNewPage) {
+                isNewPage = true;
+                targetTitle = canvasDecision.title || "New Page";
+                // Generate new ID for the new page
+                targetCanvasId = crypto.randomUUID();
+            } else if (canvasContext && canvasContext.forceNavigationSlug) {
+                // We need to resolve slug to ID to save reliably, or let saveCanvas handle it if we pass null ID? 
+                // Actually saveCanvas needs ID to upsert.
+                // We need to Find the canvas by slug first if we don't have ID.
+                // But typically forceNavigationSlug comes with a known target if from Router? 
+                // Router only gives slug.
+                const { storageService } = await import('../services/storageService.js');
+                const sessionStruct = await storageService.getSessionStructure(canvasContext.sessionId);
+                const existing = sessionStruct?.canvases?.find(c => c.slug === canvasContext.forceNavigationSlug);
+                if (existing) {
+                    targetCanvasId = existing.id;
+                    targetTitle = existing.title;
+                    targetSlug = existing.slug;
+                } else {
+                    console.warn(`[Orchestrator] Target slug ${canvasContext.forceNavigationSlug} not found. Cannot persist to it.`);
+                    // Fallback to current? Or Create?
+                }
+            }
+
+            // Perform Persistence
+            const savedCanvas = await this._persistExecutionResult(
+                targetCanvasId,
+                canvasContext?.sessionId,
+                targetTitle,
+                finalResult.widgets,
+                userMessage,
+                finalResult.text,
+                history // Pass full history if we want to append? Or just new message?
+            );
+
+            // Construct Final Response
+            if (isNewPage && savedCanvas) {
+                return {
+                    text: finalResult.text,
+                    action: 'navigate_canvas',
+                    targetSlug: savedCanvas.slug,
+                    widgets: [], // Client expects to load them from nav
+                    metadata: {
+                        action: 'navigate_canvas',
+                        targetSlug: savedCanvas.slug,
+                        isNewPage: true
+                    }
+                };
+            }
+
+            if (canvasContext && canvasContext.forceNavigationSlug && savedCanvas) {
+                return {
+                    ...finalResult,
+                    action: 'navigate_canvas',
+                    targetSlug: savedCanvas.slug,
+                    metadata: {
+                        ...finalResult.metadata,
+                        action: 'navigate_canvas',
+                        targetSlug: savedCanvas.slug
+                    }
+                };
+            }
+
             return finalResult;
         } catch (designError) {
             console.error("[Orchestrator] Designer failed:", designError.message);
@@ -350,6 +418,7 @@ export class AgentOrchestrator {
             };
         }
     }
+
 
     _sanitizeResponse(text) {
         if (!text) return "Desculpe, não consegui processar sua solicitação.";
@@ -412,6 +481,79 @@ export class AgentOrchestrator {
             summary.push(`- Databases: ${resources.dbs.map(d => `${d.name} (${d.type})`).join(', ')} `);
         }
         return summary.join('\\n');
+    }
+    async _persistExecutionResult(canvasId, sessionId, title, widgets, userMessage, aiResponseText, history) {
+        if (!canvasId) {
+            console.warn("[Orchestrator] Persist skipped: No canvasId provided.");
+            return null;
+        }
+
+        try {
+            console.log(`[Orchestrator] 💾 Persisting to Canvas ${canvasId}...`);
+            const { storageService } = await import('../services/storageService.js');
+
+            // Get existing canvas to append chat?
+            // Actually storageService.saveCanvas handles full widget replacement. 
+            // For messages, we usually want to append.
+            const existing = await storageService.getCanvas(canvasId);
+
+            let messages = existing ? (existing.messages || []) : [];
+
+            // Append User + AI Turn
+            // If historical messages are passed, maybe filtering? 
+            // Orchestrator usually receives "history" but that's what was sent TO the model.
+            // We want to save the NEW interaction.
+
+            if (userMessage) messages.push({ role: 'user', text: userMessage });
+            if (aiResponseText) messages.push({ role: 'model', text: aiResponseText });
+
+            // Ensure widgets are not empty if we just designed them?
+            // If widgets is [], it might mean "no change" or "empty". 
+            // Designer might return gathered Data without widgets?
+            // No, designerAgent.design always returns widgets array (maybe empty).
+            // If empty, should we KEEP existing?
+            // Usually Designer returns the FULL set of widgets for the canvas (merged).
+            // So we can overwrite safely.
+
+            const saved = await storageService.saveCanvas(
+                canvasId,
+                title || existing?.title, // Keep title if not providing new one
+                widgets,
+                messages,
+                sessionId
+            );
+
+            console.log(`[Orchestrator] ✅ Persistence complete. Slug: ${saved?.slug}`);
+            return saved;
+
+        } catch (e) {
+            console.error("[Orchestrator] ❌ Persistence Failed:", e);
+            // Don't block response, just log.
+            return null;
+        }
+    }
+
+    async _getSessionContext(sessionId, currentCanvasId) {
+        try {
+            const { storageService } = await import('../services/storageService.js');
+            const structure = await storageService.getSessionStructure(sessionId);
+            if (!structure || !structure.canvases) return [];
+
+            // Filter out current canvas if needed, or keep it to show "current status"
+            // Let's keep it but mark it? No, usually siblings implies "other" pages.
+            // But contextually, knowing what the current page is called is also good.
+            // Let's return all.
+            return structure.canvases.map(c => ({
+                id: c.id,
+                title: c.title,
+                slug: c.slug,
+                isCurrent: c.id === currentCanvasId,
+                widgetCount: c._count?.widgets || 0 // access prisma _count if available, or just ignore
+            }));
+        } catch (e) {
+            console.warn("[Orchestrator] Failed to load session context:", e.message);
+            return [];
+        }
     }
 }
 

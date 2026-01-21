@@ -78,6 +78,22 @@ model Session {
   lastActiveAt     DateTime @default(now()) // Sorting for Showroom
 
   canvases         Canvas[]
+  chats            Chat[] // Add relation
+}
+
+model Chat {
+  id             String   @id @default(uuid())
+  sessionId      String
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  title          String?  @default("New Chat")
+  messages       Json     // Store array of messages here
+  
+  // Context: Which page was active last?
+  lastActiveCanvasId String? 
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Canvas {

@@ -201,21 +201,40 @@ export class ResourceEnricher {
             });
         }
 
-        // 2. Create Profile
-        const newProfile = await prisma.authProfile.create({
-            data: {
+        // 2. Check if Profile already exists
+        const existingProfile = await prisma.authProfile.findFirst({
+            where: {
                 resourceId: resource.id,
                 label: profile.label || 'New Profile',
-                role: profile.role || 'user',
-                credentials: profile.credentials || {}
+                role: profile.role || 'user'
             }
         });
+
+        let savedProfile;
+        if (existingProfile) {
+            log.info('Updating existing profile', { component: 'ResourceEnricher', profileId: existingProfile.id });
+            savedProfile = await prisma.authProfile.update({
+                where: { id: existingProfile.id },
+                data: {
+                    credentials: profile.credentials || {}
+                }
+            });
+        } else {
+            savedProfile = await prisma.authProfile.create({
+                data: {
+                    resourceId: resource.id,
+                    label: profile.label || 'New Profile',
+                    role: profile.role || 'user',
+                    credentials: profile.credentials || {}
+                }
+            });
+        }
 
         // 3. Update Cache
         await this.loadProfiles();
         this._updateRuntimeResource(resourceId);
 
-        return newProfile;
+        return savedProfile;
     }
 
     async updateProfile(resourceId, profileId, updates) {

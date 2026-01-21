@@ -73,13 +73,12 @@ export const storageService = {
                 create: {
                     id,
                     title,
-                    slug: title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : id, // Auto-generate slug
-                    sessionId: groupId, // Must be a valid Session ID now
+                    slug: await this._generateUniqueSlug(title, id, groupId),
                     sessionId: groupId, // Must be a valid Session ID now
                     theme: {},
                     layoutType: 'dashboard'
                 },
-                update: updateData
+                update: updateData // Note: Update usually preserves slug unless we add logic to change it
             });
 
             // 2. Handle Widgets (Full Replacement if provided)
@@ -102,13 +101,21 @@ export const storageService = {
                 }
             }
 
+            // UPDATE PARENT SESSION TIMESTAMP
+            if (groupId) {
+                await tx.session.updateMany({
+                    where: { id: groupId },
+                    data: { lastActiveAt: new Date() } // Use lastActiveAt as standard "Updated" for sessions
+                });
+            }
+
             // Return full object
             // 3. Return updated canvas using strict TX client to ensure visibility
             const saved = await tx.canvas.findUnique({
                 where: { id },
                 include: { widgets: { orderBy: { position: 'asc' } }, outgoingLinks: true, incomingLinks: true }
             });
-            
+
             if (!saved) return null;
 
             return {
@@ -205,7 +212,99 @@ export const storageService = {
         } catch {
             return false;
         }
+    },
+
+    async getSessionStructure(sessionId) {
+        return prisma.session.findUnique({
+            where: { id: sessionId },
+            include: {
+                canvases: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        isHome: true,
+                        _count: { select: { widgets: true } }
+                    },
+                    orderBy: { isHome: 'desc' }
+                }
+            }
+        });
+    },
+
+    async _generateUniqueSlug(title, currentId, sessionId) {
+        if (!title) return currentId;
+
+        const baseSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        let slug = baseSlug;
+        let counter = 1;
+
+        while (true) {
+            const existing = await prisma.canvas.findFirst({
+                where: {
+                    sessionId: sessionId,
+                    slug: slug
+                }
+            });
+
+            if (!existing || existing.id === currentId) {
+                return slug;
+            }
+
+            slug = `${baseSlug}-${counter}`;
+            counter++;
+        }
+    },
+
+    // --- CHAT PERSISTENCE ---
+
+    async createChat(sessionId, title = "New Chat") {
+        return prisma.chat.create({
+            data: {
+                sessionId,
+                title,
+                messages: []
+            }
+        });
+    },
+
+    async getChat(chatId) {
+        const chat = await prisma.chat.findUnique({ where: { id: chatId } });
+        if (!chat) return null;
+        return {
+            ...chat,
+            messages: Array.isArray(chat.messages) ? chat.messages : []
+        };
+    },
+
+    async updateChat(chatId, messages, title = null) {
+        const data = {};
+        if (messages !== undefined) data.messages = messages;
+        if (title !== null) data.title = title;
+
+        return prisma.chat.update({
+            where: { id: chatId },
+            data
+        });
+    },
+
+    async getProjectChats(sessionId) {
+        const chats = await prisma.chat.findMany({
+            where: { sessionId },
+            orderBy: { updatedAt: 'desc' }
+        });
+        return chats.map(c => ({
+            ...c,
+            messages: Array.isArray(c.messages) ? c.messages : []
+        }));
+    },
+
+    async deleteChat(chatId) {
+        try {
+            await prisma.chat.delete({ where: { id: chatId } });
+            return true;
+        } catch {
+            return false;
+        }
     }
 };
-
-

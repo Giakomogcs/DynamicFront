@@ -17,7 +17,7 @@ export class PlannerAgent {
      * @param {Object} canvasAnalysis - Canvas context analysis from CanvasContextAnalyzer
      * @returns {Promise<Object>} Plan with tools, thought, and steps
      */
-    async plan(userMessage, availableTools, location, modelName, history = [], canvasAnalysis = null) {
+    async plan(userMessage, availableTools, location, modelName, history = [], canvasAnalysis = null, canvasContext = null) {
         console.log("[Planner] Analyzing request...");
 
         // Heuristic: If no tools, return empty.
@@ -61,6 +61,24 @@ EXISTING CANVAS CONTEXT:
 - Tools Used: ${canvasAnalysis.toolsUsed.join(', ') || 'None'}
 - Resources: Schools=${canvasAnalysis.resources.schools.length}, Enterprises=${canvasAnalysis.resources.enterprises.length}
 `;
+        }
+
+        // NEW: Session Context (Sibling Pages)
+        if (canvasContext && canvasContext.siblings && canvasContext.siblings.length > 0) {
+            const siblingsList = canvasContext.siblings
+                .filter(s => !s.isCurrent) // Show other pages
+                .map(s => `- "${s.title}" (slug: ${s.slug})`)
+                .join('\n');
+
+            if (siblingsList) {
+                canvasInfo += `
+SESSION CONTEXT (OTHER PAGES):
+${siblingsList}
+(You can reference these pages or suggest creating similar ones. You can also Navigate to them).
+`;
+            } else {
+                canvasInfo += `\nSESSION CONTEXT: No other pages yet.\n`;
+            }
         }
 
         // Auth Awareness - (Logic delegated to resourceEnricher)

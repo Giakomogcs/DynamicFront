@@ -4,6 +4,9 @@ import { modelManager } from '../services/ai/ModelManager.js';
 import { canvasMerger } from '../src/canvas/CanvasMerger.js';
 import { layoutOptimizer } from '../src/layout/LayoutOptimizer.js';
 
+// Phase 5: Intelligence & Templates
+import { WidgetTemplates } from '../src/templates/WidgetTemplates.js';
+
 
 export class DesignerAgent {
    constructor() { }
@@ -22,8 +25,9 @@ export class DesignerAgent {
       console.log("[Designer] Generating Widgets...");
       console.log("[Designer] Canvas Context:", canvasContext ? `Mode: ${canvasContext.mode}, Existing Widgets: ${canvasContext.widgets?.length || 0}` : 'None');
 
-      // If no data check
-      if ((!data || data.length === 0) && (!steps || steps.length === 0)) {
+      // If no data check, but allow if we have a Decision (e.g. Create Page)
+      const isCreateMode = canvasDecision && (canvasDecision.action === 'create' || canvasDecision.action === 'merge');
+      if (!isCreateMode && (!data || data.length === 0) && (!steps || steps.length === 0)) {
          return { text: summaryText, widgets: [] };
       }
 
@@ -79,10 +83,11 @@ You are in INTELLIGENT mode. The user may want to ADD to, UPDATE, or REPLACE the
          }
       }
 
+      // ... (Prompt Start)
       const designerPrompt = `
 You are the UI DESIGNER Agent.
 Your input: A summary text, a set of raw data blocks, and the EXECUTION PLAN used to get this data.
-Your goal: Generate a JSON array of "Widgets" to visualize this data and the process.
+Your goal: Generate a JSON array of "Widgets" to visualize this data.
 
 Input Text: "${summaryText}"
 Input Data: ${safeData}
@@ -94,24 +99,21 @@ Every screen must look like a built-for-purpose mini-application.
 
 WIDGET TYPES (Visual Hierarchy):
 
-1. **process**: { "type": "process", "title": "Execution Pipeline", "steps": [...] }
-   - ALWAYS start with this if explaining a process.
-
-2. **stat**: { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%", "icon": "trending_up" }] }
+1. **stat**: { "type": "stat", "data": [{ "label": "X", "value": "Y", "change": "+10%", "icon": "trending_up" }] }
    - EXTRACT KPIS from lists.
-   - MAKE UP meaningful stats from the raw data.
+   - Use REAL calculated stats from the raw data.
 
-3. **table**: { "type": "table", "title": "Main Data View", "data": [...], "actions": [] }
+2. **table**: { "type": "table", "title": "Main Data View", "data": [...], "actions": [] }
    - THE CORE WIDGET.
    - Put ALL list data here.
    - **MANDATORY**: Add "actions" to table configuration for drill-down.
    - Action Example: { "label": "View Courses", "type": "tool_call", "tool": "dn_coursescontroller_searchorderrecommendedcourses", "args_map": { "schoolsCnpj": "cnpj" }, "style": "primary" } (Smart mapping)
 
-4. **chart**: { "type": "chart", "config": { ... }, "data": [{ "name": "Label", "value": 123 }] }
+3. **chart**: { "type": "chart", "config": { ... }, "data": [{ "name": "Label", "value": 123 }] }
    - AGGREGATE data. Count items by city, by type, by status.
    - Show distributions (Pie) or comparisons (Bar).
 
-5. **insight**: { "type": "insight", "title": "Executive Summary", "content": [], "sentiment": "neutral", "actions": [] }
+4. **insight**: { "type": "insight", "title": "Executive Summary", "content": [], "sentiment": "neutral", "actions": [] }
    - Summarize the finding like an analyst.
 
 **ACTIONS & NAVIGATION (Interactivity):**
@@ -119,10 +121,10 @@ WIDGET TYPES (Visual Hierarchy):
 - Use \`tool_call\` for immediate actions (e.g. "Enroll", "Details").
 
 **CRITICAL RULES:**
-1. **NO SIMPLE LISTS**: Never just dump text. Use Tables.
-2. **KPIs ARE KING**: Always find at least 2 numbers to show in a 'stat' widget.
-3. **INTERACTIVITY**: Every table should ideally have an action.
-4. **DATA COMPLETENESS**: Show all data, but organize it visually.
+1. **STRICT DATA FIDELITY**: DO NOT HALLUCINATE OR FABRICATE DATA. If 'Input Data' is empty, do NOT generate a table with fake/example rows. Instead, generate a 'stat' or 'insight' stating no data was found.
+2. **NO SIMPLE LISTS**: Never just dump text. Use Tables.
+3. **KPIs ARE KING**: Always find at least 2 numbers to show in a 'stat' widget.
+4. **INTERACTIVITY**: Every table should ideally have an action to drill-down (e.g. "Ver Cursos").
 5. **INTELLIGENT UPDATES**: If the user asked to "update" or "change" something, generate the new version of that widget.
 6. **DATA SOURCE**: If you know which tool produced the data for a widget, add a "dataSource" field: { "tool": "tool_name", "args": {...} }.
 `;
@@ -191,12 +193,44 @@ WIDGET TYPES (Visual Hierarchy):
          return { text: summaryText, widgets };
 
       } catch (e) {
-         console.error("[Designer] Failed:", e);
+         console.error("[Designer] AI Designer failed:", e);
 
-         // Better fallback: Return text with empty widgets
+         // INTELLIGENT FALLBACK: Use templates based on data
+         console.log('[Designer] Using intelligent template fallback...');
+
+         let fallbackWidgets = [];
+
+         if (data && data.length > 0) {
+            // Auto-detect best template
+            const templateName = WidgetTemplates.detectTemplate(data, summaryText);
+            console.log(`[Designer] Detected template: ${templateName}`);
+
+            fallbackWidgets = WidgetTemplates.generateFromTemplate(
+               templateName,
+               data,
+               { title: summaryText || 'Dados' }
+            );
+
+            console.log(`[Designer] Generated ${fallbackWidgets.length} widgets from template`);
+         } else {
+            // No data - create welcome widget
+            fallbackWidgets = [{
+               type: 'insight',
+               title: 'Pronto para começar',
+               content: [
+                  '## Sistema Pronto',
+                  '',
+                  summaryText || 'Use o chat para buscar dados e criar visualizações.',
+                  '',
+                  '💡 Dica: Experimente pedir "mostre escolas", "liste cursos" ou "crie dashboard"'
+               ],
+               sentiment: 'neutral'
+            }];
+         }
+
          return {
             text: this._createFallbackText(summaryText, data),
-            widgets: []
+            widgets: fallbackWidgets
          };
       }
    }

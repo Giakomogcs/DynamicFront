@@ -62,19 +62,105 @@ app.get('/api/models', async (req, res) => {
     }
 });
 
+// --- CHAT MANAGEMENT ENDPOINTS ---
+
+app.post('/api/chats', async (req, res) => {
+    try {
+        const { sessionId, title } = req.body;
+        if (!sessionId) return res.status(400).json({ error: "Session ID required" });
+        const chat = await storageService.createChat(sessionId, title);
+        res.json(chat);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/sessions/:id/chats', async (req, res) => {
+    try {
+        const chats = await storageService.getProjectChats(req.params.id);
+        res.json(chats);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/chats/:id', async (req, res) => {
+    try {
+        const chat = await storageService.getChat(req.params.id);
+        if (!chat) return res.status(404).json({ error: "Chat not found" });
+        res.json(chat);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/chats/:id', async (req, res) => {
+    try {
+        const { title, messages } = req.body;
+        const chat = await storageService.updateChat(req.params.id, messages, title);
+        res.json(chat);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/chats/:id', async (req, res) => {
+    try {
+        const success = await storageService.deleteChat(req.params.id);
+        res.json({ success });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // 1. Chat Endpoint
 app.post('/api/chat', async (req, res) => {
     try {
-        const { message, history, location, model, canvasContext } = req.body;
-        console.log(`[API Server] Received chat request: "${message?.substring(0, 50)}..."`);
-        if (canvasContext) {
-            console.log(`[API Server] Canvas Context: mode=${canvasContext.mode}, widgets=${canvasContext.widgets?.length || 0}`);
+        const { message, history, location, model, canvasContext, sessionId, chatId } = req.body;
+        console.log(`[API Server] Received chat request: "${message?.substring(0, 50)}..." (ChatID: ${chatId})`);
+
+        let targetChatId = chatId;
+
+        // Auto-create chat if missing but session exists (fallback for old UI or direct calls)
+        if (!targetChatId && sessionId) {
+            console.log('[API] No Chat ID provided, creating new chat for session...');
+            const newChat = await storageService.createChat(sessionId, "New Chat");
+            targetChatId = newChat.id;
         }
 
         // Delegate entire process to the Multi-Agent Orchestrator
         const result = await orchestrator.processRequest(message, history, model, location, canvasContext);
 
-        res.json(result);
+        // PERSISTENCE: Save updated history to the Chat
+        if (targetChatId) {
+            // Construct new history: Old History + User Message + Model Response
+            // Note: 'history' in body was the client's view. 
+            // Better to append to what's in DB or trust the client history + new?
+            // Trusting client history + new response is standard for stateless-ish APIs, 
+            // but for robust persistence, we should overwrite with the full chain or append safely.
+            // Let's stick to: History passed in + User Msg (already in history?) + Model Msg.
+            // Actually, frontend usually Optimistically adds User Msg. 
+            // The `result.text` is the model response.
+
+            // Standardize: The `history` param received usually INCLUDES the connection of previous messages.
+            // Does it include the *current* user message? Frontends differ.
+            // Looking at App.jsx: `setMessages(prev => [...prev, { role: 'user', text }])` THEN calls API with `history: messages`.
+            // So `history` includes the new user message.
+
+            const newMessages = [
+                ...history,
+                { role: 'model', text: result.text, error: result.error } // Store error in msg if needed?
+            ];
+
+            // Background save (fire and forget for speed, or await for consistency)
+            await storageService.updateChat(targetChatId, newMessages);
+
+            // Update title if it's the first few messages and title is default?
+            // (Optional enhancement for later)
+        }
+
+        // Return result with ChatID so client knows (if it was auto-created)
+        res.json({ ...result, chatId: targetChatId });
 
     } catch (error) {
         console.error("Chat Error:", error);
@@ -98,8 +184,6 @@ app.post('/api/tools/execute', async (req, res) => {
     const { name, args } = req.body;
     try {
         if (name.startsWith('register_')) {
-            // Force refresh of tools to ensure registry is loaded if this is fresh
-            await toolService.getAllTools();
             const result = await toolService.executeTool(name, args);
             if (result.isError) return res.status(400).json({ error: result.content[0].text });
             return res.json(result);
@@ -437,11 +521,58 @@ app.get('/api/canvases/:id', async (req, res) => {
 app.post('/api/canvases', async (req, res) => {
     try {
         const { id, title, widgets, messages, groupId } = req.body;
+
         // Generate random ID if not provided
         const canvasId = id || Math.random().toString(36).substr(2, 9);
-        const canvas = await storageService.saveCanvas(canvasId, title, widgets, messages, groupId);
+
+        // CRITICAL FIX: Generate initial widgets if none provided
+        let initialWidgets = widgets || [];
+
+        if (!initialWidgets || initialWidgets.length === 0) {
+            console.log('[API] Creating new page without widgets. Generating welcome widget...');
+
+            // Import Designer dynamically
+            const { designerAgent } = await import('./agents/Designer.js');
+
+            try {
+                // Call Designer to generate initial widgets
+                const designResult = await designerAgent.design(
+                    `Nova página: ${title || 'New Page'}`,
+                    [], // No data yet
+                    'gemini-2.0-flash', // Default model
+                    [{ action: 'create_page', context: title }],
+                    null, // No canvas context
+                    { action: 'create', reason: 'api_endpoint_create_page' }
+                );
+
+                initialWidgets = designResult.widgets || [];
+                console.log(`[API] ✨ Designer generated ${initialWidgets.length} widgets for new page`);
+            } catch (designError) {
+                console.warn('[API] Designer failed, using fallback welcome widget:', designError.message);
+
+                // Fallback: Create welcome widget
+                initialWidgets = [{
+                    type: 'insight',
+                    title: title || 'Nova Página',
+                    content: [
+                        `## Bem-vindo à ${title || 'nova página'}!`,
+                        '',
+                        'Esta página foi criada. Use o chat no canto inferior para adicionar widgets e visualizações.',
+                        '',
+                        '💡 **Dicas**:',
+                        '- Peça "adicione um gráfico"',
+                        '- Peça "mostre uma tabela com dados"',
+                        '- Peça "crie um dashboard"'
+                    ],
+                    sentiment: 'neutral'
+                }];
+            }
+        }
+
+        const canvas = await storageService.saveCanvas(canvasId, title, initialWidgets, messages, groupId);
         res.json(canvas);
     } catch (e) {
+        console.error('[API] Error creating canvas:', e);
         res.status(500).json({ error: e.message });
     }
 });

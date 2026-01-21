@@ -8,6 +8,7 @@ import { toolService } from '../services/toolService.js';
 import { resourceEnricher } from '../src/core/ResourceEnricher.js';
 import { NoProfilesAvailableError } from '../src/errors/AuthErrors.js';
 import { getOriginalToolName } from '../ToolAdapter.js';
+import { cacheService } from '../services/CacheService.js';
 
 export class ExecutorAgent {
     constructor() {
@@ -363,7 +364,22 @@ CRITICAL MULTI-AUTH RULES:
 
                         let toolResult;
                         try {
-                            toolResult = await toolService.executeTool(call.name, filteredArgs);
+                            // CHECK CACHE FIRST
+                            const cached = cacheService.get(call.name, filteredArgs);
+
+                            if (cached) {
+                                console.log(`[Executor] ⚡ Using cached result for ${call.name}`);
+                                toolResult = cached;
+                            } else {
+                                // Execute tool
+                                toolResult = await toolService.executeTool(call.name, filteredArgs);
+
+                                // Cache successful results
+                                if (!toolResult.isError) {
+                                    const ttl = cacheService.getRecommendedTTL(call.name);
+                                    cacheService.set(call.name, filteredArgs, toolResult, ttl);
+                                }
+                            }
 
                             // 🔥 EXTRACT CONTEXT from AUTH responses & UPDATE PROFILE
                             if (!toolResult.isError && toolResult.content && (call.name.includes('auth') || call.name.includes('login') || call.name.includes('session'))) {
@@ -459,43 +475,36 @@ CRITICAL MULTI-AUTH RULES:
                                     if (resultStr.includes('"length":0') || resultStr.includes('[]')) isEmpty = true;
                                 }
 
-                                if (isEmpty && !filteredArgs._isFallback) { // Prevent infinite loop
-                                    console.log(`[Executor] 🔄 Auto-Retry: No schools found at current location. Retrying with HUB Location (São Paulo) to ensure data...`);
+                                if (isEmpty && !filteredArgs._isFallback) {
+                                    // Use 'distance' to detect if we were doing a GEO search
+                                    const wasGeoSearch = (filteredArgs.lat || filteredArgs.latitude) && (filteredArgs.lon || filteredArgs.longitude);
 
-                                    // Create fallback args: Clear lat/lon/user location, force SP
-                                    const retryArgs = {
-                                        ...filteredArgs,
-                                        city: "São Paulo",
-                                        state: "SP",
-                                        _isFallback: true
-                                    };
-                                    delete retryArgs.lat;
-                                    delete retryArgs.lon;
-                                    delete retryArgs.latitude;
-                                    delete retryArgs.longitude;
-                                    delete retryArgs.userLat;
-                                    delete retryArgs.userLng;
+                                    if (wasGeoSearch) {
+                                        console.log(`[Executor] 🔄 Auto-Retry: No schools found at current location/radius. Retrying with WIDER RADIUS (100km)...`);
+                                        const retryArgs = {
+                                            ...filteredArgs,
+                                            distance: 100, // Expand radius
+                                            _isFallback: true
+                                        };
 
-                                    try {
-                                        // Execute Retry
-                                        toolResult = await toolService.executeTool(call.name, retryArgs);
-                                        console.log(`[Executor] ✅ Auto-Retry (Hub) SUCCESS. Found schools in São Paulo.`);
+                                        try {
+                                            toolResult = await toolService.executeTool(call.name, retryArgs);
+                                            console.log(`[Executor] ✅ Auto-Retry (Wider Radius) SUCCESS.`);
 
-                                        // Update the args in the "call" object so downstream tools (context accumulators) use the NEW location data if needed? 
-                                        // Actually better to just accept this result.
-
-                                        // Update history to show we found something
-                                        messages.push({
-                                            role: 'tool',
-                                            name: call.name,
-                                            content: this.compressResult(toolResult, 5)
-                                        });
-                                        gatheredData.push({ tool: call.name, result: this.compressResult(toolResult, 15) });
-                                        continue; // Skip standard processing
-                                    } catch (retryErr) {
-                                        console.warn(`[Executor] Hub fallback failed: ${retryErr.message}`);
+                                            messages.push({
+                                                role: 'tool',
+                                                name: call.name,
+                                                content: this.compressResult(toolResult, 5)
+                                            });
+                                            gatheredData.push({ tool: call.name, result: this.compressResult(toolResult, 15) });
+                                            continue;
+                                        } catch (retryErr) {
+                                            console.warn(`[Executor] Wider radius retry failed: ${retryErr.message}`);
+                                        }
                                     }
                                 }
+
+
                             }
 
                             // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
@@ -931,6 +940,12 @@ CRITICAL MULTI-AUTH RULES:
             if (paramKeys.includes('latitude')) filtered.latitude = lat;
             if (paramKeys.includes('userLat')) filtered.userLat = lat;
             if (paramKeys.includes('companyLat')) filtered.companyLat = lat;
+
+            // Auto-set distance if not present (default 50km for geo searches)
+            if (paramKeys.includes('distance') && !filtered.distance) {
+                filtered.distance = 50;
+                console.log(`[Executor] 📏 Sagaz Mode: Auto-setting distance to 50km`);
+            }
         }
 
         if ((paramKeys.includes('lon') || paramKeys.includes('longitude') || paramKeys.includes('userLng') || paramKeys.includes('companyLng')) &&

@@ -35,12 +35,12 @@ export const CanvasHeader = ({ title, projectTitle, onTitleChange, onSave, onNew
                 ) : (
                     <div className="flex flex-col">
                         <span className="text-xs text-slate-500 font-medium mb-0.5 flex items-center gap-1">
-                             {projectTitle} <span className="text-slate-700">/</span>
+                            {projectTitle} <span className="text-slate-700">/</span>
                         </span>
                         <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditing(true)}>
                             {/* Back Button */}
                             {canGoBack && (
-                                <button 
+                                <button
                                     onClick={(e) => { e.stopPropagation(); onBack(); }}
                                     className="p-1 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors mr-1"
                                     title="Go Back"
@@ -67,21 +67,6 @@ export const CanvasHeader = ({ title, projectTitle, onTitleChange, onSave, onNew
                    Dynamic UI: The system will determine whether to append, replace, or update 
                    based on the user request and context.
                 */}
-
-                <button
-                    onClick={onNewChat}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors border border-slate-800"
-                >
-                    <PlusCircle size={16} />
-                    New Chat
-                </button>
-
-                <button
-                    onClick={onToggleChat}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border ${chatCollapsed ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' : 'text-slate-300 bg-slate-900 border-slate-800 hover:bg-slate-800'}`}
-                >
-                    {chatCollapsed ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
-                </button>
 
                 <button
                     onClick={onSave}
