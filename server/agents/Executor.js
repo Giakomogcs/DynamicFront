@@ -129,11 +129,13 @@ CRITICAL MULTI-AUTH RULES:
             
             Instructions:
             1. **MANDATORY**: You MUST follow the EXECUTION PLAN above.
-            2. **DO NOT** just answer comfortably. You must CALL THE TOOLS to get the real data.
-            3. If the plan says to "Call Tool X", you MUST return a Function Call for Tool X.
-            4. If the user asks what you can do (e.g. "what can we do?", "help") AND no tools are selected/relevant, explain your capabilities.
-            5. Otherwise, your primary job is to **EXECUTE TOOLS**.
+            2. **UI PRIORITY**: If 'manage_pages' is available, CALL IT FIRST to establish the visual context. Do not wait for data to build the page.
+            3. **DO NOT** just answer comfortably. You must CALL THE TOOLS to get the real data.
+            4. If the plan says to "Call Tool X", you MUST return a Function Call for Tool X.
+            5. If you lack credentials for a data tool, explain this in the text response, BUT DO NOT BLOCK the 'manage_pages' call.
             6. Return a Function Call object to invoke a tool.
+            7. **STRICTLY FORBIDDEN**: Do NOT output code blocks, python scripts, TODO lists, or "placeholder" implementations. You are an Agent, not a Code Editor. If you cannot do it with tools, say you cannot.
+            8. If you cannot execute a tool, return a text explanation but still TRY to execute 'manage_pages' if relevant.
         `;
 
         let gatheredData = [];

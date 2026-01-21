@@ -1,58 +1,67 @@
+// Import db client (assuming it's exported from storageService or a db module)
+// Actually storageService assumes persistence file? 
+// No, the user migrated to Prisma in Phase 1. 
+// We should use prisma client here or storageService.
+// Let's use prisma directly if valid imports, or check storageService implementation.
+// Looking at storageService below... it uses prisma!
+
 import { modelManager } from '../services/ai/ModelManager.js';
-import { storageService } from '../services/storageService.js';
+import prisma from '../registry.js';
 
 export class RouterAgent {
     constructor() { }
 
-    /**
-     * analyzeRequest
-     * Decides if the user wants to:
-     * 1. NAVIGATE (Switch to another page/canvas)
-     * 2. EXECUTE (Run tools on current page)
-     * 3. CHAT (Ask for help/explanation)
-     * 
-     * @param {string} userMessage 
-     * @param {string} currentSlug 
-     * @param {string} sessionId 
-     */
     async analyzeRequest(userMessage, currentSlug = 'home', sessionId) {
         // 1. Get Project Context (Routes)
-        let projectRoutes = [];
+        let availablePages = [];
         if (sessionId) {
-            // TODO: Implement getProjectNavigation in StorageService
-            // For now, fast path: just define common intent
+            try {
+                const session = await prisma.session.findUnique({
+                    where: { id: sessionId },
+                    include: { canvases: { select: { slug: true, title: true } } }
+                });
+                if (session && session.canvases) {
+                    availablePages = session.canvases.map(c => `${c.title} (slug: ${c.slug})`);
+                }
+            } catch (err) {
+                console.warn("[Router] Failed to fetch session pages:", err.message);
+            }
         }
 
-        const routerPrompt = `
-You are the ROUTER Agent for a Web App Builder.
+const routerPrompt = `
+You are the ROUTER Agent for a Multi-Page Web App Builder.
 User Input: "${userMessage}"
-Current Page: "${currentSlug}"
+Current Page: "${currentSlug}" (Active Canvas)
+Session Context (Available Pages):
+${availablePages.map(p => `- ${p}`).join('\n') || "No other pages yet."}
 
 Your goal is to classify the INTENT.
 
 INTENTS:
-1. **NAVIGATE**: User wants to go to a DIFFERENT page/view (e.g. "Go to settings", "Open contracts", "Back to home").
-2. **EXECUTE**: User wants to see data, change data, or build something ON THE CURRENT PAGE or broadly (e.g. "Show me active contracts", "Add a table", "Analyze this").
-3. **CHAT**: User is greeting or asking for help (e.g. "Hi", "Help", "How do I use this?").
+1. **NAVIGATE**: User wants to go to an EXISTING page listed above (e.g., "Go to dashboard").
+2. **CREATE_PAGE**: User wants to create a NEW distinct page (e.g., "Create a settings page", "Add a marketing dashboard").
+3. **UPDATE_CURRENT**: User wants to modify the CURRENT page (e.g., "Add a calendar here", "Put a chart on this page", "Change the title").
+4. **CHAT**: User is greeting or asking for help with no UI intent.
 
 OUTPUT FORMAT (JSON):
 {
-    "intent": "NAVIGATE" | "EXECUTE" | "CHAT",
-    "targetSlug": "string" (only for NAVIGATE, guess the best slug e.g. 'settings', 'dashboard'),
+    "intent": "NAVIGATE" | "CREATE_PAGE" | "UPDATE_CURRENT" | "CHAT",
+    "targetSlug": "string" (For NAVIGATE: exact slug. For CREATE_PAGE: suggested new slug. For UPDATE_CURRENT: "${currentSlug}"),
+    "pageTitle": "string" (For CREATE_PAGE: suggested title),
     "confidence": number (0-1)
 }
 `;
 
         try {
             const result = await modelManager.generateContent(routerPrompt, {
-                model: "gemini-2.0-flash", // Fast model for routing
+                model: "gemini-2.0-flash",
                 jsonMode: true
             });
             const text = result.response.text();
             return JSON.parse(text);
         } catch (e) {
             console.error("[Router] Failed:", e);
-            return { intent: "EXECUTE", confidence: 0 }; // Default to normal execution
+            return { intent: "EXECUTE", confidence: 0 };
         }
     }
 }

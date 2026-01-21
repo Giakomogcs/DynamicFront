@@ -73,8 +73,8 @@ export class CanvasGroupManager {
      */
     calculateThemeSimilarity(theme1, theme2) {
         // Normalizar temas
-        const t1Primary = this.normalizeTheme(theme1.primary || theme1);
-        const t2Primary = this.normalizeTheme(theme2.primary || theme2);
+        const t1Primary = this.normalizeTheme((theme1 && theme1.primary) ? theme1.primary : (theme1 || ''));
+        const t2Primary = this.normalizeTheme((theme2 && theme2.primary) ? theme2.primary : (theme2 || ''));
 
         // Exact match
         if (t1Primary === t2Primary) return 1.0;

@@ -315,6 +315,10 @@ app.post('/api/resources/:id/auth-profiles/test', async (req, res) => {
 // 3. Resource Management (List/Delete)
 app.get('/api/resources', async (req, res) => {
     const resources = await toolService.getRegisteredResources();
+    // Filter out INTERNAL system resources (DataNavigator) so they don't clutter the user UI
+    if (resources.apis) {
+        resources.apis = resources.apis.filter(api => api.name !== 'DataNavigator' && api.idString !== 'dn-api');
+    }
     res.json(resources);
 });
 

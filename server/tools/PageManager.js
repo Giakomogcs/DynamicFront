@@ -33,7 +33,12 @@ export const pageManagerTool = {
     }
 };
 
-export async function handlePageManager(args) {
+export async function handlePageManager(name, args) {
+    // If called with single arg (legacy/direct), handle it
+    if (arguments.length === 1) {
+        args = name;
+    }
+    
     const { action, title, sessionId, targetSlug } = args;
     let { slug } = args;
 

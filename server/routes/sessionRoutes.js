@@ -1,128 +1,112 @@
 import express from 'express';
-import { sessionService } from '../services/SessionService.js';
-import { versioningService } from '../services/VersioningService.js';
+import prisma from '../registry.js';
 
 const router = express.Router();
 
-/**
- * SESSSION MANAGEMENT
- */
-
-// List all sessions (for Showcase)
+// GET /api/sessions - List all sessions (Projects)
 router.get('/', async (req, res) => {
     try {
-        // In the future: filter by req.user.id
-        // For now list all or filter by query param conversationId
-        const { conversationId } = req.query;
-        if (conversationId) {
-            const session = await sessionService.createSession(conversationId);
-            return res.json([session]);
-        }
-        // TODO: listAll() not implemented in service yet, but needed for Showcase
-        // defaulting to empty or mock for now
-        res.json([]);
+        const sessions = await prisma.session.findMany({
+            orderBy: { lastActiveAt: 'desc' },
+            include: {
+                _count: {
+                    select: { canvases: true }
+                }
+            }
+        });
+
+        const formatted = sessions.map(s => ({
+            id: s.id,
+            title: s.title || 'Untitled Project',
+            description: s.description,
+            pageCount: s._count.canvases,
+            lastActive: s.lastActiveAt,
+            thumbnail: s.thumbnail,
+            createdAt: s.createdAt
+        }));
+
+        res.json(formatted);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// Create New Session (Project)
+// POST /api/sessions - Create new session
 router.post('/', async (req, res) => {
     try {
-        const { title, conversationId } = req.body;
-        // Generate a random conversationId if not provided (for new clean projects)
-        const finalConvId = conversationId || `proj_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const { title, description } = req.body;
+        // Generate a conversation ID if not provided (server-side generation preferred for uniqueness)
+        const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
-        const session = await sessionService.createSession(finalConvId, null, title);
-        res.json(session);
+        const session = await prisma.session.create({
+            data: {
+                title: title || 'New Project',
+                description: description || '',
+                conversationId,
+                lastActiveAt: new Date()
+            }
+        });
+
+        // Auto-create a "Home" canvas for this session
+        const homeCanvas = await prisma.canvas.create({
+            data: {
+                sessionId: session.id,
+                title: 'Home',
+                slug: 'home',
+                isHome: true,
+                type: 'dashboard'
+                // widgets: [] // REMOVED: Prisma handles empty relations by default, invalid syntax to pass []
+            }
+        });
+
+        // Update session with last active canvas
+        await prisma.session.update({
+            where: { id: session.id },
+            data: { lastActiveCanvasId: homeCanvas.id }
+        });
+
+        res.json({ ...session, startCanvasId: homeCanvas.id });
     } catch (e) {
+        console.error("[Session] Create Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
 
-// Get Session Structure (Project)
+// GET /api/sessions/:id/structure - Get full structure (pages list) for Sidebar
 router.get('/:id/structure', async (req, res) => {
     try {
-        const session = await sessionService.getSessionStructure(req.params.id);
-        if (!session) return res.status(404).json({ error: "Session not found" });
+        const { id } = req.params;
+        const session = await prisma.session.findUnique({
+            where: { id },
+            include: {
+                canvases: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                        isHome: true,
+                        icon: true,
+                        updatedAt: true
+                    },
+                    orderBy: { isHome: 'desc' } // Home first, then others? Or createdAt?
+                }
+            }
+        });
+
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+
         res.json(session);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// Get Session Details (Keep legacy /:id for now or alias)
-router.get('/:id', async (req, res) => {
+// DELETE /api/sessions/:id
+router.delete('/:id', async (req, res) => {
     try {
-        const session = await sessionService.getSessionStructure(req.params.id);
-        if (!session) return res.status(404).json({ error: "Session not found" });
-        res.json(session);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Create/Get Session by Conversation ID
-router.post('/init', async (req, res) => {
-    try {
-        const { conversationId } = req.body;
-        const session = await sessionService.createSession(conversationId);
-        res.json(session);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Auto-Name Session
-router.post('/:id/autoname', async (req, res) => {
-    try {
-        const { context } = req.body;
-        const title = await sessionService.autoNameSession(req.params.id, context);
-        res.json({ title });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-/**
- * CANVAS (PAGES)
- */
-router.post('/:sessionId/pages', async (req, res) => {
-    try {
-        const { route, type, title } = req.body;
-        const canvas = await sessionService.createCanvas(req.params.sessionId, route, type, title);
-        res.json(canvas);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-/**
- * VERSIONING
- */
-router.post('/canvas/:canvasId/snapshot', async (req, res) => {
-    try {
-        const { description } = req.body;
-        const version = await versioningService.createSnapshot(req.params.canvasId, description);
-        res.json(version);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-router.get('/canvas/:canvasId/history', async (req, res) => {
-    try {
-        const history = await versioningService.getHistory(req.params.canvasId);
-        res.json(history);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-router.post('/canvas/:canvasId/restore/:versionId', async (req, res) => {
-    try {
-        const restored = await versioningService.restoreSnapshot(req.params.versionId);
-        res.json(restored);
+        const { id } = req.params;
+        await prisma.session.delete({ where: { id } });
+        res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

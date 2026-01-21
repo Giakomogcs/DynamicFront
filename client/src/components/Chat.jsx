@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
+import { Send, Bot, User, Sparkles, ChevronLeft, ChevronRight, Edit2, ChevronDown, ChevronUp, Minus } from 'lucide-react';
 import { DynamicWidget } from './DynamicWidget';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -8,7 +8,7 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed, onToggleCollapse, onEditMessage, showControls = true }) => {
+export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed, onToggleCollapse, onEditMessage, showControls = true, isFloating = false, isExpanded = false, onExpand }) => {
     const [input, setInput] = useState('');
     const [editingIndex, setEditingIndex] = useState(null);
     const bottomRef = useRef(null);
@@ -57,23 +57,37 @@ export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed,
     }
 
     return (
-        <div className="flex flex-col h-full w-full bg-slate-900/30 border-r border-slate-800 relative">
-            {/* Minimize Button */}
+        <div className={cn(
+            "flex flex-col h-full w-full relative",
+            isFloating ? "bg-transparent" : "bg-slate-900/30 border-r border-slate-800"
+        )}>
+            {/* Header / Controls */}
             {showControls && (
-                <button
-                    onClick={onToggleCollapse}
-                    className="absolute -right-3 top-4 z-50 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-1 transition-colors"
-                    title="Minimize chat"
-                >
-                    <ChevronLeft size={14} className="text-slate-400" />
-                </button>
+                <div className="absolute right-4 top-4 z-50 flex gap-2">
+                    {/* Expand/Collapse Height (Only if floating and not minimized) */}
+                    {isFloating && !collapsed && (
+                        <button
+                            onClick={onExpand} // Need to pass this prop
+                            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-1.5 transition-colors"
+                            title={isExpanded ? "Shrink" : "Expand"}
+                        >
+                            {isExpanded ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
+                        </button>
+                    )}
+                    
+                    <button
+                        onClick={onToggleCollapse}
+                        className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full p-1.5 transition-colors"
+                        title="Minimize chat"
+                    >
+                        {isFloating ? <Minus size={14} className="text-slate-400" /> : <ChevronLeft size={14} className="text-slate-400" />}
+                    </button>
+                </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                 {(!messages || messages.length === 0) && (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-500 opacity-60">
-                        <Sparkles size={32} className="mb-4 text-indigo-500" />
-                        <p className="text-sm font-medium">AI Assistant</p>
+                    <div className="flex flex-col items-center justify-center h-full text-slate-500 opacity-0"> 
                     </div>
                 )}
 
@@ -122,19 +136,31 @@ export const Chat = ({ messages, onSendMessage, isProcessing, onStop, collapsed,
                 )}
             </div>
 
-            <div className="p-4 bg-slate-950 border-t border-slate-800 z-10">
+            <div className={cn("p-4 z-10", isFloating ? "bg-slate-900/95 border-t border-slate-800" : "bg-slate-950 border-t border-slate-800")}>
                 <div className="relative flex gap-2">
                     <textarea
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={(e) => {
+                            setInput(e.target.value);
+                            e.target.style.height = 'auto'; // Reset to auto to shrink
+                            e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`; // Grow to max 200px
+                        }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
                                 handleSend();
+                                // Reset height
+                                if (e.target.form) e.target.form.querySelector('textarea').style.height = '52px';
+                                // Or use ref: e.target.style.height = '52px'
+                                setTimeout(() => {
+                                    const ta = document.querySelector('textarea.chat-input');
+                                    if(ta) ta.style.height = '52px';
+                                }, 0);
                             }
                         }}
                         placeholder="Type a message..."
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none resize-none h-[52px]"
+                        className="chat-input w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none resize-none min-h-[52px] max-h-[200px] overflow-y-auto"
+                        style={{ height: '52px' }}
                         disabled={isProcessing}
                     />
 

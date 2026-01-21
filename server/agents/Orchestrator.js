@@ -30,7 +30,8 @@ export class AgentOrchestrator {
         // PHASE 0: ROUTING (New Phase 2)
         // Check if this is a navigation intent before planning tools
         if (canvasContext && canvasContext.sessionId) { // Only route if in a session
-            const routing = await routerAgent.analyzeRequest(userMessage, 'home', canvasContext.sessionId); // TODO: pass real current slug
+            const currentSlug = canvasContext.activeSlug || 'home'; // Ensure App.jsx sends this
+            const routing = await routerAgent.analyzeRequest(userMessage, currentSlug, canvasContext.sessionId); 
             console.log(`[Orchestrator] Router Intent: ${routing.intent}`);
 
             if (routing.intent === 'NAVIGATE' && routing.targetSlug) {
@@ -40,6 +41,36 @@ export class AgentOrchestrator {
                     action: 'navigate_canvas',
                     targetSlug: routing.targetSlug,
                     widgets: []
+                };
+            }
+
+            if (routing.intent === 'CREATE_PAGE') {
+                console.log(`[Orchestrator] 🆕 Router suggests creating NEW PAGE: ${routing.pageTitle}`);
+                
+                // Create the new canvas in the database
+                const { storageService } = await import('../services/storageService.js');
+                
+                const newId = crypto.randomUUID();
+                const newCanvas = await storageService.saveCanvas(
+                    newId,
+                    routing.pageTitle || "New Page",
+                    [],
+                    [],
+                    canvasContext.sessionId
+                );
+
+                if (!newCanvas) {
+                     return {
+                        text: "Failed to create the new page. Please try again.",
+                        action: 'none'
+                     };
+                }
+
+                return {
+                    text: `Creating new page "${newCanvas.title || 'New Page'}"...`,
+                    action: 'navigate_canvas',
+                    targetSlug: newCanvas.slug, // Use the real slug from DB
+                    widgets: newCanvas.widgets || []
                 };
             }
         }
@@ -254,18 +285,39 @@ export class AgentOrchestrator {
         console.log("[Orchestrator] Step 3.5: Analyzing canvas decision (merge vs create)...");
 
         let canvasDecision = null;
-        try {
-            canvasDecision = await canvasGroupManager.decideCanvasAction(
-                userMessage,
-                { primary: 'General' }, // Fallback theme if analyzer didn't run
-                canvasContext ? [canvasContext] : []
-            );
-
-            console.log(`[Orchestrator] Canvas Decision: ${canvasDecision.action.toUpperCase()}`);
-            console.log(`[Orchestrator] Theme: ${canvasDecision.theme.primary}`);
-        } catch (error) {
-            console.warn(`[Orchestrator] Canvas decision failed: ${error.message}, defaulting to create`);
-            canvasDecision = { action: 'create', theme: { primary: 'General' } };
+        
+        // CHECK ROUTING INTENT (New Phase 3 Logic)
+        // If Router explicitly said UPDATE_CURRENT, or we have a context, we should try to MERGE.
+        if (canvasContext && canvasContext.sessionId) {
+             const currentSlug = canvasContext.activeSlug || 'home';
+             // Re-check intent if we have it locally (we don't persist 'routing' variable from Phase 0 except logs)
+             // Ideally we should pass 'routing' down. But for now, let's look at the action.
+             // If user said "nessa pagina" (this page), Router likely classified as UPDATE_CURRENT or EXECUTE on current slug.
+             
+             // Simplification: If we are in Intelligent Mode and have an active canvas, 
+             // and the user didn't ask for a new page (CREATE_PAGE was handled up top),
+             // then we FORCE MERGE to the current canvas ID.
+             
+             console.log(`[Orchestrator] 🧠 Smart Context: Preserving current canvas ${canvasContext.canvasId}`);
+             canvasDecision = {
+                 action: 'merge',
+                 targetCanvasId: canvasContext.canvasId,
+                 reason: 'router_update_current_intent'
+             };
+        } else {
+            // Fallback to legacy Theme-Based Decision
+            try {
+                canvasDecision = await canvasGroupManager.decideCanvasAction(
+                    userMessage,
+                    { primary: 'General' }, 
+                    canvasContext ? [canvasContext] : []
+                );
+    
+                console.log(`[Orchestrator] Canvas Decision: ${canvasDecision?.action?.toUpperCase()}`);
+            } catch (error) {
+                console.warn(`[Orchestrator] Canvas decision failed: ${error.message}, defaulting to create`);
+                canvasDecision = { action: 'create', theme: { primary: 'General' }, reason: 'error_recovery' };
+            }
         }
 
         // 4. DESIGN
@@ -277,7 +329,7 @@ export class AgentOrchestrator {
             const executionData = executionResult.result || executionResult;
 
             const finalResult = await designerAgent.design(
-                executionData.text || summaryText || 'Processamento concluído',
+                executionData.text || 'Processamento concluído',
                 executionData.gatheredData || [],
                 modelName,
                 plan.steps, // Execution steps
@@ -293,7 +345,7 @@ export class AgentOrchestrator {
             // FALLBACK: Return sanitized text response
             console.log("=== [Orchestrator] Process Complete (with fallback) ===\n");
             return {
-                text: this._sanitizeResponse(executionResult.text),
+                text: this._sanitizeResponse(executionResult.result?.text),
                 widgets: []
             };
         }

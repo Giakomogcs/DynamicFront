@@ -62,34 +62,41 @@ model AuthProfile {
 // ========================================
 
 model Session {
-  id             String   @id @default(uuid())
-  conversationId String   @unique // One session per chat conversation
-  title          String?  // Auto-named: "Analysis June 2024"
-  description    String?  // Project summary
-  metadata       Json?    // Extensibility
-  userId         String?  // Future multi-user
+  id               String   @id @default(uuid())
+  conversationId   String   @unique // One session per chat conversation logic
+  title            String?  @default("New Project")
+  description      String?  // Project summary/goal
+  thumbnail        String?  // Base64 or URL for project cover
   
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  lastActiveCanvasId String? // Resume where left off
+  
+  metadata         Json?    
+  userId           String?  
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  lastActiveAt     DateTime @default(now()) // Sorting for Showroom
 
-  canvases       Canvas[]
+  canvases         Canvas[]
 }
 
 model Canvas {
   id             String   @id @default(uuid())
   
-  // App Builder Fields
-  sessionId      String?
-  session        Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  route          String?  // e.g. "/dashboard", "/details/SP" (Legacy? Keep for now)
-  slug           String?  // URL-friendly ID: "home", "settings"
+  // Strict Relation
+  sessionId      String
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  route          String?  // e.g. "/dashboard"
+  slug           String   // e.g. "home", "analytics" - Unique per session ideally
   isHome         Boolean  @default(false)
-  icon           String?  // Lucide icon name
-
-  type           String   @default("dashboard") // "dashboard", "form", "list", "modal"
   
   title          String?
-  theme          Json?    // { primary, entities, colors }
+  icon           String?  // Lucide icon name
+  thumbnail      String?  // Snapshot of canvas state
+  
+  type           String   @default("dashboard")
+  theme          Json?    
   layoutType     String   @default("grid")
   
   createdAt      DateTime @default(now())
@@ -100,6 +107,8 @@ model Canvas {
   
   outgoingLinks  NavigationLink[] @relation("FromCanvas")
   incomingLinks  NavigationLink[] @relation("ToCanvas")
+  
+  @@unique([sessionId, slug]) // Ensure unique slugs within a session
 }
 
 model CanvasVersion {
@@ -107,6 +116,7 @@ model CanvasVersion {
   canvasId  String
   canvas    Canvas   @relation(fields: [canvasId], references: [id], onDelete: Cascade)
   
+  version   Int      @default(1)
   snapshot  Json     // Full copy of widgets/layout/theme
   changeLog String?  // "Added Map Widget", "Changed to Dark Mode"
   createdAt DateTime @default(now())

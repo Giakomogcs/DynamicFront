@@ -49,14 +49,18 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction, onRef
     if ((!widgets || widgets.length === 0) && !loading) {
         return (
             <div className="flex-1 h-full flex flex-col items-center justify-center bg-slate-950">
-                <div className="flex flex-col items-center max-w-md text-center">
-                    <LayoutDashboard size={64} className="mb-6 text-indigo-500/30" />
-                    <h2 className="text-2xl font-semibold text-slate-200 mb-2">Canvas Workspace</h2>
-                    <p className="text-sm text-slate-500">
-                        Charts, tables, and insights will appear here.
-                        <br />
-                        Start chatting to create visualizations.
+                <div className="flex flex-col items-center max-w-md text-center p-8 rounded-2xl border border-dashed border-slate-800 bg-slate-900/30">
+                    <div className="size-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6">
+                        <Sparkles size={32} className="text-indigo-400" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-white mb-2">Ready to Analyze</h2>
+                    <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+                        This page is empty. Use the <strong>AI Assistant</strong> on the right to generate charts, tables, and reports instantly.
                     </p>
+                    <div className="flex gap-2 text-xs text-slate-500 bg-slate-950/50 px-4 py-3 rounded-lg border border-slate-800/50">
+                        <LayoutDashboard size={14} />
+                        <span>Try "Create a Sales Dashboard"</span>
+                    </div>
                 </div>
             </div>
         );
@@ -68,7 +72,7 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction, onRef
 
             {/* Scrollable Container - Moved padding here to fix scroll issue */}
             <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
-                <div className="max-w-7xl mx-auto space-y-6 pb-24"> {/* Added pb-24 for screen selector space */}
+                <div className="max-w-7xl mx-auto space-y-6 pb-[50vh]"> {/* Added huge padding for floating chat */}
                     <header className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800/50">
                         <Sparkles className="text-indigo-400" size={24} />
                         <h2 className="text-xl font-semibold text-white">

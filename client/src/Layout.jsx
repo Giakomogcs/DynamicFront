@@ -7,7 +7,7 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent, onToggleSettings, sessionStructure }) => {
+const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent, onToggleSettings, sidebarContent }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
 
@@ -55,46 +55,19 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                 </div>
 
                 <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden">
-                    {/* DYNAMIC SIDEBAR: PROJECT MODE */}
-                    {activeTab === 'project' && sessionStructure ? (
+                    {/* CUSTOM SIDEBAR CONTENT (e.g. Session Nav) */}
+                    {sidebarContent ? (
                         <>
-                            <div className={cn(
-                                "pb-2 border-b border-slate-800 mb-2 transition-all duration-300",
-                                collapsed ? "opacity-0 h-0 p-0" : "opacity-100 px-3"
-                            )}>
-                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                    Project
-                                </h3>
-                                <div className="text-sm font-medium text-slate-200 truncate mt-1">
-                                    {sessionStructure.title || "Untitled Project"}
-                                </div>
-                            </div>
-
-                            {/* Render Project Pages */}
-                            {sessionStructure.canvases?.map(canvas => (
-                                <SidebarItem
-                                    key={canvas.id}
-                                    icon={<LayoutGrid size={20} />} // TODO: Use dynamic icon from canvas.icon map
-                                    label={canvas.title}
-                                    isActive={headerContent?.props?.activeSlug === canvas.slug}
-                                    collapsed={collapsed}
-                                    onClick={() => headerContent?.props?.onNavigatePage && headerContent.props.onNavigatePage(canvas.slug)}
-                                />
-                            ))}
-
+                            {sidebarContent}
                             <div className="my-4 border-t border-slate-800" />
-
-                            {/* Always show "Back to Projects" */}
-                            <SidebarItem
-                                icon={<ChevronLeft size={20} />}
-                                label="Back to Projects"
-                                isActive={false}
-                                collapsed={collapsed}
-                                onClick={() => setActiveTab('showcase')}
-                            />
+                            {/* Always show "Back to Projects" if we are in a sub-view? 
+                                Actually SidebarNavigation handles "Back to Projects". 
+                                So we might just render sidebarContent and that's it. 
+                                But check if we need standard items below it.
+                            */}
                         </>
                     ) : (
-                        /* DEFAULT SIDEBAR: SHOWCASE MODE */
+                        /* DEFAULT SIDEBAR: SHOWCASE / MAIN MENU */
                         <>
                             <SidebarItem
                                 icon={<MessageSquareText size={20} />}
@@ -153,7 +126,7 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                                 }}
                             />
                             <SidebarItem
-                                icon={<Plus size={20} />} // Database + Plus implies "Add Database"
+                                icon={<Plus size={20} />}
                                 label="Register Database"
                                 collapsed={collapsed}
                                 onClick={() => {
@@ -212,7 +185,7 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                 </header>
 
                 {/* Content Area - NO PADDING */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden flex flex-col">
                     {children}
                 </div>
             </main>

@@ -137,3 +137,111 @@
 {"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T19:56:25.418Z"}
 {"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T19:56:33.903Z"}
 {"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T19:59:25.506Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:45:58.276Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:45:58.641Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:45:59.143Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:45:59.443Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:46:00.448Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:46:16.989Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:47:25.438Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:48:18.713Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-20T22:48:54.767Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-20T22:48:54.768Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T22:49:01.731Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-20T22:53:56.923Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-20T22:53:56.923Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:02:18.541Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:02:27.070Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:09:28.777Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:09:29.065Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:09:30.690Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:09:32.684Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:09:37.433Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:09:50.066Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":3,"resourceId":"all","timestamp":"2026-01-20T23:09:55.024Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:20:47.296Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:23:02.607Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:23:02.881Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:23:10.257Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:23:45.099Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:23:49.144Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:24:07.504Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:24:12.388Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:24:23.439Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:24:27.691Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:24:47.797Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:24:51.919Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:25:03.379Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:25:38.486Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:25:46.346Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-20T23:38:09.711Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-20T23:38:09.711Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-20T23:39:22.014Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-20T23:39:22.014Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:40:11.110Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:40:11.471Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:40:15.637Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:41:50.511Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-20T23:49:15.692Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-20T23:49:15.692Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:54:35.627Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:54:39.969Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-20T23:55:29.533Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-20T23:55:29.533Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:58:40.828Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:58:41.158Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:58:46.271Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:59:01.608Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-20T23:59:08.776Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-21T00:00:45.711Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-21T00:00:45.711Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-21T00:03:00.685Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-21T00:03:00.686Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:04:06.312Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:04:08.206Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-21T00:04:56.641Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-21T00:04:56.641Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:06:47.318Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:06:47.607Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:06:52.528Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:06:57.968Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:07:02.418Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:07:07.141Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:07:07.459Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:07:10.948Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-21T00:07:56.910Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-21T00:07:56.911Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-21T00:07:56.911Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-21T00:14:59.946Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-21T00:14:59.946Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-21T00:14:59.947Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:16:32.368Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:16:32.699Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:16:38.575Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:16:44.877Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:16:50.022Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:16:54.118Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:16:54.468Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:16:56.776Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-21T00:17:36.989Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-21T00:17:36.989Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-21T00:17:36.989Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-21T00:18:57.415Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-21T00:18:57.418Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:22:01.185Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:22:01.531Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:22:07.307Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:22:12.165Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:22:12.558Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:22:15.189Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:32:37.432Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-21T00:35:42.607Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-21T00:35:42.607Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-21T00:35:42.608Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:36:50.290Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:36:55.352Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:37:13.242Z"}
+{"event":"PROFILE_LOAD","level":"info","message":"Profiles loaded","profileCount":0,"resourceId":"all","timestamp":"2026-01-21T00:37:18.108Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-21T00:37:45.827Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-21T00:37:45.828Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-21T00:37:45.828Z"}

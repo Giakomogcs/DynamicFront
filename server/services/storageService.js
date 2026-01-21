@@ -73,9 +73,10 @@ export const storageService = {
                 create: {
                     id,
                     title,
+                    slug: title ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : id, // Auto-generate slug
+                    sessionId: groupId, // Must be a valid Session ID now
                     sessionId: groupId, // Must be a valid Session ID now
                     theme: {},
-                    messages: messages || [],
                     layoutType: 'dashboard'
                 },
                 update: updateData
@@ -102,7 +103,34 @@ export const storageService = {
             }
 
             // Return full object
-            return this.getCanvas(id);
+            // 3. Return updated canvas using strict TX client to ensure visibility
+            const saved = await tx.canvas.findUnique({
+                where: { id },
+                include: { widgets: { orderBy: { position: 'asc' } }, outgoingLinks: true, incomingLinks: true }
+            });
+            
+            if (!saved) return null;
+
+            return {
+                ...saved,
+                title: saved.title || 'Untitled',
+                slug: saved.slug,
+                isHome: saved.isHome,
+                icon: saved.icon,
+                messages: saved.messages || [],
+                groupId: saved.sessionId,
+                widgets: saved.widgets.map(w => ({
+                    id: w.id,
+                    type: w.type,
+                    title: w.title,
+                    config: typeof w.config === 'object' ? w.config : {}, // Validated object
+                    ...((typeof w.config === 'object' ? w.config : {}) || {})
+                })),
+                linkedCanvases: [
+                    ...saved.outgoingLinks.map(l => ({ id: l.toCanvasId, label: l.label })),
+                    ...saved.incomingLinks.map(l => ({ id: l.fromCanvasId, label: l.label })),
+                ]
+            };
         });
     },
 

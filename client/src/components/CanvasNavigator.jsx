@@ -30,26 +30,9 @@ import {
 } from '@mui/icons-material';
 
 const CanvasNavigator = ({ currentCanvasId, onNavigate }) => {
-    const [canvasGroups, setCanvasGroups] = useState([
-        {
-            id: 'group-1',
-            name: 'Cursos SENAI',
-            canvases: [
-                { id: 'canvas-1', title: 'Cursos de Mecatrônica', widgetCount: 5, theme: 'Education' },
-                { id: 'canvas-2', title: 'Cursos de TI', widgetCount: 3, theme: 'Education' }
-            ]
-        },
-        {
-            id: 'group-2',
-            name: 'Empresas',
-            canvases: [
-                { id: 'canvas-3', title: 'Empresas do Sul', widgetCount: 8, theme: 'Enterprise' },
-                { id: 'canvas-4', title: 'Contratos Ativos', widgetCount: 4, theme: 'Enterprise' }
-            ]
-        }
-    ]);
+    const [canvasGroups, setCanvasGroups] = useState([]);
 
-    const [favorites, setFavorites] = useState(['canvas-1']);
+    const [favorites, setFavorites] = useState([]);
 
     const getIconByTheme = (theme) => {
         switch (theme) {
