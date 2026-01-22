@@ -34,6 +34,58 @@ model SystemSetting {
   value String // JSON value
 }
 
+// ========================================
+// AI TOKEN TRACKING
+// ========================================
+
+model TokenUsage {
+  id            String   @id @default(uuid())
+  providerId    String   // "gemini", "openai", etc.
+  modelId       String   // "gemini-2.0-flash", "gpt-4o", etc.
+  
+  inputTokens   Int
+  outputTokens  Int
+  totalTokens   Int
+  
+  estimatedCost Float?   // USD
+  
+  requestType   String   // "chat", "tool_execution", etc.
+  sessionId     String?  // Link to session if applicable
+  
+  timestamp     DateTime @default(now())
+  
+  @@index([providerId, timestamp])
+  @@index([modelId, timestamp])
+  @@index([sessionId])
+}
+
+model ProviderQuota {
+  id            String   @id @default(uuid())
+  providerId    String   @unique
+  
+  // Limits
+  rpmLimit      Int?     // Requests per minute
+  tokensPerMinuteLimit Int?
+  dailyTokenLimit Int?
+  
+  // Current Usage (reset periodically)
+  currentRpm    Int      @default(0)
+  currentTPM    Int      @default(0)
+  dailyTokens   Int      @default(0)
+  
+  // Reset timestamps
+  lastRpmReset  DateTime @default(now())
+  lastTPMReset  DateTime @default(now())
+  lastDailyReset DateTime @default(now())
+  
+  // Historical
+  totalRequests Int      @default(0)
+  totalTokens   BigInt   @default(0)
+  
+  updatedAt     DateTime @updatedAt
+}
+
+
 model Resource {
   id          String   @id @default(uuid())
   name        String   @unique // e.g. "schools_db"

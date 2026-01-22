@@ -21,4 +21,13 @@ export class AIProvider {
     async listModels() {
         throw new Error("Not implemented");
     }
+
+    async validate() {
+        try {
+            const models = await this.listModels();
+            return models && models.length > 0;
+        } catch (e) {
+            return false;
+        }
+    }
 }

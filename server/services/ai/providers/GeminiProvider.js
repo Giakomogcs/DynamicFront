@@ -21,12 +21,33 @@ export class GeminiProvider extends AIProvider {
 
     async listModels() {
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${this.config.apiKey}`);
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`);
             if (!response.ok) throw new Error("Failed to fetch models");
             const data = await response.json();
 
+            const WHITELIST = [
+                //  Gemini 2.0 (Latest)
+                'gemini-2.0-flash-exp',
+                'gemini-2.0-flash-thinking-exp',
+                'gemini-2.0-flash',
+
+                // Gemini 1.5 (Stable)
+                'gemini-1.5-pro',
+                'gemini-1.5-pro-exp',
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-8b',
+                'gemini-1.5-flash-exp',
+
+                // Experimental/Preview
+                'gemini-exp-1206',
+                'learnlm-1.5-pro-experimental'
+            ];
+
             return (data.models || [])
-                .filter(m => m.supportedGenerationMethods.includes("generateContent"))
+                .filter(m => {
+                    const id = m.name.replace('models/', '');
+                    return m.supportedGenerationMethods.includes("generateContent") && WHITELIST.includes(id);
+                })
                 .map(m => ({
                     id: m.name.replace('models/', ''),
                     name: m.name.replace('models/', ''),
@@ -35,7 +56,12 @@ export class GeminiProvider extends AIProvider {
                     description: m.description,
                     version: m.version
                 }))
-                .sort((a, b) => b.name.localeCompare(a.name));
+                .sort((a, b) => {
+                    // Sort by WHITELIST order
+                    const idA = a.name;
+                    const idB = b.name;
+                    return WHITELIST.indexOf(idA) - WHITELIST.indexOf(idB);
+                });
         } catch (e) {
             console.warn("[GeminiProvider] List models failed:", e.message);
             return [];

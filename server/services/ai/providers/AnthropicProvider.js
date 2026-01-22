@@ -17,10 +17,9 @@ export class AnthropicProvider extends AIProvider {
         if (!this.apiKey) return [];
 
         return [
-            { id: "claude-3-opus-20240229", name: "claude-3-opus-20240229", displayName: "Claude 3 Opus", provider: "anthropic" },
-            { id: "claude-3-sonnet-20240229", name: "claude-3-sonnet-20240229", displayName: "Claude 3 Sonnet", provider: "anthropic" },
-            { id: "claude-3-haiku-20240307", name: "claude-3-haiku-20240307", displayName: "Claude 3 Haiku", provider: "anthropic" },
-            { id: "claude-3-5-sonnet-latest", name: "claude-3-5-sonnet-latest", displayName: "Claude 3.5 Sonnet", provider: "anthropic" }
+            { id: "claude-3-5-sonnet-latest", name: "claude-3-5-sonnet-latest", displayName: "Claude 3.5 Sonnet", provider: "anthropic" },
+            { id: "claude-3-5-haiku-20241022", name: "claude-3-5-haiku-20241022", displayName: "Claude 3.5 Haiku", provider: "anthropic" },
+            { id: "claude-3-opus-20240229", name: "claude-3-opus-20240229", displayName: "Claude 3 Opus", provider: "anthropic" }
         ];
     }
 

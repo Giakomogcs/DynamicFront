@@ -32,15 +32,15 @@ function AppContent() {
 
 
     // --- Onboarding State ---
-    const [isInitialized, setIsInitialized] = useState(null);
+    const [systemStatus, setSystemStatus] = useState(null); // { initialized, hasModels, hasResources }
 
     useEffect(() => {
         fetch('http://localhost:3000/api/system/status')
             .then(res => res.json())
-            .then(data => setIsInitialized(data.initialized))
+            .then(data => setSystemStatus(data))
             .catch(err => {
                 console.warn("[App] Failed to check system status, assuming initialized", err);
-                setIsInitialized(true);
+                setSystemStatus({ initialized: true, hasModels: true, hasResources: true });
             });
     }, [refreshResourcesTrigger]);
 
@@ -663,19 +663,20 @@ function AppContent() {
 
     // --- Render ---
 
-    if (isInitialized === null) {
+    if (!systemStatus) {
         return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>;
     }
 
     return (
         <>
             {/* ONBOARDING OVERLAY */}
-            {!isInitialized && !onboardingDismissed && (
+            {!systemStatus.initialized && !onboardingDismissed && (
                 <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-500">
                     <div className="w-full max-w-4xl">
                         <OnboardingWizard
+                            status={systemStatus}
                             onComplete={() => {
-                                setIsInitialized(true);
+                                setSystemStatus(prev => ({ ...prev, initialized: true })); // Optimistic
                                 setRefreshProjectsTrigger(prev => prev + 1);
                             }}
                             onSkip={() => setOnboardingDismissed(true)}
@@ -692,10 +693,16 @@ function AppContent() {
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
 
-                onToggleSettings={() => setShowSettings(true)}
+                onToggleSettings={() => setShowSettings(prev => !prev)}
                 onRegisterApi={() => setModalType('api')}
                 onRegisterDb={() => setModalType('db')}
                 onOpenLoadModal={() => setModalType('load')}
+
+                // Settings Drawer Props
+                isSettingsOpen={showSettings}
+                onSettingsClose={() => setShowSettings(false)}
+                settingsContent={<SettingsView onClose={() => setShowSettings(false)} />}
+
                 // Pass Sidebar Content for Navigation
                 sidebarContent={activeTab === 'project' && sessionStructure ? (
                     <SidebarNavigation
@@ -995,18 +1002,7 @@ function AppContent() {
                 )
             }
 
-            {/* SETTINGS MODAL */}
-            {
-                showSettings && (
-                    <Modal
-                        isOpen={showSettings}
-                        onClose={() => setShowSettings(false)}
-                        title="Settings"
-                    >
-                        <SettingsView onClose={() => setShowSettings(false)} />
-                    </Modal>
-                )
-            }
+
         </>
     );
 }

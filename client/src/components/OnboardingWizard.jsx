@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, Key, Check, ChevronRight, Globe, Database, Shield, Github, Loader2, ArrowRight, X, RotateCw } from 'lucide-react';
 
-export const OnboardingWizard = ({ onComplete, onSkip, onOpenApiModal, onOpenDbModal, refreshTrigger }) => {
-    const [step, setStep] = useState(1); // 1: Welcome, 2: Providers, 3: Resources, 4: Complete
+export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, onOpenDbModal, refreshTrigger }) => {
+    // Smart Step Detection
+    const getInitialStep = () => {
+        if (!status) return 1;
+        if (!status.hasModels) return 2; // Needs Providers
+        if (!status.hasResources) return 3; // Needs Resources
+        return 1; // Default welcome
+    };
+
+    const [step, setStep] = useState(getInitialStep());
     const [providers, setProviders] = useState({});
     const [loading, setLoading] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(false);
@@ -24,6 +32,7 @@ export const OnboardingWizard = ({ onComplete, onSkip, onOpenApiModal, onOpenDbM
             <button
                 onClick={() => toggleProvider(label)}
                 className="w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
+                title={label}
             >
                 <label className="flex items-center gap-2 text-white font-medium cursor-pointer">
                     {icon} {label}
@@ -244,9 +253,17 @@ export const OnboardingWizard = ({ onComplete, onSkip, onOpenApiModal, onOpenDbM
                 </button>
 
                 <div className="mb-8">
-                    <div className="text-sm text-indigo-400 font-semibold mb-2">STEP 1 OF 3</div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Connect AI Providers</h2>
-                    <p className="text-slate-400">Configure at least one provider to power your agent.</p>
+                    <div className="text-sm text-indigo-400 font-semibold mb-2">
+                        {status?.hasResources ? 'MISSING CONFIGURATION' : 'STEP 1 OF 3'}
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                        {status?.hasModels ? 'Configure AI Providers' : 'Connect AI Providers'}
+                    </h2>
+                    <p className="text-slate-400">
+                        {!status?.hasModels
+                            ? "No active AI models detected. Please configure at least one provider to restore system functionality."
+                            : "Configure at least one provider to power your agent."}
+                    </p>
                 </div>
 
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -425,9 +442,15 @@ export const OnboardingWizard = ({ onComplete, onSkip, onOpenApiModal, onOpenDbM
                 </button>
 
                 <div className="mb-8">
-                    <div className="text-sm text-indigo-400 font-semibold mb-2">STEP 2 OF 3</div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Add Your First Resource</h2>
-                    <p className="text-slate-400">The agent needs context. Connect an existing API or Database.</p>
+                    <div className="text-sm text-indigo-400 font-semibold mb-2">
+                        {status?.hasModels ? 'MISSING DATA' : 'STEP 2 OF 3'}
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Add Data Resource</h2>
+                    <p className="text-slate-400">
+                        {!status?.hasResources
+                            ? "The agent needs data to work with. Connect an existing API or Database."
+                            : "The agent needs context. Connect an existing API or Database."}
+                    </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

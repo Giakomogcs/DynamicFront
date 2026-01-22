@@ -19,15 +19,23 @@ export class OpenAIProvider extends AIProvider {
             if (!response.ok) throw new Error(await response.text());
             const data = await response.json();
 
+            const WHITELIST = [
+                'gpt-4o',
+                'gpt-4o-mini',
+                'o1-preview',
+                'o1-mini'
+            ];
+
             return data.data
-                .filter(m => m.id.includes('gpt'))
+                .filter(m => WHITELIST.includes(m.id))
                 .map(m => ({
                     id: m.id,
                     name: m.id,
                     displayName: `OpenAI/${m.id}`,
                     provider: 'openai',
                     description: `OpenAI Model: ${m.id}`
-                }));
+                }))
+                .sort((a, b) => WHITELIST.indexOf(a.id) - WHITELIST.indexOf(b.id));
         } catch (e) {
             console.error("[OpenAIProvider] List models failed:", e);
             return [];

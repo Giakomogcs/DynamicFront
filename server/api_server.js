@@ -15,6 +15,7 @@ import { toolService } from './services/toolService.js';
 import { storageService } from './services/storageService.js';
 import { orchestrator } from './agents/Orchestrator.js';
 import { modelManager } from './services/ai/ModelManager.js';
+import { tokenTracker } from './services/ai/TokenTrackingService.js';
 
 // Import routes
 // Import routes
@@ -79,11 +80,82 @@ app.get('/api/system/status', async (req, res) => {
 app.get('/api/models', async (req, res) => {
     try {
         const models = await modelManager.getAvailableModels();
-        // Return both list and the currently configured default (from .env or server fallback)
+
+        // Dynamic Default: Pick the flagship model of the first available healthy provider
+        let defaultModel = "gemini-2.0-flash";
+
+        // Find first healthy provider
+        const firstProvider = modelManager.providers.values().next().value;
+        if (firstProvider && modelManager.isProviderHealthy(firstProvider.id)) {
+            if (firstProvider.getDefaultModel) {
+                defaultModel = firstProvider.getDefaultModel();
+            } else if (models.length > 0) {
+                defaultModel = models[0].name;
+            }
+        } else if (models.length > 0) {
+            // If we found models but maybe provider health is weird, try from models list
+            defaultModel = models[0].name;
+        }
+
         res.json({
             models,
-            defaultModel: "gemini-2.0-flash" // Safe fallback if frontend needs one, or use first model
+            defaultModel
         });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/providers/:id/validate', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Force settings reload to ensure we have the latest keys from DB
+        // We use a private internal reload or simply init again (init checks isInitialized, but reload forces reset)
+        // We need to make sure the specific provider is reconstructed with the new key.
+        await modelManager.reload(true); // true = forceful immediate reload
+
+        // 2. Force validation
+        const isValid = await modelManager.forceRevalidate(id);
+
+        // 3. Get updated status
+        const status = await modelManager.getProviderStatuses();
+
+        res.json({
+            valid: isValid,
+            status: status[id],
+            timestamp: Date.now()
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/providers', async (req, res) => {
+    try {
+        const statuses = await modelManager.getProviderStatuses();
+        res.json(statuses);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Token Usage & Analytics Endpoints
+app.get('/api/tokens/usage', async (req, res) => {
+    try {
+        const { timeframe = '24h', providerId } = req.query;
+        const stats = await tokenTracker.getUsageStats(providerId, timeframe);
+        res.json(stats);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/tokens/costs', async (req, res) => {
+    try {
+        const { timeframe = '30d' } = req.query;
+        const costs = await tokenTracker.getCostAnalysis(timeframe);
+        res.json(costs);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

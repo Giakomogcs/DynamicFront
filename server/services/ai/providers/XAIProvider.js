@@ -11,7 +11,7 @@ export class XAIProvider extends AIProvider {
     }
 
     async listModels() {
-        if (!this.apiKey) return [];
+        if (!this.apiKey) return this.getDefaultModels();
         try {
             const response = await fetch(`${this.baseUrl}/models`, {
                 headers: { "Authorization": `Bearer ${this.apiKey}` }
@@ -33,13 +33,33 @@ export class XAIProvider extends AIProvider {
                 const jsonErr = JSON.parse(msg);
                 if (jsonErr.error) {
                     console.warn(`[XAIProvider] Could not load models: ${jsonErr.error}`);
-                    return [];
+                    return this.getDefaultModels();
                 }
             } catch { }
 
             console.warn("[XAIProvider] List models failed:", msg);
-            return [];
+            // Return default models so users can still select them
+            return this.getDefaultModels();
         }
+    }
+
+    getDefaultModels() {
+        return [
+            {
+                id: 'grok-beta',
+                name: 'grok-beta',
+                displayName: 'Grok Beta',
+                provider: 'xai',
+                description: 'xAI Grok Beta Model'
+            },
+            {
+                id: 'grok-2-1212',
+                name: 'grok-2-1212',
+                displayName: 'Grok 2 (Latest)',
+                provider: 'xai',
+                description: 'xAI Grok 2 Latest'
+            }
+        ];
     }
 
     async generateContent(input, options = {}) {

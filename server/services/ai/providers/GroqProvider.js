@@ -19,13 +19,22 @@ export class GroqProvider extends AIProvider {
             if (!response.ok) throw new Error(await response.text());
             const data = await response.json();
 
-            return data.data.map(m => ({
-                id: m.id,
-                name: m.id,
-                displayName: `Groq/${m.id}`,
-                provider: 'groq',
-                description: `Groq hosted model: ${m.id}`
-            }));
+            const WHITELIST = [
+                'llama-3.3-70b-versatile',
+                'llama-3.1-8b-instant',
+                'mixtral-8x7b-32768'
+            ];
+
+            return data.data
+                .filter(m => WHITELIST.includes(m.id))
+                .map(m => ({
+                    id: m.id,
+                    name: m.id,
+                    displayName: `Groq/${m.id}`,
+                    provider: 'groq',
+                    description: `Groq hosted model: ${m.id}`
+                }))
+                .sort((a, b) => WHITELIST.indexOf(a.id) - WHITELIST.indexOf(b.id));
         } catch (e) {
             console.error("[GroqProvider] List models failed:", e);
             return [];

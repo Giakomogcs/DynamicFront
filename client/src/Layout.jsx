@@ -7,11 +7,28 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent, onToggleSettings, sidebarContent, title, collapsed = false, onToggleCollapse }) => {
+const Layout = ({
+    children,
+    activeTab,
+    setActiveTab,
+    onRegisterApi,
+    onRegisterDb,
+    onOpenLoadModal,
+    headerContent,
+    onToggleSettings,
+    sidebarContent,
+    title,
+    collapsed = false,
+    onToggleCollapse,
+    // Settings Drawer Props
+    isSettingsOpen = false,
+    onSettingsClose,
+    settingsContent
+}) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden font-sans">
+        <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden font-sans relative">
             {/* Overlay for mobile sidebar */}
             {sidebarOpen && (
                 <div
@@ -33,7 +50,7 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                     collapsed ? "justify-center px-0" : "justify-between px-4"
                 )}>
                     <div className="flex items-center gap-3 overflow-hidden ml-1">
-                         {/* Toggle Button (Desktop) - Replaces logo based on Gemini style? Or keeps both? 
+                        {/* Toggle Button (Desktop) - Replaces logo based on Gemini style? Or keeps both? 
                             Let's keep the logo but maybe make it icon only when collapsed? 
                             Actually, Gemini puts the hamburger at the top left. 
                             Let's put the toggle button HERE.
@@ -45,12 +62,12 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                             <Menu size={20} />
                         </button>
 
-                         {/* Logo / Title */}
-                         {!collapsed && (
+                        {/* Logo / Title */}
+                        {!collapsed && (
                             <span className="font-bold text-xl tracking-tight text-white whitespace-nowrap animate-fade-in">
                                 DynamicFront
                             </span>
-                         )}
+                        )}
                     </div>
 
                     {/* Mobile close button */}
@@ -145,6 +162,28 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
 
                     {/* Collapse Toggle MOVED TO TOP */}
                 </div>
+            </div>
+
+            {/* Settings Drawer Backdrop (z-40: Below Sidebar z-50, Above Content) */}
+            {isSettingsOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+                    onClick={onSettingsClose}
+                />
+            )}
+
+            {/* Settings Drawer (z-40: Sits on top of backdrop, appears as extension) */}
+            <div className={cn(
+                "fixed top-0 bottom-0 z-40 transition-all duration-300 ease-in-out bg-slate-900 border-r border-slate-800 shadow-2xl overflow-hidden",
+                // Mobile: Full width or slideover. Desktop: Anchored to sidebar
+                "w-full md:w-[600px]",
+                // Position logic
+                isSettingsOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none",
+                // Left offset matches sidebar width on desktop
+                collapsed ? "md:left-20" : "md:left-64",
+                "left-0" // Mobile default
+            )}>
+                {settingsContent}
             </div>
 
             {/* Main Content */}

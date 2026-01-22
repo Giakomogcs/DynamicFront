@@ -6,6 +6,7 @@ import { AnthropicProvider } from './providers/AnthropicProvider.js';
 import { XAIProvider } from './providers/XAIProvider.js';
 import { CopilotProvider } from './providers/CopilotProvider.js';
 import { GenericOpenAIProvider } from './providers/GenericOpenAIProvider.js';
+import { tokenTracker } from './TokenTrackingService.js';
 
 class ModelManager {
     constructor() {
@@ -16,6 +17,11 @@ class ModelManager {
         // Provider Health Tracking
         this.providerHealth = new Map(); // providerId -> { available: bool, lastError: Date, failCount: number }
 
+        // Models Cache with TTL
+        this.modelsCache = null;
+        this.modelsCacheTimestamp = 0;
+        this.modelsCacheTTL = 60000; // 60 seconds
+
         // Usage Metrics
         this.metrics = {
             totalRequests: 0,
@@ -24,6 +30,10 @@ class ModelManager {
             failoverCount: 0,
             providerUsage: new Map() // providerId -> count
         };
+
+        // Logging Throttle (Prevent Spam)
+        this.lastLogTime = new Map(); // key -> timestamp
+        this.lastReloadTime = 0;
     }
 
     async init() {
@@ -75,24 +85,43 @@ class ModelManager {
         }
 
         for (const { Provider, key, name, id } of providerConfigs) {
-            // PRIORITIZE DB SETTINGS: If setting exists (even if empty), use it. Only fallback to ENV if setting is undefined.
+            // Load API key from database settings ONLY (no .env fallback)
             let apiKey = settings[key];
-            if (apiKey === undefined || apiKey === null) {
-                apiKey = process.env[key];
-            } else if (apiKey.trim() === "") {
-                // If user deliberately saved empty string, treat it as disabled/missing, do not fallback to ENV.
+
+            // Treat empty strings as undefined (disabled)
+            if (apiKey !== undefined && apiKey !== null && apiKey.trim() === "") {
                 apiKey = undefined;
             }
 
             const enabled = isProviderEnabled(id);
 
-            if (apiKey && apiKey.length > 10 && enabled) { // Basic validation + Enabled Check
-                this.registerProvider(new Provider({ apiKey }));
-                console.log(`[ModelManager] ✅ ${name} provider registered`);
+            if (apiKey && apiKey.length > 5 && enabled) { // Basic validation + Enabled Check
+                const provider = new Provider({ apiKey });
+                this.registerProvider(provider);
+
+                // Do not block startup with network calls, but we could trigger a background check
+                console.log(`[ModelManager] ➕ ${name} provider registered (Validation Pending)`);
+
+                // Trigger background validation ONLY if not recently failed
+                const health = this.providerHealth.get(id);
+                const shouldSkipValidation = health && !health.available && health.lastError && (Date.now() - health.lastError.getTime() < 60000);
+
+                if (!shouldSkipValidation) {
+                    this.validateProvider(provider.id).catch(e => {
+                        // Suppress repeated validation errors
+                        this._logThrottled(`validation-error-${id}`, () => {
+                            console.warn(`[ModelManager] Background validation failed for ${name}: ${e.message}`);
+                        }, 60000); // Log once per minute
+                    });
+                }
+
                 availableCount++;
             } else {
-                if (!enabled) console.log(`[ModelManager] 🚫 ${name} provider disabled by user setting.`);
-                else console.warn(`[ModelManager] ⚠️ ${name} provider skipped (no API key)`);
+                // Throttle "provider skipped" warnings
+                this._logThrottled(`provider-skip-${id}`, () => {
+                    if (!enabled) console.log(`[ModelManager] 🚫 ${name} provider disabled by user setting.`);
+                    else console.warn(`[ModelManager] ⚠️ ${name} provider skipped (no API key)`);
+                }, 300000); // Log once every 5 minutes
             }
         }
 
@@ -104,14 +133,39 @@ class ModelManager {
         console.log(`[ModelManager] Initialized with ${availableCount} providers.`);
     }
 
-    async reload() {
-        if (this.reloadTimer) clearTimeout(this.reloadTimer);
-        this.reloadTimer = setTimeout(async () => {
-            console.log("[ModelManager] Reloading settings and providers...");
+    async reload(force = false) {
+        // If force is true, bypass throttle and execute immediately
+        if (force) {
+            if (this.reloadTimer) clearTimeout(this.reloadTimer);
+            console.log("[ModelManager] 🔄 Forcing immediate reload...");
             this.providers = new Map();
             this.isInitialized = false;
             await this.init();
-        }, 500); // 500ms debounce
+            this.lastReloadTime = Date.now();
+            return;
+        }
+
+        // Standard debounce logic
+        const now = Date.now();
+        if (now - this.lastReloadTime < 3000) {
+            return;
+        }
+
+        if (this.reloadTimer) clearTimeout(this.reloadTimer);
+
+        // Return a promise that resolves when the reloaded completes
+        return new Promise((resolve) => {
+            this.reloadTimer = setTimeout(async () => {
+                this.lastReloadTime = Date.now();
+                this._logThrottled('reload', () => {
+                    console.log("[ModelManager] Reloading settings and providers...");
+                }, 5000);
+                this.providers = new Map();
+                this.isInitialized = false;
+                await this.init();
+                resolve();
+            }, 500);
+        });
     }
 
     async loadSettings() {
@@ -134,14 +188,62 @@ class ModelManager {
         this.providers.set(provider.id, provider);
     }
 
-    async getAvailableModels() {
+    async getAvailableModels(useCache = true) {
         await this.init();
-        let allModels = [];
-        for (const provider of this.providers.values()) {
-            const models = await provider.listModels();
-            allModels = [...allModels, ...models];
+
+        // Check cache first if enabled
+        const now = Date.now();
+        if (useCache && this.modelsCache && (now - this.modelsCacheTimestamp) < this.modelsCacheTTL) {
+            console.log('[ModelManager] Returning cached models');
+            return this.modelsCache;
         }
+
+        let allModels = [];
+
+        // Strict Validation: Only return models from providers that are HEALTHY and VERIFIED
+        for (const provider of this.providers.values()) {
+
+            // Check health cache
+            if (!this.isProviderHealthy(provider.id)) {
+                // Throttle "Skipping models" warnings
+                this._logThrottled(`skip-models-${provider.id}`, () => {
+                    console.warn(`[ModelManager] Skipping models for ${provider.id} (Unhealthy)`);
+                }, 60000); // Log once per minute
+                continue;
+            }
+
+            try {
+                // Ensure we can list models (Validation Check)
+                const models = await provider.listModels();
+                if (models && models.length > 0) {
+                    allModels = [...allModels, ...models];
+                } else {
+                    console.warn(`[ModelManager] Provider ${provider.id} returned no models. Marking as suspicious.`);
+                    // Optional: Mark unhealthy?
+                }
+            } catch (e) {
+                console.warn(`[ModelManager] Failed to list models for ${provider.id}: ${e.message}`);
+                this.markProviderUnhealthy(provider.id, e);
+            }
+        }
+
+        // Update cache
+        this.modelsCache = allModels;
+        this.modelsCacheTimestamp = now;
+
         return allModels;
+    }
+
+    getSmartDefaultModel(providerId) {
+        const defaults = {
+            'gemini': 'gemini-2.0-flash',
+            'openai': 'gpt-4o',
+            'anthropic': 'claude-3-5-sonnet-20240620',
+            'groq': 'llama-3.3-70b-versatile',
+            'xai': 'grok-beta',
+            'copilot': 'gpt-4o'
+        };
+        return defaults[providerId] || 'gemini-2.0-flash';
     }
 
     getProviderForModel(modelName) {
@@ -193,9 +295,12 @@ class ModelManager {
         return this.requestQueue.add(fn);
     }
 
-    async generateContent(input, config = {}) {
+    async generateContent(input, inputConfig = {}) {
         await this.init();
         this.recordMetric('request');
+
+        // Copy config to avoid mutation
+        const config = { ...inputConfig };
 
         let targetModel = config.model || "gemini-2.0-flash";
         let provider = this.getProviderForModel(targetModel);
@@ -206,16 +311,20 @@ class ModelManager {
             console.error(`No provider available for model ${targetModel}`);
             // Try a forced fallback?
             provider = this.providers.values().next().value;
-            if (!provider) throw new Error(`No providers available at all.`);
+            if (!provider) throw new Error(`No providers available at all. Please configure keys in Settings.`);
             console.log(`[ModelManager] Forced fallback to ${provider.id}...`);
         }
 
         // AUTOMATIC MODEL SWITCH: If we switched provider (or used fallback), check if it supports the requested model.
         // If not (likely), switch to its default.
-        if (provider && provider.getDefaultModel && (!targetModel.includes(provider.id) && !targetModel.startsWith('gpt') && !targetModel.startsWith('claude'))) {
-                const newModel = provider.getDefaultModel();
+        if (provider) {
+            const isSupported = await this.isModelSupportedByProvider(provider, targetModel);
+            if (!isSupported) {
+                const newModel = this.getSmartDefaultModel(provider.id);
                 console.log(`[ModelManager] ⚠️ Switching model from ${targetModel} to ${newModel} because provider is ${provider.id}`);
                 targetModel = newModel;
+                config.model = newModel; // Update config for failover reference
+            }
         }
 
         try {
@@ -271,6 +380,16 @@ class ModelManager {
             this.recordMetric('failure');
             throw primaryError;
         }
+    }
+
+    async isModelSupportedByProvider(provider, modelName) {
+        // Quick check using regex patterns or provider prefix
+        if (modelName.toLowerCase().includes(provider.id)) return true;
+        // Check actual list if cached
+        // (For now, heuristic is enough for major providers to avoid extra API calls)
+        if (provider.id === 'openai' && modelName.startsWith('gpt')) return true;
+        if (provider.id === 'anthropic' && modelName.startsWith('claude')) return true;
+        return false;
     }
 
     getFailoverPlan(failedModel, errorType = 'rate_limit') {
@@ -447,9 +566,60 @@ class ModelManager {
         this.providerHealth.set(providerId, health);
     }
 
+    async validateProvider(providerId) {
+        const provider = this.providers.get(providerId);
+        if (!provider) return false;
+
+        try {
+            // Force a listModels check to verify API key
+            console.log(`[ModelManager] Validating ${providerId}...`);
+            const models = await provider.listModels();
+
+            if (models && models.length > 0) {
+                this.markProviderHealthy(providerId);
+                console.log(`[ModelManager] ✅ ${providerId} validated successfully (${models.length} models)`);
+
+                // Invalidate models cache to force refresh
+                this.modelsCache = null;
+
+                return true;
+            } else {
+                throw new Error("No models returned");
+            }
+        } catch (e) {
+            console.warn(`[ModelManager] ❌ Validation failed for ${providerId}: ${e.message}`);
+            this.markProviderUnhealthy(providerId, e);
+
+            // Invalidate models cache to force refresh
+            this.modelsCache = null;
+
+            return false;
+        }
+    }
+
+    async forceRevalidate(providerId) {
+        // Force validation by clearing health cache first
+        console.log(`[ModelManager] Force revalidating ${providerId}...`);
+
+        const provider = this.providers.get(providerId);
+        if (!provider) {
+            console.warn(`[ModelManager] Provider ${providerId} not found`);
+            return false;
+        }
+
+        // Clear health cache to force fresh validation
+        this.providerHealth.delete(providerId);
+
+        // Clear models cache
+        this.modelsCache = null;
+
+        // Run validation
+        return await this.validateProvider(providerId);
+    }
+
     isProviderHealthy(providerId) {
         const health = this.providerHealth.get(providerId);
-        if (!health) return true; // Assume healthy if no data
+        if (!health) return true; // Assume healthy if no data (or pending)
 
         // If provider failed more than 3 times in a row, mark as unhealthy
         if (health.failCount > 3) return false;
@@ -485,17 +655,75 @@ class ModelManager {
         };
     }
 
+    async getProviderStatuses() {
+        const statuses = {};
+        for (const [id, provider] of this.providers.entries()) {
+            const health = this.providerHealth.get(id) || { available: true };
+            const isHealthy = this.isProviderHealthy(id);
+
+            // Get quota status
+            const quotaStatus = await tokenTracker.getQuotaStatus(id).catch(() => null);
+
+            // Get available models
+            let models = [];
+            try {
+                if (isHealthy) {
+                    models = await provider.listModels().catch(() => []);
+                }
+            } catch (e) {
+                // Silent fail - already logged by provider
+            }
+
+            statuses[id] = {
+                id,
+                name: provider.name,
+                status: isHealthy ? 'online' : 'offline',
+                available: isHealthy,
+                lastError: health.lastError,
+                failCount: health.failCount,
+                models: models,
+                quota: quotaStatus
+            };
+        }
+        return statuses;
+    }
+
+    _logThrottled(key, logFn, intervalMs = 5000) {
+        const now = Date.now();
+        const last = this.lastLogTime.get(key) || 0;
+
+        if (now - last > intervalMs) {
+            logFn();
+            this.lastLogTime.set(key, now);
+        }
+    }
+
     async executeWithRetry(provider, model, input, config) {
         const result = await this.requestQueue.add(() => provider.generateContent(input, { ...config, model }));
-        // Map result to pseudo-Gemini response format if needed for legacy code?
-        // Legacy code expects: result.response.text(), result.response.functionCalls()
 
-        // Let's return a "UniversalResponse" object that has getters to match Gemini behavior for backward compat
+        // Record token usage if available
+        if (result.usage) {
+            const sessionId = config.sessionId || null;
+            await tokenTracker.recordUsage(
+                provider.id,
+                model,
+                result.usage,
+                'chat',
+                sessionId
+            ).catch(err => {
+                console.warn('[ModelManager] Failed to record token usage:', err.message);
+            });
+        }
+
+        // Map result to pseudo-Gemini response format if needed for legacy code
+        // Legacy code expects: result.response.text(), result.response.functionCalls()
         return {
             usedModel: model,
+            usage: result.usage, // Pass through usage data
             response: {
                 text: () => result.text,
-                functionCalls: () => result.toolCalls || []
+                functionCalls: () => result.toolCalls || [],
+                usageMetadata: result.usage // Also expose here for compatibility
             }
         };
     }

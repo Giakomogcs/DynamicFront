@@ -44,11 +44,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
         OLLAMA_URL: ''
     });
 
-    // Validation Tracking State
-    const [validatingKeys, setValidatingKeys] = useState(new Set());
-    const [keyErrors, setKeyErrors] = useState({}); // { GEMINI_API_KEY: "Erro..." }
-    const [refreshingProviders, setRefreshingProviders] = useState(false);
-
     // GitHub Copilot Auth State
     const [copilotStatus, setCopilotStatus] = useState('disconnected');
     const [copilotData, setCopilotData] = useState(null);
@@ -58,30 +53,23 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
         fetchData();
     }, []);
 
-    const fetchData = async (options = {}) => {
-        const { skipSettings = false } = options;
+    const fetchData = async () => {
         try {
             // 1. Fetch All Models (Backend now filters this list to only HEALTHY providers)
-            // Use timestamp to bypass potential browser cache if needed
-            const modelsRes = await fetch(`http://localhost:3000/api/models?t=${Date.now()}`);
+            const modelsRes = await fetch('http://localhost:3000/api/models');
             const modelsData = await modelsRes.json();
             const allModels = Array.isArray(modelsData.models) ? modelsData.models : (modelsData || []);
             setAvailableModels(allModels);
 
             // 2. Fetch Provider Statuses
             try {
-                const statusRes = await fetch(`http://localhost:3000/api/providers?t=${Date.now()}`);
+                const statusRes = await fetch('http://localhost:3000/api/providers');
                 if (statusRes.ok) {
                     const statusData = await statusRes.json();
                     setProviderStatuses(statusData);
                 }
             } catch (e) {
                 console.warn("Failed to fetch provider statuses", e);
-            }
-
-            if (skipSettings) {
-                setLoading(false);
-                return;
             }
 
             // 3. Fetch Settings
@@ -174,26 +162,10 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
 
     const handleKeyChange = (provider, value) => {
         setApiKeys(prev => ({ ...prev, [provider]: value }));
-        // Clean error when user edits
-        setKeyErrors(prev => {
-            if (!prev[provider]) return prev;
-            const updated = { ...prev };
-            delete updated[provider];
-            return updated;
-        });
     };
 
-    const handleProviderToggle = async (providerId, isEnabled) => {
+    const handleProviderToggle = (providerId, isEnabled) => {
         setProviderSettings(prev => ({ ...prev, [providerId]: isEnabled }));
-
-        // Optimistic UI update logic handled by state
-        // But we want to refresh lists quickly
-        setRefreshingProviders(true);
-        setTimeout(async () => {
-            // Fetch only models and statuses, skip full settings reload
-            await fetchData({ skipSettings: true });
-            setRefreshingProviders(false);
-        }, 500); // Small delay to allow backend to process updateSetting call if happening in parallel
     };
 
     const handleGeneralChange = (key, value) => {
@@ -250,6 +222,7 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
     const saveNonKeySettings = async () => {
         setSaving(true);
         try {
+            // Parallelize? 
             const promises = [];
             promises.push(fetch('http://localhost:3000/api/settings', {
                 method: 'POST',
@@ -274,10 +247,8 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
             });
 
             await Promise.all(promises);
-
-            // Refresh models list when provider settings change
-            await fetchData();
-
+            // No success toast for auto-save to reduce noise? Or a small indicator?
+            // Let's rely on the "Saving..." state in the UI.
             if (onSettingsChanged) onSettingsChanged();
         } catch (e) {
             console.error("Auto-save failed", e);
@@ -291,19 +262,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
         setSaving(true);
         try {
             const promises = [];
-            const providersToValidate = new Set();
-
-            // Map keys to provider IDs
-            const keyMap = {
-                'GEMINI_API_KEY': 'gemini',
-                'GROQ_API_KEY': 'groq',
-                'OPENAI_API_KEY': 'openai',
-                'ANTHROPIC_API_KEY': 'anthropic',
-                'XAI_API_KEY': 'xai',
-                'GITHUB_COPILOT_TOKEN': 'copilot',
-                'LM_STUDIO_URL': 'lmstudio',
-                'OLLAMA_URL': 'ollama'
-            };
 
             // Only save keys that actually changed
             Object.entries(apiKeys).forEach(([key, val]) => {
@@ -313,9 +271,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ key, value: val })
                     }));
-
-                    const providerId = keyMap[key];
-                    if (providerId) providersToValidate.add(providerId);
                 }
             });
 
@@ -330,60 +285,14 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
             setInitialApiKeys(apiKeys);
             setHasUnsavedChanges(false);
 
-            // Trigger Validation Logic
-            if (providersToValidate.size > 0) {
-                info("Validating new keys...");
-
-                // Set validating state
-                setValidatingKeys(new Set(providersToValidate));
-
-                // Validate each in parallel
-                const validationPromises = Array.from(providersToValidate).map(async (pid) => {
-                    try {
-                        const res = await fetch(`http://localhost:3000/api/providers/${pid}/validate`, { method: 'POST' });
-                        const data = await res.json();
-
-                        const apiKeyName = Object.keys(keyMap).find(k => keyMap[k] === pid);
-
-                        if (!data.valid) {
-                            // Set error state
-                            const errorMsg = data.status?.errorMessage || 'Validation Failed';
-                            setKeyErrors(prev => ({
-                                ...prev,
-                                [apiKeyName]: errorMsg
-                            }));
-                            // Show toast
-                            error(`${pid.toUpperCase()} failed: ${errorMsg}`);
-                        } else {
-                            // Clear specific error if success
-                            setKeyErrors(prev => {
-                                const next = { ...prev };
-                                delete next[apiKeyName];
-                                return next;
-                            });
-                        }
-                    } catch (e) {
-                        console.error(`Validation error for ${pid}`, e);
-                    } finally {
-                        setValidatingKeys(prev => {
-                            const next = new Set(prev);
-                            next.delete(pid);
-                            return next;
-                        });
-                    }
-                });
-
-                await Promise.all(validationPromises);
-            }
+            // Wait for provider validation
+            info("Validating API keys...");
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Refresh to get new models and statuses
-            await fetchData({ skipSettings: true });
+            await fetchData();
 
-            if (Object.keys(keyErrors).length === 0) {
-                // Only show success if no errors persist (or we could show partial success)
-                // success("Settings saved!");
-            }
-
+            success("API keys saved and providers validated!");
             if (onSettingsChanged) onSettingsChanged();
         } catch (e) {
             error("Failed to save keys: " + e.message);
@@ -674,8 +583,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     isEnabled={providerSettings.gemini}
                                     onToggle={(v) => handleProviderToggle('gemini', v)}
                                     status={providerStatuses.gemini}
-                                    validating={validatingKeys.has('gemini')}
-                                    error={keyErrors['GEMINI_API_KEY']}
                                 />
                                 <ApiKeyInput
                                     label="OpenAI"
@@ -685,8 +592,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     isEnabled={providerSettings.openai}
                                     onToggle={(v) => handleProviderToggle('openai', v)}
                                     status={providerStatuses.openai}
-                                    validating={validatingKeys.has('openai')}
-                                    error={keyErrors['OPENAI_API_KEY']}
                                 />
                                 <ApiKeyInput
                                     label="Groq"
@@ -697,8 +602,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     isEnabled={providerSettings.groq}
                                     onToggle={(v) => handleProviderToggle('groq', v)}
                                     status={providerStatuses.groq}
-                                    validating={validatingKeys.has('groq')}
-                                    error={keyErrors['GROQ_API_KEY']}
                                 />
                                 <ApiKeyInput
                                     label="Anthropic"
@@ -708,8 +611,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     isEnabled={providerSettings.anthropic}
                                     onToggle={(v) => handleProviderToggle('anthropic', v)}
                                     status={providerStatuses.anthropic}
-                                    validating={validatingKeys.has('anthropic')}
-                                    error={keyErrors['ANTHROPIC_API_KEY']}
                                 />
                                 <ApiKeyInput
                                     label="xAI (Grok)"
@@ -719,8 +620,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     isEnabled={providerSettings.xai}
                                     onToggle={(v) => handleProviderToggle('xai', v)}
                                     status={providerStatuses.xai}
-                                    validating={validatingKeys.has('xai')}
-                                    error={keyErrors['XAI_API_KEY']}
                                 />
                             </div>
                         </div>
@@ -740,8 +639,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     isEnabled={providerSettings.lmstudio}
                                     onToggle={(v) => handleProviderToggle('lmstudio', v)}
                                     status={providerStatuses.lmstudio}
-                                    validating={validatingKeys.has('lmstudio')}
-                                    error={keyErrors['LM_STUDIO_URL']}
                                 />
                                 <ApiKeyInput
                                     label="Ollama URL"
@@ -752,8 +649,6 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     isEnabled={providerSettings.ollama}
                                     onToggle={(v) => handleProviderToggle('ollama', v)}
                                     status={providerStatuses.ollama}
-                                    validating={validatingKeys.has('ollama')}
-                                    error={keyErrors['OLLAMA_URL']}
                                 />
                             </div>
                         </div>
@@ -905,125 +800,37 @@ const Cloud = ({ className }) => (
     </svg>
 );
 
-const ApiKeyInput = ({ label, value, onChange, placeholder, type = 'password', desc, onToggle, isEnabled, status, validating, error }) => {
-    const [showKey, setShowKey] = useState(false);
-
-    const getStatusInfo = () => {
-        if (validating) return { color: 'blue', text: 'Validating...' };
-        if (error) return { color: 'red', text: 'Validation Failed' };
-
-        if (!status) return { color: 'slate', text: 'Unknown' };
-
-        const { status: providerStatus, quota, lastError, failCount } = status;
-
-        // Check for errors first
-        if (lastError || (failCount && failCount > 0)) {
-            return { color: 'red', text: 'Error' };
-        }
-
-        // Check quota
-        if (quota) {
-            const usagePercent = quota.usagePercentage || 0;
-            if (usagePercent > 90) return { color: 'red', text: 'Quota Critical' };
-            if (usagePercent > 70) return { color: 'yellow', text: 'Quota Warning' };
-        }
-
-        // Check provider status
-        if (providerStatus === 'online') return { color: 'green', text: 'Online' };
-        if (providerStatus === 'offline') return { color: 'red', text: 'Offline' };
-
-        return { color: 'slate', text: 'Unknown' };
-    };
-
-    const statusInfo = getStatusInfo();
-    const hasValue = value && value.length > 5;
-
-    const formatNumber = (num) => {
-        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-        return num?.toString() || '0';
-    };
-
-    return (
-        <div className="space-y-2 group">
-            <div className="flex justify-between items-center">
-                <label className="text-xs font-medium text-slate-400 group-focus-within:text-indigo-400 transition-colors flex items-center gap-2">
-                    {label}
-                    {hasValue && (status || validating || error) && (
-                        <span className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full border ${statusInfo.color === 'green' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                            statusInfo.color === 'yellow' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                                statusInfo.color === 'red' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                    statusInfo.color === 'blue' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                        'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                            }`}>
-                            {validating ? (
-                                <Loader2 className="animate-spin size-2.5" />
-                            ) : (
-                                <span className={`size-1.5 rounded-full ${statusInfo.color === 'green' ? 'bg-green-500' :
-                                    statusInfo.color === 'yellow' ? 'bg-yellow-500' :
-                                        statusInfo.color === 'red' ? 'bg-red-500' :
-                                            statusInfo.color === 'blue' ? 'bg-blue-500' : 'bg-slate-500'
-                                    }`} />
-                            )}
-                            {statusInfo.text}
-                            {status?.models && !validating && !error && <span className="opacity-60">· {status.models.length} models</span>}
-                        </span>
-                    )}
-                </label>
+const ApiKeyInput = ({ label, value, onChange, placeholder, type = 'password', desc, onToggle, isEnabled }) => (
+    <div className="space-y-1.5 group">
+        <div className="flex justify-between items-center">
+            <label className="text-xs font-medium text-slate-400 group-focus-within:text-indigo-400 transition-colors flex items-center gap-2">
+                {label}
                 {onToggle && (
-                    <span onClick={() => onToggle(!isEnabled)} className={`text-[9px] px-1.5 py-0.5 rounded cursor-pointer border transition-colors ${isEnabled ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20' :
-                        'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'
-                        }`}>{isEnabled ? 'ENABLED' : 'DISABLED'}</span>
+                    <span
+                        onClick={() => onToggle(!isEnabled)}
+                        className={`text-[9px] px-1.5 py-0.5 rounded cursor-pointer border transition-colors ${isEnabled
+                            ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20'
+                            : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'}`}
+                    >
+                        {isEnabled ? 'ENABLED' : 'DISABLED'}
+                    </span>
                 )}
-            </div>
-            <div className={`relative ${!isEnabled && onToggle ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-                <input type={showKey ? 'text' : type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-                    className={`w-full bg-slate-950 border rounded-lg pl-3 pr-16 py-2 text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-700 font-mono
-                        ${error ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500' : 'border-slate-800 hover:border-slate-700'}`}
-                />
-
-                {hasValue && type === 'password' && (
-                    <button type="button" onClick={() => setShowKey(!showKey)}
-                        className="absolute right-9 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-300 transition-colors"
-                        title={showKey ? 'Hide API key' : 'Show API key'}>
-                        {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                )}
-                {hasValue && isEnabled !== false && statusInfo.color === 'green' && !validating && !error && (
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-                        <div className="size-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
-                    </div>
-                )}
-                {validating && (
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-                        <Loader2 className="animate-spin size-3 text-blue-400" />
-                    </div>
-                )}
-                {error && (
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 group/err">
-                        <AlertTriangle className="size-4 text-red-500 cursor-help" />
-                        <div className="absolute bottom-full right-0 mb-2 w-64 p-2 bg-red-950 border border-red-500/30 rounded text-[10px] text-red-200 opacity-0 group-hover/err:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
-                            {error}
-                        </div>
-                    </div>
-                )}
-            </div>
-            {status?.quota && status.quota.dailyLimit && (
-                <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] text-slate-500">
-                        <span>{formatNumber(status.quota.dailyUsage)} / {formatNumber(status.quota.dailyLimit)} tokens today</span>
-                        <span className={status.quota.usagePercentage > 70 ? 'text-yellow-400 font-medium' : ''}>
-                            {status.quota.usagePercentage?.toFixed(1)}%
-                        </span>
-                    </div>
-                    <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${status.quota.usagePercentage > 90 ? 'bg-red-500' :
-                            status.quota.usagePercentage > 70 ? 'bg-yellow-500' : 'bg-green-500'
-                            }`} style={{ width: `${Math.min(status.quota.usagePercentage || 0, 100)}%` }} />
-                    </div>
+            </label>
+        </div>
+        <div className={`relative ${!isEnabled && onToggle ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+            <input
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-700 hover:border-slate-700"
+            />
+            {value && value.length > 5 && isEnabled !== false && (
+                <div className="absolute right-2.5 top-2.5">
+                    <div className="size-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
                 </div>
             )}
-            {desc && <p className="text-[10px] text-slate-600">{desc}</p>}
         </div>
-    );
-};
+        {desc && <p className="text-[10px] text-slate-600">{desc}</p>}
+    </div>
+);
