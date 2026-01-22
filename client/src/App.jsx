@@ -73,7 +73,8 @@ function AppContent() {
 
     // --- UI State ---
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [pageToDelete, setPageToDelete] = useState(null); // Lifted state for Delete Modal
+    const [pageToDelete, setPageToDelete] = useState(null);
+    const [chatToDelete, setChatToDelete] = useState(null); // New state for chat deletion modal // Lifted state for Delete Modal
 
     // --- History State ---
     const [historyStack, setHistoryStack] = useState([]); // Stack of canvas IDs
@@ -313,8 +314,15 @@ function AppContent() {
         }
     };
 
-    const handleDeleteChat = async (id) => {
-        if (!confirm("Delete this chat?")) return;
+    const handleDeleteChat = (id) => {
+        // Find chat to show title or just pass ID
+        const chat = chats.find(c => c.id === id);
+        setChatToDelete(chat || { id, title: 'Untitled Chat' });
+    };
+
+    const confirmDeleteChat = async () => {
+        if (!chatToDelete) return;
+        const id = chatToDelete.id;
         try {
             await fetch(`http://localhost:3000/api/chats/${id}`, { method: 'DELETE' });
             setChats(prev => prev.filter(c => c.id !== id));
@@ -322,6 +330,7 @@ function AppContent() {
                 setActiveChatId(null);
                 setMessages([]);
             }
+            setChatToDelete(null);
         } catch (e) {
             handleError("Delete chat failed");
         }
@@ -543,8 +552,13 @@ function AppContent() {
     };
 
     const handleSendMessage = async (text, isSystemHidden = false) => {
+        // Construct the new history explicitly to ensure API gets the latest state
+        // (State updates are async, so 'messages' would be stale if used directly)
+        const newMessage = { role: 'user', text };
+        const updatedHistory = [...messages, newMessage];
+
         if (!isSystemHidden) {
-            setMessages(prev => [...prev, { role: 'user', text }]);
+            setMessages(updatedHistory);
         }
         setIsProcessing(true);
 
@@ -554,11 +568,11 @@ function AppContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: text,
-                    history: messages,
+                    history: updatedHistory, // USE UPDATED HISTORY
                     location,
                     model: selectedModel,
                     sessionId,
-                    chatId: activeChatId, // VITAL: Send Chat ID
+                    chatId: activeChatId,
                     canvasContext: {
                         mode: 'intelligent',
                         widgets: activeWidgets,
@@ -590,12 +604,36 @@ function AppContent() {
                 toolCalls: data.toolCalls
             }]);
 
-            // If implicit creation happened, update ID
-            if (data.chatId && data.chatId !== activeChatId) {
-                setActiveChatId(data.chatId);
-                // Refresh list to show new chat
-                loadChats(sessionId);
-            }
+                // Reflexive update to chat list if we just got a real ID
+                if (data.chatId && data.chatId !== activeChatId) {
+                    setActiveChatId(data.chatId);
+                    await loadChats(sessionId);
+                }
+
+                // Check if we need to auto-rename (First Message)
+                // Use 'messages' from closure (state at start of function call)
+                if (messages.length === 0) { 
+                    const preview = text.substring(0, 21).trim();
+                    if (preview) {
+                        try {
+                            // Update DB
+                            await fetch(`http://localhost:3000/api/chats/${data.chatId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ title: preview })
+                            });
+                            
+                            // Update Local State IMMEDIATELY
+                            setChats(prev => prev.map(c => 
+                                c.id === data.chatId 
+                                    ? { ...c, title: preview } 
+                                    : c
+                            ));
+                        } catch (e) {
+                            console.error("Auto-rename failed", e);
+                        }
+                    }
+                }
 
             // Handle Widgets - DEFER update if navigating
             let nextWidgets = data.widgets || [];
@@ -713,31 +751,7 @@ function AppContent() {
                 </div>
             )}
 
-            {/* MAIN LAYOUT (Always Rendered in Background) */}
-            <ChatLayout // Replaced Chat with ChatLayout
-                // Data
-                chats={chats}
-                activeChatId={activeChatId}
-                messages={messages}
 
-                // Agents State
-                agentMode={agentMode}
-                setAgentMode={setAgentMode}
-                selectedModel={selectedModel}
-                setSelectedModel={setSelectedModel}
-                availableModels={availableModels}
-
-                // Actions
-                onSendMessage={handleSendMessage}
-                onNewChat={() => handleCreateNewChat()}
-                onNavigateChat={(id) => loadChat(id)} // Use loadChat directly or wrap? loadChat updates activeChatId
-                onDeleteChat={handleDeleteChat}
-                onRenameChat={handleRenameChat}
-
-                // Status
-                isProcessing={isProcessing}
-                onStop={handleStopGeneration}
-            />
 
             <Layout
                 activeTab={activeTab}
@@ -782,6 +796,37 @@ function AppContent() {
                 onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
                 headerContent={
                     <div className="flex items-center gap-4">
+                        {/* PROJECT CANVAS CONTROLS - Moved before chat */}
+                        {activeTab === 'project' && (
+                            <div className="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-lg border border-white/5">
+                                <span className="text-xs font-semibold text-slate-400 px-2">Current Page</span>
+                                <div className="h-4 w-px bg-white/10" />
+                                <button
+                                    onClick={() => saveCanvas()}
+                                    disabled={isSaving}
+                                    title="Save Project"
+                                    className={`
+                                    p-1.5 rounded-md transition-all flex items-center gap-2
+                                    ${isSaving
+                                            ? 'bg-amber-500/10 text-amber-500 cursor-wait'
+                                            : 'hover:bg-indigo-500 hover:text-white text-slate-400'}\n                                `}
+                                >
+                                    <Save size={16} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* CHAT TOGGLE (when minimized in project view) - Moved after save */}
+                        {activeTab === 'project' && chatCollapsed && (
+                            <button
+                                onClick={() => setChatCollapsed(false)}
+                                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-400 transition-colors"
+                                title="Open Assistant"
+                            >
+                                <MessageSquareText size={18} />
+                            </button>
+                        )}
+                        
                         {/* PROJECTS VIEW CONTROLS */}
                         {activeTab === 'showcase' && (
                             <>
@@ -804,27 +849,6 @@ function AppContent() {
                                     <span>New Project</span>
                                 </button>
                             </>
-                        )}
-
-                        {/* PROJECT CANVAS CONTROLS */}
-                        {activeTab === 'project' && (
-                            <div className="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-lg border border-white/5">
-                                <span className="text-xs font-semibold text-slate-400 px-2">Current Page</span>
-                                <div className="h-4 w-px bg-white/10" />
-                                <button
-                                    onClick={() => saveCanvas()}
-                                    disabled={isSaving}
-                                    title="Save Project"
-                                    className={`
-                                    p-1.5 rounded-md transition-all flex items-center gap-2
-                                    ${isSaving
-                                            ? 'bg-amber-500/10 text-amber-500 cursor-wait'
-                                            : 'hover:bg-indigo-500 hover:text-white text-slate-400'}
-                                `}
-                                >
-                                    <Save size={16} />
-                                </button>
-                            </div>
                         )}
 
                         {/* RESOURCES VIEW CONTROLS */}
@@ -875,21 +899,30 @@ function AppContent() {
                                     onWidgetChange={setActiveWidgets}
                                     activeChatId={activeChatId}
                                 />
-
-                                {/* Floating Trigger (When Collapsed) */}
-                                {chatCollapsed && (
-                                    <div className="absolute bottom-6 right-6 z-50 animate-bounce-in pointer-events-auto">
-                                        <button
-                                            onClick={() => setChatCollapsed(false)}
-                                            className="bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center transform active:scale-95"
-                                            title="Open Chat"
-                                        >
-                                            <span className="sr-only">Open Chat</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
-                                        </button>
-                                    </div>
-                                )}
                             </div>
+
+                            {/* Chat - Integrated to push content */}
+                            {!chatCollapsed && sessionId && (
+                                <ChatLayout
+                                    chats={chats}
+                                    activeChatId={activeChatId}
+                                    messages={messages}
+                                    agentMode={agentMode}
+                                    setAgentMode={setAgentMode}
+                                    selectedModel={selectedModel}
+                                    setSelectedModel={setSelectedModel}
+                                    availableModels={availableModels}
+                                    onSendMessage={handleSendMessage}
+                                    onNewChat={() => handleCreateNewChat()}
+                                    onNavigateChat={(id) => loadChat(id)}
+                                    onDeleteChat={handleDeleteChat}
+                                    onRenameChat={handleRenameChat}
+                                    isProcessing={isProcessing}
+                                    onStop={handleStopGeneration}
+                                    isCollapsed={chatCollapsed}
+                                    onCollapseChange={(collapsed) => setChatCollapsed(collapsed)}
+                                />
+                            )}
 
 
                         </div>
@@ -1028,6 +1061,64 @@ function AppContent() {
                 )
             }
 
+
+            {/* DELETE PAGE MODAL */}
+            {pageToDelete && (
+                <Modal
+                    isOpen={!!pageToDelete}
+                    onClose={() => setPageToDelete(null)}
+                    title="Delete Page?"
+                >
+                    <div className="space-y-4">
+                        <p className="text-slate-300 text-sm">
+                            Are you sure you want to delete <strong>{pageToDelete.title}</strong>? This action cannot be undone.
+                        </p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setPageToDelete(null)}
+                                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleDeletePage(pageToDelete.id).then(() => setPageToDelete(null))}
+                                className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
+                            >
+                                Delete Page
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* DELETE CHAT MODAL */}
+            {chatToDelete && (
+                <Modal
+                    isOpen={!!chatToDelete}
+                    onClose={() => setChatToDelete(null)}
+                    title="Delete Chat?"
+                >
+                    <div className="space-y-4">
+                        <p className="text-slate-300 text-sm">
+                            Are you sure you want to delete <strong>{chatToDelete.title}</strong>? This action cannot be undone.
+                        </p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setChatToDelete(null)}
+                                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteChat}
+                                className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
+                            >
+                                Delete Chat
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
 
         </>
     );

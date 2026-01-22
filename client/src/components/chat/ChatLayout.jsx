@@ -21,30 +21,50 @@ export const ChatLayout = ({
     selectedModel,
     setSelectedModel,
     availableModels,
-    onClose // If strictly closing
+    onClose, // If strictly closing
+    // Collapse control
+    onCollapseChange, // Callback when collapse state changes
+    isCollapsed: externalIsCollapsed // Controlled by parent
 }) => {
     const [width, setWidth] = useState(450);
+
     const [isResizing, setIsResizing] = useState(false);
+    const startXRef = useRef(0);
+    const startWidthRef = useRef(0);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isCollapsed, setIsCollapsed] = useState(false); // Minimized state
+    const [isCollapsed, setIsCollapsed] = useState(false); // Internal state
 
     const sidebarRef = useRef(null);
 
-    // Resizing Logic
+    // Sync with parent's collapsed state
+    useEffect(() => {
+        if (externalIsCollapsed !== undefined && externalIsCollapsed !== isCollapsed) {
+            setIsCollapsed(externalIsCollapsed);
+        }
+    }, [externalIsCollapsed]);
+
+    // Notify parent when collapse state changes
+    useEffect(() => {
+        if (onCollapseChange) {
+            onCollapseChange(isCollapsed);
+        }
+    }, [isCollapsed, onCollapseChange]);
+
+    // Resizing Logic - DELTA BASED
     useEffect(() => {
         const handleMouseMove = (e) => {
             if (!isResizing) return;
-            // Calculate new width based on mouse position from RIGHT edge of screen? 
-            // Or usually Chat is on the RIGHT side.
-            // If on right side, width = window.innerWidth - e.clientX
-            const newWidth = window.innerWidth - e.clientX;
+            
+            // Calculate delta: Positive if moved LEFT (growing), Negative if moved RIGHT (shrinking)
+            // startX (larger) - currentX (smaller) = positive delta
+            const delta = startXRef.current - e.clientX;
+            const newWidth = startWidthRef.current + delta;
 
-            if (newWidth < 300) {
-                // Snap to collapse if too small?
-                // For now, hard limit
-                setWidth(300);
-            } else if (newWidth > 800) {
-                setWidth(800);
+            // Apply limits: 250px min, 1000px max
+            if (newWidth < 250) {
+                setWidth(250);
+            } else if (newWidth > 1000) {
+                setWidth(1000);
             } else {
                 setWidth(newWidth);
             }
@@ -52,9 +72,13 @@ export const ChatLayout = ({
 
         const handleMouseUp = () => {
             setIsResizing(false);
+            document.body.style.cursor = ''; // Reset cursor
+            document.body.style.userSelect = ''; // Re-enable text selection
         };
 
         if (isResizing) {
+            document.body.style.cursor = 'ew-resize'; // Show resize cursor globally
+            document.body.style.userSelect = 'none'; // Prevent text selection while dragging
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -69,35 +93,28 @@ export const ChatLayout = ({
         setIsCollapsed(!isCollapsed);
     };
 
+    // When collapsed, don't render anything - the button will be in the header
     if (isCollapsed) {
-        return (
-            <div className="fixed right-0 top-0 bottom-0 w-12 bg-slate-950 border-l border-slate-800 flex flex-col items-center py-4 z-50">
-                <button
-                    onClick={toggleCollapse}
-                    className="p-2 bg-slate-800 rounded-lg text-slate-400 hover:text-white mb-4"
-                    title="Expand Chat"
-                >
-                    <PanelRight size={20} />
-                </button>
-                {/* Vertical Text or Icons indicate status? */}
-                <div className="writing-vertical-rl text-slate-500 text-xs font-mono tracking-widest uppercase rotate-180 flex-1 flex items-center justify-center gap-4">
-                    <span>Antigravity Chat</span>
-                </div>
-            </div>
-        );
+        return null;
     }
 
     return (
         <div
-            className="fixed right-0 top-0 bottom-0 bg-slate-950 border-l border-slate-800 z-40 flex shadow-2xl transition-all duration-75"
-            style={{ width: `${width}px` }}
+            className={`h-full bg-slate-950 border-l border-slate-800 flex shadow-2xl relative ${isResizing ? 'transition-none' : 'transition-all duration-300'}`}
+            style={{ width: `${width}px`, minWidth: '250px', maxWidth: '1000px' }}
         >
-            {/* Resizer Handle */}
+            {/* Resizer Handle - Enhanced visibility and Hit Area */}
             <div
-                className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-indigo-500/50 transition-colors z-50 group flex items-center justify-center"
-                onMouseDown={() => setIsResizing(true)}
+                className="absolute left-0 top-0 bottom-0 w-4 -ml-2 cursor-ew-resize hover:bg-indigo-500/10 active:bg-indigo-500/20 transition-all z-50 group flex items-center justify-center"
+                onMouseDown={(e) => {
+                    e.preventDefault(); // Prevent text selection start
+                    startXRef.current = e.clientX;
+                    startWidthRef.current = width;
+                    setIsResizing(true);
+                }}
+                title="Arrastar para redimensionar"
             >
-                <div className="h-8 w-1 bg-slate-700 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="h-16 w-1 bg-slate-500 rounded-full opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity" />
             </div>
 
             {/* Main Content Area */}
@@ -108,7 +125,8 @@ export const ChatLayout = ({
                     <div className="flex items-center gap-2">
                         <button
                             onClick={toggleCollapse}
-                            className="p-1.5 hover:bg-slate-800 rounded-md text-slate-400"
+                            className="p-1.5 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white transition-colors"
+                            title="Minimize Chat"
                         >
                             <ChevronRight size={18} />
                         </button>
@@ -122,7 +140,9 @@ export const ChatLayout = ({
                         >
                             <History size={18} />
                         </button>
-                        <span className="font-semibold text-slate-200">Assistant</span>
+                        <span className="font-semibold text-slate-200">
+                            {chats.find(c => c.id === activeChatId)?.title || 'New Chat'}
+                        </span>
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -137,12 +157,6 @@ export const ChatLayout = ({
                         >
                             <Plus size={18} />
                         </button>
-                        <button
-                            onClick={onClose} // Assuming onClose prop handles global close/collapse
-                            className="p-1.5 hover:bg-slate-800 rounded-md text-slate-400 hover:text-white"
-                        >
-                            <X size={18} />
-                        </button>
                     </div>
                 </div>
 
@@ -152,9 +166,11 @@ export const ChatLayout = ({
                     {/* Given "Antigravity" style usually implies a clean dedicated panel. Let's make it an Overlay on the left side of the chat panel. */}
 
                     <div className={cn(
-                        "absolute top-0 bottom-0 left-0 w-64 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 z-20",
+                        "absolute top-0 bottom-0 left-0 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 z-20",
                         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-                    )}>
+                    )}
+                    style={{ width: width < 300 ? '100%' : '256px' }} // Responsive width: Full width if chat is narrow, else 256px
+                    >
                         <ChatSidebar
                             chats={chats}
                             activeChatId={activeChatId}
@@ -163,12 +179,14 @@ export const ChatLayout = ({
                             onDelete={onDeleteChat}
                             onRename={onRenameChat}
                             onClose={() => setIsSidebarOpen(false)}
+                            width={width} // Pass width down if needed for internal adjustments
                         />
                     </div>
 
                     {/* Chat Main Stream */}
                     <div className="flex-1 flex flex-col min-w-0 bg-slate-950">
                         <ChatMain
+                            width={width} // Pass width for responsive layout
                             messages={messages}
                             onSendMessage={onSendMessage}
                             isProcessing={isProcessing}

@@ -14,41 +14,38 @@ export const MessageBubble = ({ message }) => {
     // We will enhance this once backend sends structured data.
 
     return (
-        <div className={`flex gap-4 ${isUser ? 'flex-row-reverse' : ''} group animate-in slide-in-from-bottom-2 duration-300 fade-in`}>
-            <div className={`size-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${isUser ? 'bg-slate-700' : 'bg-indigo-600'}`}>
-                {isUser ? <User size={14} className="text-white" /> : <Bot size={14} className="text-white" />}
+        <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'} group animate-in slide-in-from-bottom-2 duration-300 fade-in`}>
+            
+            {/* Header: Avatar (Stacked on top) */}
+            <div className={`flex items-center gap-2 ${isUser ? 'flex-row-reverse' : ''} opacity-80`}>
+                <div className={`size-5 rounded-full flex items-center justify-center shrink-0 ${isUser ? 'bg-slate-700' : 'bg-indigo-600'}`}>
+                    {isUser ? <User size={10} className="text-white" /> : <Bot size={10} className="text-white" />}
+                </div>
             </div>
 
-            <div className={`flex-1 max-w-[90%]`}>
-                {/* Name / Time (Optional) */}
-                <div className={`text-[10px] text-slate-500 mb-1 ${isUser ? 'text-right' : 'text-left'}`}>
-                    {isUser ? 'You' : 'Assistant'}
+            <div className={`max-w-[90%] relative px-3 py-2.5 rounded-2xl ${isUser
+                    ? 'bg-slate-800 text-slate-200 rounded-tr-md'
+                    : 'bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-md'
+                }`}>
+
+                {/* THOUGHT BUBBLE (Collapsible) */}
+                {message.thought && (
+                    <ThoughtBlock text={message.thought} />
+                )}
+
+                {/* MAIN CONTENT - Reduced Text Size */}
+                <div className="prose prose-invert prose-xs max-w-none leading-relaxed whitespace-pre-wrap text-xs">
+                    {message.text}
                 </div>
 
-                <div className={`relative p-4 rounded-2xl ${isUser
-                        ? 'bg-slate-800 text-slate-100 rounded-tr-sm'
-                        : 'bg-slate-900 border border-slate-800 text-slate-300 rounded-tl-sm'
-                    }`}>
-
-                    {/* THOUGHT BUBBLE (Collapsible) */}
-                    {message.thought && (
-                        <ThoughtBlock text={message.thought} />
-                    )}
-
-                    {/* MAIN CONTENT */}
-                    <div className="prose prose-invert prose-sm max-w-none leading-relaxed whitespace-pre-wrap">
-                        {message.text}
+                {/* TOOL EXECUTIONS (Structured) */}
+                {message.toolCalls && message.toolCalls.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                        {message.toolCalls.map((tool, i) => (
+                            <ToolBrick key={i} tool={tool} />
+                        ))}
                     </div>
-
-                    {/* TOOL EXECUTIONS (Structured) */}
-                    {message.toolCalls && message.toolCalls.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                            {message.toolCalls.map((tool, i) => (
-                                <ToolBrick key={i} tool={tool} />
-                            ))}
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
         </div>
     );

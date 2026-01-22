@@ -1487,3 +1487,37 @@
 {"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-22 16:50:50"}
 {"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-22 16:50:50"}
 {"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-22 16:50:50"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-22 17:57:37"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-22 17:57:37"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-22 17:57:39"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-22 17:57:39"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"dn-api","timestamp":"2026-01-22 17:57:39"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 17:57:39"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":4,"resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 17:57:39"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-22 18:04:59"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-22 18:04:59"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-22 18:05:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-22 18:05:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"dn-api","timestamp":"2026-01-22 18:05:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 18:05:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":4,"resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 18:05:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-22 19:31:59"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-22 19:31:59"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"dn-api","timestamp":"2026-01-22 19:31:59"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 19:31:59"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":4,"resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 19:31:59"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-22 19:37:58"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-22 19:37:58"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"dn-api","timestamp":"2026-01-22 19:37:58"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 19:37:58"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":4,"resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 19:37:58"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-22 19:50:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-22 19:50:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"dn-api","timestamp":"2026-01-22 19:50:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 19:50:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":4,"resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 19:50:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-22 20:00:18"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-22 20:00:18"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"dn-api","timestamp":"2026-01-22 20:00:18"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 20:00:18"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":4,"resourceId":"2be19067-591d-4a82-9523-b51a2f65ff1d","timestamp":"2026-01-22 20:00:18"}
