@@ -66,14 +66,17 @@ export class ToolService {
      * Uses the internal cache populated by getAllTools().
      */
     async executeTool(name, args) {
-        const execInfo = this.executionMap.get(name);
+        let execInfo = this.executionMap.get(name);
 
         if (!execInfo) {
             // Attempt a lazy refresh if not found (optional safety net)
-            // await this.getAllTools();
-            // execInfo = this.executionMap.get(name);
-            // if (!execInfo) 
-            return { isError: true, content: [{ type: "text", text: `Tool '${name}' not found.` }] };
+            console.log(`[ToolService] Tool '${name}' not found. Attempting lazy refresh...`);
+            await this.getAllTools(true);
+            execInfo = this.executionMap.get(name);
+            
+            if (!execInfo) {
+                return { isError: true, content: [{ type: "text", text: `Tool '${name}' not found.` }] };
+            }
         }
 
         try {

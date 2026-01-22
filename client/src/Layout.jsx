@@ -7,9 +7,8 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent, onToggleSettings, sidebarContent }) => {
+const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb, onOpenLoadModal, headerContent, onToggleSettings, sidebarContent, title, collapsed = false, onToggleCollapse }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [collapsed, setCollapsed] = useState(false);
 
     return (
         <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden font-sans">
@@ -30,19 +29,28 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
             )}>
                 {/* Header with logo */}
                 <div className={cn(
-                    "flex items-center border-b border-slate-800 h-16 transition-all duration-300",
+                    "flex items-center border-b border-slate-800 h-14 transition-all duration-300",
                     collapsed ? "justify-center px-0" : "justify-between px-4"
                 )}>
-                    <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="size-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
-                            <Layers className="text-white size-6" />
-                        </div>
-                        <span className={cn(
-                            "font-bold text-xl tracking-tight text-white whitespace-nowrap transition-all duration-300",
-                            collapsed ? "opacity-0 w-0 translate-x-[-20px]" : "opacity-100 w-auto translate-x-0"
-                        )}>
-                            DynamicFront
-                        </span>
+                    <div className="flex items-center gap-3 overflow-hidden ml-1">
+                         {/* Toggle Button (Desktop) - Replaces logo based on Gemini style? Or keeps both? 
+                            Let's keep the logo but maybe make it icon only when collapsed? 
+                            Actually, Gemini puts the hamburger at the top left. 
+                            Let's put the toggle button HERE.
+                         */}
+                        <button
+                            onClick={onToggleCollapse}
+                            className="hidden md:flex items-center justify-center p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                        >
+                            <Menu size={20} />
+                        </button>
+
+                         {/* Logo / Title */}
+                         {!collapsed && (
+                            <span className="font-bold text-xl tracking-tight text-white whitespace-nowrap animate-fade-in">
+                                DynamicFront
+                            </span>
+                         )}
                     </div>
 
                     {/* Mobile close button */}
@@ -54,31 +62,20 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                     </button>
                 </div>
 
-                <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden">
+                <nav className={cn(
+                    "flex-1 overflow-x-hidden",
+                    sidebarContent ? "overflow-y-hidden p-0" : "overflow-y-auto p-3 space-y-2"
+                )}>
                     {/* CUSTOM SIDEBAR CONTENT (e.g. Session Nav) */}
                     {sidebarContent ? (
                         <>
                             {sidebarContent}
                             <div className="my-4 border-t border-slate-800" />
-                            {/* Always show "Back to Projects" if we are in a sub-view? 
-                                Actually SidebarNavigation handles "Back to Projects". 
-                                So we might just render sidebarContent and that's it. 
-                                But check if we need standard items below it.
-                            */}
                         </>
                     ) : (
                         /* DEFAULT SIDEBAR: SHOWCASE / MAIN MENU */
                         <>
-                            <SidebarItem
-                                icon={<MessageSquareText size={20} />}
-                                label="Chat Canvas"
-                                isActive={activeTab === 'chat'}
-                                collapsed={collapsed}
-                                onClick={() => {
-                                    setActiveTab('chat');
-                                    setSidebarOpen(false);
-                                }}
-                            />
+
                             <SidebarItem
                                 icon={<LayoutGrid size={20} />}
                                 label="Projects"
@@ -99,43 +96,40 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                                     setSidebarOpen(false);
                                 }}
                             />
-                            <SidebarItem
-                                icon={<Cloud size={20} />}
-                                label="Load Analysis"
-                                collapsed={collapsed}
-                                onClick={() => {
-                                    onOpenLoadModal();
-                                    setSidebarOpen(false);
-                                }}
-                            />
-
-                            <div className={cn(
-                                "pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider transition-all duration-300 whitespace-nowrap overflow-hidden",
-                                collapsed ? "opacity-0 h-0 p-0" : "opacity-100 px-3"
-                            )}>
-                                Resources
-                            </div>
-
-                            <SidebarItem
-                                icon={<CloudLightning size={20} />}
-                                label="Register API"
-                                collapsed={collapsed}
-                                onClick={() => {
-                                    onRegisterApi();
-                                    setSidebarOpen(false);
-                                }}
-                            />
-                            <SidebarItem
-                                icon={<Plus size={20} />}
-                                label="Register Database"
-                                collapsed={collapsed}
-                                onClick={() => {
-                                    onRegisterDb();
-                                    setSidebarOpen(false);
-                                }}
-                            />
                         </>
                     )}
+
+                    {/* ALWAYS SHOW RESOURCE REGISTRATION BUTTONS */}
+                    <div className={cn(
+                        sidebarContent ? "px-3 space-y-2" : "", // Add padding when after custom content
+                        "flex flex-col"
+                    )}>
+                        <div className={cn(
+                            "pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider transition-all duration-300 whitespace-nowrap overflow-hidden",
+                            collapsed ? "opacity-0 h-0 p-0" : "opacity-100 px-3"
+                        )}>
+                            Resources
+                        </div>
+
+                        <SidebarItem
+                            icon={<CloudLightning size={20} />}
+                            label="Register API"
+                            collapsed={collapsed}
+                            onClick={() => {
+                                onRegisterApi();
+                                setSidebarOpen(false);
+                            }}
+                        />
+                        <SidebarItem
+                            icon={<Plus size={20} />}
+                            label="Register Database"
+                            collapsed={collapsed}
+                            onClick={() => {
+                                onRegisterDb();
+                                setSidebarOpen(false);
+                            }}
+                        />
+                    </div>
                 </nav>
 
                 <div className="p-3 border-t border-slate-800 flex flex-col gap-2">
@@ -149,14 +143,7 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                         }}
                     />
 
-                    {/* Collapse Toggle (Desktop only) */}
-                    <button
-                        onClick={() => setCollapsed(!collapsed)}
-                        className="hidden md:flex items-center justify-center p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors mt-2"
-                        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                    >
-                        {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-                    </button>
+                    {/* Collapse Toggle MOVED TO TOP */}
                 </div>
             </div>
 
@@ -173,14 +160,12 @@ const Layout = ({ children, activeTab, setActiveTab, onRegisterApi, onRegisterDb
                             <Menu size={20} className="text-slate-400" />
                         </button>
                         <h2 className="text-lg font-semibold text-slate-100">
-                            {activeTab === 'chat' ? 'Agentic Canvas' : activeTab === 'resources' ? 'My Resources' : activeTab === 'settings' ? 'Settings' : activeTab}
+                            {title || (activeTab === 'chat' ? 'Agentic Canvas' : activeTab === 'resources' ? 'My Resources' : activeTab === 'settings' ? 'Settings' : activeTab === 'showcase' ? 'Projects' : activeTab)}
                         </h2>
                     </div>
                     <div className="flex items-center gap-3">
                         {headerContent}
-                        <span className="hidden sm:flex text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-full border border-green-400/20">
-                            Online
-                        </span>
+
                     </div>
                 </header>
 

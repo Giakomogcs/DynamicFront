@@ -68,22 +68,11 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction, onRef
 
     return (
         <div className="flex-1 h-full flex flex-col bg-slate-950 overflow-hidden relative">
-            {canvasId && <CanvasNavigator canvasId={canvasId} onNavigate={onNavigate} />}
+
 
             {/* Scrollable Container - Moved padding here to fix scroll issue */}
             <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
                 <div className="max-w-7xl mx-auto space-y-6 pb-[50vh]"> {/* Added huge padding for floating chat */}
-                    <header className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800/50">
-                        <Sparkles className="text-indigo-400" size={24} />
-                        <h2 className="text-xl font-semibold text-white">
-                            {activeScreen.name}
-                        </h2>
-                        <span className="text-xs text-slate-500 bg-slate-900 px-3 py-1.5 rounded-full ml-auto border border-slate-800">
-                            {visibleWidgets.length} Widget{visibleWidgets.length !== 1 && 's'}
-                        </span>
-                        {loading && <span className="text-xs text-indigo-400 animate-pulse">Updating...</span>}
-                    </header>
-
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-8">
                         {visibleWidgets.map((widget, idx) => (
                             <div key={`${activeScreenId}-${idx}`} className={`

@@ -56,61 +56,83 @@ export const storageService = {
     },
 
     async saveCanvas(id, title, widgets, messages = null, groupId = null) {
-        // Upsert Canvas
+        // Enhanced saveCanvas with explicit partial update support
         return prisma.$transaction(async (tx) => {
-            // 1. Upsert Canvas
-            // Prepare update data (ignore undefined)
-            const updateData = {};
-            if (title !== undefined) updateData.title = title;
-            // Phase 2: Persist new fields if provided in update (implicit via body usually, but explicit here for safety)
-            // Note: saveCanvas args are limited, so we might need to rely on '...rest' pattern or just extend args later.
-            // For now, let's assume updateData can take more if we passed an object.
-            // BUT, since we are strict on args:
-            if (groupId !== undefined) updateData.sessionId = groupId;
+            // Check if canvas exists
+            const existing = await tx.canvas.findUnique({ where: { id } });
+            
+            if (!existing) {
+                // CREATE NEW CANVAS
+                await tx.canvas.create({
+                    data: {
+                        id,
+                        title: title || 'Untitled',
+                        slug: await this._generateUniqueSlug(title || 'Untitled', id, groupId),
+                        sessionId: groupId,
+                        theme: {},
+                        layoutType: 'dashboard'
+                    }
+                });
 
-            await tx.canvas.upsert({
-                where: { id },
-                create: {
-                    id,
-                    title,
-                    slug: await this._generateUniqueSlug(title, id, groupId),
-                    sessionId: groupId, // Must be a valid Session ID now
-                    theme: {},
-                    layoutType: 'dashboard'
-                },
-                update: updateData // Note: Update usually preserves slug unless we add logic to change it
-            });
-
-            // 2. Handle Widgets (Full Replacement if provided)
-            if (widgets !== undefined) {
-                // Delete all existing for this canvas
-                await tx.widget.deleteMany({ where: { canvasId: id } });
-
-                // Create new
-                if (widgets.length > 0) {
+                // Create initial widgets if provided
+                if (widgets && widgets.length > 0) {
                     await tx.widget.createMany({
                         data: widgets.map((w, index) => ({
                             canvasId: id,
                             type: w.type,
                             title: w.title,
-                            config: w.config || w.content || w, // Fallback to whole object if no config/content
+                            config: w.config || w.content || w,
                             dataSource: w.dataSource || null,
                             position: index
                         }))
                     });
                 }
+            } else {
+                // UPDATE EXISTING CANVAS
+                // Only update fields that are explicitly provided
+                const updateData = {};
+                if (title !== undefined) updateData.title = title;
+                if (groupId !== undefined && groupId !== null) updateData.sessionId = groupId;
+                
+                // Always update timestamp
+                updateData.updatedAt = new Date();
+
+                if (Object.keys(updateData).length > 0) {
+                    await tx.canvas.update({
+                        where: { id },
+                        data: updateData
+                    });
+                }
+
+                // Handle widgets ONLY if explicitly provided (not undefined)
+                if (widgets !== undefined) {
+                    // Full replacement: delete existing and create new
+                    await tx.widget.deleteMany({ where: { canvasId: id } });
+
+                    if (widgets.length > 0) {
+                        await tx.widget.createMany({
+                            data: widgets.map((w, index) => ({
+                                canvasId: id,
+                                type: w.type,
+                                title: w.title,
+                                config: w.config || w.content || w,
+                                dataSource: w.dataSource || null,
+                                position: index
+                            }))
+                        });
+                    }
+                }
             }
 
-            // UPDATE PARENT SESSION TIMESTAMP
+            // Update parent session timestamp if groupId provided
             if (groupId) {
                 await tx.session.updateMany({
                     where: { id: groupId },
-                    data: { lastActiveAt: new Date() } // Use lastActiveAt as standard "Updated" for sessions
+                    data: { lastActiveAt: new Date() }
                 });
             }
 
-            // Return full object
-            // 3. Return updated canvas using strict TX client to ensure visibility
+            // Return full updated canvas
             const saved = await tx.canvas.findUnique({
                 where: { id },
                 include: { widgets: { orderBy: { position: 'asc' } }, outgoingLinks: true, incomingLinks: true }
@@ -130,7 +152,7 @@ export const storageService = {
                     id: w.id,
                     type: w.type,
                     title: w.title,
-                    config: typeof w.config === 'object' ? w.config : {}, // Validated object
+                    config: typeof w.config === 'object' ? w.config : {},
                     ...((typeof w.config === 'object' ? w.config : {}) || {})
                 })),
                 linkedCanvases: [

@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { X, Check, Loader2, Eye, EyeOff, Sparkles, AlertCircle, ArrowRight } from 'lucide-react';
+import { z } from 'zod';
+import { useToast } from './ui/Toast';
+import { apiRegistrationSchema, dbRegistrationSchema } from '../schemas/resourceSchemas';
 
 export const Modal = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
@@ -48,6 +51,8 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
     const [analyzing, setAnalyzing] = useState(false);
     const [testing, setTesting] = useState(false);
     const [testResult, setTestResult] = useState(null);
+    const { success, error: toastError } = useToast();
+    const [validationErrors, setValidationErrors] = useState({});
 
     // Initial State Logic
     // Initial State Logic
@@ -116,7 +121,7 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
 
     const handleAnalyze = async () => {
         if (!basicInfo.specUrl && !basicInfo.docsContent) {
-            alert("Please provide Documentation URL or Content.");
+            toastError("Please provide Documentation URL or Content.");
             return;
         }
         setAnalyzing(true);
@@ -183,12 +188,13 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
 
                 setAuthConfig(newAuth);
                 setStep(2); // Move to Config
+                setStep(2); // Move to Config
             } else {
-                alert("Could not detect authentication strategy automatically. Please configure manually.");
+                toastError("Could not detect authentication strategy automatically. Please configure manually.");
                 setStep(2);
             }
         } catch (e) {
-            alert(`Analysis failed: ${e.message}`);
+            toastError(`Analysis failed: ${e.message}`);
             setStep(2); // Fallback to manual
         } finally {
             setAnalyzing(false);
@@ -196,7 +202,7 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
     };
 
     const handleTest = async () => {
-        if (!basicInfo.baseUrl) return alert("Base URL is required");
+        if (!basicInfo.baseUrl) return toastError("Base URL is required");
         setTesting(true);
         setTestResult(null);
 
@@ -295,14 +301,38 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
             }
         }
 
-        onSubmit({
-            name: basicInfo.name,
-            baseUrl: basicInfo.baseUrl.trim(),
-            specUrl: basicInfo.docsMode === 'url' ? basicInfo.specUrl.trim() : undefined,
-            docsContent: basicInfo.docsMode === 'text' ? basicInfo.docsContent : undefined,
-            authConfig: JSON.stringify(finalConfig),
-            verificationAuthData // Pass to backend
-        });
+        // Zod Validation
+        try {
+            const validationPayload = {
+                name: basicInfo.name,
+                baseUrl: basicInfo.baseUrl.trim(),
+                specUrl: basicInfo.docsMode === 'url' ? basicInfo.specUrl.trim() : '',
+                docsContent: basicInfo.docsMode === 'text' ? basicInfo.docsContent : '',
+                docsAuthEnabled: basicInfo.docsAuthEnabled,
+                docsUsername: basicInfo.docsUsername,
+                docsPassword: basicInfo.docsPassword,
+                authConfig: JSON.stringify(finalConfig)
+            };
+            
+            apiRegistrationSchema.parse(validationPayload);
+            setValidationErrors({});
+
+            onSubmit({ 
+                 ...validationPayload,
+                 verificationAuthData 
+            });
+        } catch (err) {
+            if (err instanceof z.ZodError) {
+                const errors = {};
+                err.issues.forEach(e => errors[e.path[0]] = e.message);
+                setValidationErrors(errors);
+                
+                // Show toast for the first error
+                toastError(err.issues[0]?.message || "Validation failed");
+            } else {
+                 toastError(err.message);
+            }
+        }
     };
 
     // --- Render ---
@@ -313,15 +343,17 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
             <div className="space-y-4">
                 <div>
                     <label className="block text-xs font-semibold text-slate-400 mb-1">API Name</label>
-                    <input autoFocus required className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none"
+                    <input autoFocus required className={`w-full bg-slate-950 border rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none ${validationErrors.name ? 'border-red-500/50' : 'border-slate-800'}`}
                         placeholder="e.g. Stripe API"
                         value={basicInfo.name} onChange={e => setBasicInfo({ ...basicInfo, name: e.target.value })} />
+                    {validationErrors.name && <div className="text-[10px] text-red-400 mt-1">{validationErrors.name}</div>}
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-slate-400 mb-1">Base URL</label>
-                    <input required className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none font-mono"
+                    <input required className={`w-full bg-slate-950 border rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none font-mono ${validationErrors.baseUrl ? 'border-red-500/50' : 'border-slate-800'}`}
                         placeholder="https://api.example.com/v1"
                         value={basicInfo.baseUrl} onChange={e => setBasicInfo({ ...basicInfo, baseUrl: e.target.value })} />
+                    {validationErrors.baseUrl && <div className="text-[10px] text-red-400 mt-1">{validationErrors.baseUrl}</div>}
                 </div>
 
                 <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800/50">
@@ -331,9 +363,10 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
                     </div>
                     {basicInfo.docsMode === 'url' ? (
                         <div className="space-y-3">
-                            <input className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white text-sm focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
+                            <input className={`w-full bg-slate-900 border rounded-lg p-2.5 text-white text-sm focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all ${validationErrors.specUrl ? 'border-red-500/50' : 'border-slate-800'}`}
                                 placeholder="https://docs.example.com/api"
                                 value={basicInfo.specUrl} onChange={e => setBasicInfo({ ...basicInfo, specUrl: e.target.value })} />
+                            {validationErrors.specUrl && <div className="text-[10px] text-red-400 mt-1">{validationErrors.specUrl}</div>}
 
                             <div className="flex items-center gap-2">
                                 <input type="checkbox" id="docsAuthCheck"
@@ -345,22 +378,31 @@ export const RegisterApiForm = ({ onSubmit, isLoading, initialData }) => {
 
                             {basicInfo.docsAuthEnabled && (
                                 <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1">
-                                    <input className="bg-slate-900 border border-slate-800 rounded px-2.5 py-2 text-white text-xs outline-none"
-                                        placeholder="Username"
-                                        value={basicInfo.docsUsername || ''}
-                                        onChange={e => setBasicInfo({ ...basicInfo, docsUsername: e.target.value })} />
-                                    <RevealableInput
-                                        className="bg-slate-900 border border-slate-800 rounded px-2.5 py-2 text-white text-xs outline-none focus:border-indigo-500"
-                                        placeholder="Password"
-                                        value={basicInfo.docsPassword || ''}
-                                        onChange={e => setBasicInfo({ ...basicInfo, docsPassword: e.target.value })} />
+                                    <div className="space-y-1">
+                                        <input className={`w-full bg-slate-900 border rounded px-2.5 py-2 text-white text-xs outline-none ${validationErrors.docsUsername ? 'border-red-500/50' : 'border-slate-800'}`}
+                                            placeholder="Username"
+                                            value={basicInfo.docsUsername || ''}
+                                            onChange={e => setBasicInfo({ ...basicInfo, docsUsername: e.target.value })} />
+                                        {validationErrors.docsUsername && <div className="text-[10px] text-red-400">{validationErrors.docsUsername}</div>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <RevealableInput
+                                            className={`bg-slate-900 border rounded px-2.5 py-2 text-white text-xs outline-none focus:border-indigo-500 ${validationErrors.docsPassword ? 'border-red-500/50' : 'border-slate-800'}`}
+                                            placeholder="Password"
+                                            value={basicInfo.docsPassword || ''}
+                                            onChange={e => setBasicInfo({ ...basicInfo, docsPassword: e.target.value })} />
+                                        {validationErrors.docsPassword && <div className="text-[10px] text-red-400">{validationErrors.docsPassword}</div>}
+                                    </div>
                                 </div>
                             )}
                         </div>
                     ) : (
-                        <textarea className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-white text-xs h-32 font-mono focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all resize-none"
-                            placeholder="Paste CURL commands, JSON specs, or raw docs here..."
-                            value={basicInfo.docsContent} onChange={e => setBasicInfo({ ...basicInfo, docsContent: e.target.value })} />
+                        <div className="space-y-1">
+                            <textarea className={`w-full bg-slate-900 border rounded-lg p-3 text-white text-xs h-32 font-mono focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all resize-none ${validationErrors.docsContent ? 'border-red-500/50' : 'border-slate-800'}`}
+                                placeholder="Paste CURL commands, JSON specs, or raw docs here..."
+                                value={basicInfo.docsContent} onChange={e => setBasicInfo({ ...basicInfo, docsContent: e.target.value })} />
+                            {validationErrors.docsContent && <div className="text-[10px] text-red-400">{validationErrors.docsContent}</div>}
+                        </div>
                     )}
                 </div>
 
@@ -577,13 +619,26 @@ export const RegisterDbForm = ({ onSubmit, isLoading, initialData }) => {
 
     const [testResult, setTestResult] = useState(null);
     const [isTesting, setIsTesting] = useState(false);
+    const { error: toastError } = useToast();
+    const [validationErrors, setValidationErrors] = useState({});
 
     // TODO: Add Db Test Endpoint validation here similar to API if desired.
     // For now we just implement simple UI to match.
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSubmit(formData);
+        try {
+            dbRegistrationSchema.parse(formData);
+            setValidationErrors({});
+            onSubmit(formData);
+        } catch (err) {
+            if (err instanceof z.ZodError) {
+                const errors = {};
+                err.issues.forEach(e => errors[e.path[0]] = e.message);
+                setValidationErrors(errors);
+                toastError(err.issues[0]?.message || "Validation failed");
+            }
+        }
     };
 
     return (
@@ -592,11 +647,12 @@ export const RegisterDbForm = ({ onSubmit, isLoading, initialData }) => {
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Database Name</label>
                 <input
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none"
+                    className={`w-full bg-slate-950 border rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none ${validationErrors.name ? 'border-red-500/50' : 'border-slate-800'}`}
                     placeholder="e.g. Analytics DB"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                 />
+                {validationErrors.name && <div className="text-[10px] text-red-400 mt-1">{validationErrors.name}</div>}
             </div>
             <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Type</label>
@@ -613,11 +669,12 @@ export const RegisterDbForm = ({ onSubmit, isLoading, initialData }) => {
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Connection String</label>
                 <input
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white text-sm font-mono focus:border-indigo-500 outline-none"
+                    className={`w-full bg-slate-950 border rounded-lg p-3 text-white text-sm font-mono focus:border-indigo-500 outline-none ${validationErrors.connectionString ? 'border-red-500/50' : 'border-slate-800'}`}
                     placeholder="postgres://user:pass@localhost:5432/db"
                     value={formData.connectionString}
                     onChange={e => setFormData({ ...formData, connectionString: e.target.value })}
                 />
+                {validationErrors.connectionString && <div className="text-[10px] text-red-400 mt-1">{validationErrors.connectionString}</div>}
             </div>
             <button
                 type="submit"

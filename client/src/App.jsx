@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './Layout';
 import { Chat } from './components/Chat';
-import { MessageSquareText } from 'lucide-react';
+import { MessageSquareText, Search, Plus, Save, AlertTriangle } from 'lucide-react';
 import { ResourcesView } from './components/ResourcesView';
 import { SettingsView } from './components/SettingsView';
 import { Modal, RegisterApiForm, RegisterDbForm } from './components/RegistrationModal';
 import { ToastProvider, useToast } from './components/ui/Toast';
 
 import { Canvas } from './components/Canvas';
-import { CanvasHeader } from './components/CanvasHeader';
 import { ShowroomView } from './components/ShowroomView';
 import { SidebarNavigation } from './components/SidebarNavigation';
 
@@ -21,6 +20,11 @@ function AppContent() {
     const [modalType, setModalType] = useState(null);
     const [showSettings, setShowSettings] = useState(false);
     const [location, setLocation] = useState(null);
+    const [refreshResourcesTrigger, setRefreshResourcesTrigger] = useState(0);
+    const [projectsSearchTerm, setProjectsSearchTerm] = useState('');
+    const [refreshProjectsTrigger, setRefreshProjectsTrigger] = useState(0);
+    const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+    const [newProjectData, setNewProjectData] = useState({ title: '', description: '' });
 
     // --- Session State ---
     const [sessionId, setSessionId] = useState(null);
@@ -43,6 +47,11 @@ function AppContent() {
     const [chatExpanded, setChatExpanded] = useState(false); // For vertical expansion
     const [chatWidth, setChatWidth] = useState(400);
     const [isResizing, setIsResizing] = useState(false);
+    
+    // --- UI State ---
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [pageToDelete, setPageToDelete] = useState(null); // Lifted state for Delete Modal
+    
     // --- History State ---
     const [historyStack, setHistoryStack] = useState([]); // Stack of canvas IDs
 
@@ -52,11 +61,30 @@ function AppContent() {
         error(msg);
     };
 
+    // --- Persistence (F5 Support) ---
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const urlProjectId = params.get('project');
+        if (urlProjectId) {
+            console.log("Restoring session from URL:", urlProjectId);
+            // We need to restore the session
+            // Note: We don't have the full session object here, but handleSelectSession fetches it.
+            // We just need to make sure we don't duplicate logic.
+            handleSelectSession(urlProjectId);
+        }
+    }, []); // Run ONCE on mount
+
     const refreshSession = async (sessId) => {
         try {
             const res = await fetch(`http://localhost:3000/api/sessions/${sessId}/structure`);
             if (!res.ok) throw new Error("Failed to load layout");
             const struct = await res.json();
+            
+            // STABLE SORT: Sort by ID to prevent jumping
+            if (struct.canvases) {
+                struct.canvases.sort((a, b) => a.id - b.id);
+            }
+            
             setSessionStructure(struct);
 
             // Also load chats
@@ -129,6 +157,10 @@ function AppContent() {
         setSessionId(id);
         setActiveTab('project');
         setHistoryStack([]); // Clear history on project switch
+        
+        // Persist URL
+        const newUrl = `${window.location.pathname}?project=${id}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
 
         // Load Data
         const struct = await refreshSession(id);
@@ -275,7 +307,7 @@ function AppContent() {
     const handleCreateNewCanvas = async (sessId = sessionId) => {
         // PERF: Auto-save current work before creating new
         if (canvasId) await saveCanvas();
-
+        
         // Create via API directly
         try {
             setIsProcessing(true);
@@ -283,22 +315,58 @@ function AppContent() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: 'New Page',
+                    title: 'Untitled Page',
                     groupId: sessId,
                     widgets: [],
-                    messages: []
+                    messages: [],
+                    skipGeneration: true // Prevent auto-generated welcome widget delay
                 })
             });
             const newCanvas = await res.json();
 
-            // Reload session structure
-            await refreshSession(sessId);
-            // Load new canvas
-            await loadCanvas(newCanvas.id);
+            // OPTIMISTIC UPDATE: Add to local state immediately so UI updates fast
+            setSessionStructure(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    canvases: [...(prev.canvases || []), newCanvas].sort((a,b) => a.id - b.id)
+                };
+            });
+            
+            // Return the new canvas so the UI can select/edit it
+            return newCanvas;
         } catch (e) {
             handleError("Failed to create page");
+            return null;
         } finally {
             setIsProcessing(false);
+            // Background refresh to true-up everything
+             refreshSession(sessId);
+        }
+    };
+
+    const handleCreateProject = async () => {
+        if (!newProjectData.title.trim()) return;
+
+        try {
+            const res = await fetch('http://localhost:3000/api/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newProjectData)
+            });
+
+            if (res.ok) {
+                const session = await res.json();
+                // Close modal and refresh list
+                setShowNewProjectModal(false);
+                setNewProjectData({ title: '', description: '' });
+                setRefreshProjectsTrigger(prev => prev + 1);
+                // Optional: Open directly?
+                // onSelectSession(session.id); 
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed to create project");
         }
     };
 
@@ -319,6 +387,7 @@ function AppContent() {
 
             success("API registered successfully!");
             setModalType(null);
+            setRefreshResourcesTrigger(prev => prev + 1);
         } catch (e) {
             handleError(e.message);
         } finally {
@@ -342,6 +411,7 @@ function AppContent() {
 
             success("Database registered successfully!");
             setModalType(null);
+            setRefreshResourcesTrigger(prev => prev + 1);
         } catch (e) {
             handleError(e.message);
         } finally {
@@ -350,30 +420,59 @@ function AppContent() {
     };
 
     const handleRenamePage = async (id, newTitle) => {
+        // Optimistic Update
+        setSessionStructure(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                canvases: prev.canvases?.map(c => 
+                    c.id === id ? { ...c, title: newTitle } : c
+                ) || []
+            };
+        });
+        if (id === canvasId) setCanvasTitle(newTitle);
+
         try {
             await fetch(`http://localhost:3000/api/canvases/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: newTitle })
             });
-            if (id === canvasId) setCanvasTitle(newTitle);
+            // Background refresh to ensure consistency
             refreshSession(sessionId);
         } catch (e) {
             handleError("Rename failed");
+            refreshSession(sessionId); // Revert on error
         }
     };
 
     const handleDeletePage = async (id) => {
-        if (!confirm("Delete this page?")) return;
+        // No confirm here - the Modal handles the user interaction
         try {
+            // Optimistic Removal
+            setSessionStructure(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    canvases: prev.canvases.filter(c => c.id !== id)
+                };
+            });
+
             await fetch(`http://localhost:3000/api/canvases/${id}`, { method: 'DELETE' });
-            const updated = await refreshSession(sessionId);
-            // If deleted current, go home
-            if (id === canvasId && updated?.canvases?.length > 0) {
-                loadCanvas(updated.canvases[0].id);
+            
+            // If deleted current, go home or prev
+            if (id === canvasId) {
+                const remaining = sessionStructure?.canvases?.filter(c => c.id !== id) || [];
+                if (remaining.length > 0) {
+                     loadCanvas(remaining[0].id);
+                }
             }
+            
+            await refreshSession(sessionId);
         } catch (e) {
             handleError("Delete failed");
+            // Revert on error would be ideal, but for now just refresh
+            refreshSession(sessionId);
         }
     };
 
@@ -546,6 +645,7 @@ function AppContent() {
     // --- Render ---
 
     return (
+        <>
         <Layout
             activeTab={activeTab}
             setActiveTab={setActiveTab}
@@ -558,55 +658,102 @@ function AppContent() {
                 <SidebarNavigation
                     pages={sessionStructure.canvases || []}
                     activePageId={canvasId}
+                    collapsed={sidebarCollapsed}
                     onNavigate={handleNavigatePage}
                     onCreatePage={() => handleCreateNewCanvas()}
                     onRenamePage={handleRenamePage}
-                    onDeletePage={handleDeletePage}
+                    onDeletePage={(pageId) => handleDeletePage(pageId)}
+                    onRequestDelete={(page) => {
+                        console.log("Requesting delete for:", page);
+                        setPageToDelete(page);
+                    }}
 
-                    // Chat Props
-                    chats={chats}
-                    activeChatId={activeChatId}
-                    onSelectChat={(id) => loadChat(id)}
-                    onCreateChat={() => handleCreateNewChat()}
-                    onRenameChat={handleRenameChat}
-                    onDeleteChat={handleDeleteChat}
 
-                    onBackToHome={() => setActiveTab('showcase')}
+
+                    onBackToHome={() => {
+                        setActiveTab('showcase');
+                        // Clear URL
+                        window.history.pushState({}, '', window.location.pathname);
+                    }}
                 />
             ) : null}
+            title={activeTab === 'project' ? (sessionStructure?.title || 'Loading Project...') : undefined}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            headerContent={
+                <div className="flex items-center gap-4">
+                    {/* PROJECTS VIEW CONTROLS */}
+                    {activeTab === 'showcase' && (
+                        <>
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search projects..."
+                                    value={projectsSearchTerm}
+                                    onChange={(e) => setProjectsSearchTerm(e.target.value)}
+                                    className="pl-9 pr-4 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none w-48 transition-all"
+                                />
+                            </div>
+
+                            <button
+                                onClick={() => setShowNewProjectModal(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95"
+                            >
+                                <Plus size={16} />
+                                <span>New Project</span>
+                            </button>
+                        </>
+                    )}
+
+                    {/* PROJECT CANVAS CONTROLS */}
+                    {activeTab === 'project' && (
+                        <div className="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-lg border border-white/5">
+                            <span className="text-xs font-semibold text-slate-400 px-2">Current Page</span>
+                            <div className="h-4 w-px bg-white/10" />
+                            <button
+                                onClick={() => saveCanvas()}
+                                disabled={isSaving}
+                                title="Save Project"
+                                className={`
+                                    p-1.5 rounded-md transition-all flex items-center gap-2
+                                    ${isSaving 
+                                        ? 'bg-amber-500/10 text-amber-500 cursor-wait' 
+                                        : 'hover:bg-indigo-500 hover:text-white text-slate-400'}
+                                `}
+                            >
+                                <Save size={16} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            }
         >
-            {activeTab === 'showcase' && (
-                <ShowroomView
-                    onSelectSession={handleSelectSession}
-                    onCreateSession={(id) => handleSelectSession(id)}
-                />
-            )}
-
-            {activeTab === 'project' && (
-                <div className="flex-1 flex flex-col min-w-0 relative h-full">
-                    {/* 1. Top Header */}
-                    <CanvasHeader
-                        title={canvasTitle}
-                        projectTitle={sessionStructure?.title || "Project"}
-                        onTitleChange={(t) => { setCanvasTitle(t); saveCanvas(t); }}
-                        isSaving={isSaving || isProcessing}
-                        onSave={() => saveCanvas()}
-                        lastSavedAt={lastSaved}
-                        canGoBack={false}
-                        onBack={() => { }}
+                {/* ACTIVE TAB CONTENT */}
+                {activeTab === 'showcase' && (
+                    <ShowroomView 
+                        searchTerm={projectsSearchTerm} 
+                        refreshTrigger={refreshProjectsTrigger}
+                        onSelectSession={handleSelectSession}
+                        onCreateProject={() => setShowNewProjectModal(true)}
                     />
-
-                    {/* 2. Horizontal Container (Canvas + Sidebar) */}
-                    <div className="flex-1 flex flex-row relative overflow-hidden bg-slate-950">
-
-                        {/* 2a. Main Canvas Area (Takes remaining width) */}
-                        <div className="flex-1 relative h-full min-w-0">
-                            <Canvas
-                                widgets={activeWidgets}
-                                loading={isProcessing}
+                )}
+                {activeTab === 'project' && (
+                     <div className="flex h-full w-full relative">
+                        {/* Canvas Area */}
+                        <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
+                             <Canvas
+                                key={canvasId} // Key ensures remount on swap
                                 canvasId={canvasId}
-                                onAction={(action) => console.log(action)}
-                            />
+                                title={canvasTitle}
+                                widgets={activeWidgets}
+                                messages={messages}
+                                isProcessing={isProcessing}
+                                onSendMessage={handleSendMessage}
+                                onStopGeneration={handleStopGeneration}
+                                onWidgetChange={setActiveWidgets}
+                                activeChatId={activeChatId}
+                             />
 
                             {/* Floating Trigger (When Collapsed) */}
                             {chatCollapsed && (
@@ -623,61 +770,165 @@ function AppContent() {
                             )}
                         </div>
 
-                        {/* 2b. Chat Sidebar (Animated Width) */}
+                         {/* CHAT SIDEBAR (Right) */}
                         <div
-                            className={`border-l border-slate-800 bg-slate-900/40 backdrop-blur-sm transition-all duration-300 ease-in-out flex flex-col z-20 h-full ${chatCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[450px] opacity-100'
-                                }`}
+                            className={`border-l border-slate-800 bg-slate-900/40 backdrop-blur-sm transition-all duration-300 ease-in-out flex flex-col z-20 h-full ${chatCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[450px] opacity-100'}`}
+                             style={{width: chatCollapsed ? 0 : chatWidth}}
                         >
-                            <Chat
+                            <Chat 
+                                chatId={activeChatId}
+                                sessionId={sessionId}
                                 messages={messages}
-                                onSendMessage={handleSendMessage}
                                 isProcessing={isProcessing}
-                                onStop={handleStopGeneration}
-
-                                // Centralized Control Props
-                                collapsed={false}
-                                onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
-
-                                // Management
-                                chats={chats} // Pass actual chats
-                                activeChatId={activeChatId}
-                                onNavigateChat={(id) => loadChat(id)} // Maps to onSelectChat basically
-                                onNewChat={handleCreateNewChat}
+                                onSendMessage={handleSendMessage}
+                                onStopGeneration={handleStopGeneration}
                                 onEditMessage={handleEditMessage}
+                                onClose={() => setChatCollapsed(true)} 
+                                width={chatWidth}
+                                setWidth={setChatWidth}
+                                isResizing={isResizing}
+                                onResizeStart={() => setIsResizing(true)}
+                                onResizeEnd={() => setIsResizing(false)}
+                                collapsed={chatCollapsed}
+                                onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
+                                expanded={chatExpanded}
+                                onToggleExpand={() => setChatExpanded(!chatExpanded)}
                             />
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+                {activeTab === 'resources' && (
+                     <ResourcesView refreshTrigger={refreshResourcesTrigger} />
+                )}
 
-            {activeTab === 'resources' && <ResourcesView />}
+            </Layout>
 
-            {/* Settings & Modals ... */}
-            {showSettings && (
-                <div className="fixed inset-0 z-[60] flex justify-end">
-                    <div className="absolute inset-0 bg-black/60" onClick={() => setShowSettings(false)} />
-                    <div className="relative w-full max-w-2xl bg-slate-950 border-l border-slate-800 shadow-2xl h-full animate-in slide-in-from-right">
-                        <SettingsView onClose={() => setShowSettings(false)} onSettingsChanged={() => { }} />
+            {/* GLOBAL MODALS */}
+            
+            {/* DELETE PAGE MODAL */}
+            {pageToDelete && (
+                <Modal
+                    isOpen={!!pageToDelete}
+                    onClose={() => setPageToDelete(null)}
+                    title="Delete Page"
+                >
+                    <div className="flex flex-col items-center text-center p-2 mb-6">
+                        <div className="size-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                            <AlertTriangle className="text-red-500" size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">Confirm Deletion</h3>
+                        <p className="text-slate-400 text-sm">
+                            Are you sure you want to delete <span className="text-white font-medium">"{pageToDelete.title}"</span>? 
+                            <br/>This action cannot be undone.
+                        </p>
                     </div>
-                </div>
+
+                    <div className="flex w-full gap-3">
+                        <button 
+                            onClick={() => setPageToDelete(null)}
+                            className="flex-1 px-4 py-2 rounded-xl text-slate-300 hover:bg-slate-800 transition-colors font-medium text-sm border border-slate-700 hover:text-white"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={() => {
+                                handleDeletePage(pageToDelete.id);
+                                setPageToDelete(null);
+                            }}
+                            className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium shadow-lg shadow-red-500/20 transition-all text-sm"
+                        >
+                            Delete Page
+                        </button>
+                    </div>
+                </Modal>
+            )}
+            
+            {/* NEW PROJECT MODAL */}
+            {showNewProjectModal && (
+                <Modal 
+                    isOpen={showNewProjectModal} 
+                    onClose={() => setShowNewProjectModal(false)}
+                    title="Create New Project"
+                >
+                     <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Project Name</label>
+                            <input 
+                                type="text"
+                                autoFocus
+                                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                                value={newProjectData.title}
+                                onChange={e => setNewProjectData(prev => ({ ...prev, title: e.target.value }))}
+                            />
+                        </div>
+                         <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Description</label>
+                            <textarea 
+                                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-2 focus:ring-indigo-500/50 outline-none h-24 resize-none"
+                                value={newProjectData.description}
+                                onChange={e => setNewProjectData(prev => ({ ...prev, description: e.target.value }))}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-4">
+                             <button 
+                                onClick={() => setShowNewProjectModal(false)}
+                                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleCreateProject}
+                                disabled={!newProjectData.title.trim()}
+                                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Create Project
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             )}
 
-            <Modal
-                isOpen={modalType === 'api'}
-                onClose={() => setModalType(null)}
-                title="Register New API"
-            >
-                <RegisterApiForm onSubmit={handleRegisterApiSubmit} isLoading={isProcessing} />
-            </Modal>
+            {/* API REGISTRATION MODAL */}
+            {modalType === 'api' && (
+                <Modal 
+                    isOpen={modalType === 'api'} 
+                    onClose={() => setModalType(null)}
+                    title="Register New API"
+                >
+                    <RegisterApiForm 
+                        onSubmit={handleRegisterApiSubmit}
+                        isProcessing={isProcessing}
+                        onCancel={() => setModalType(null)}
+                    />
+                </Modal>
+            )}
 
-            <Modal
-                isOpen={modalType === 'db'}
-                onClose={() => setModalType(null)}
-                title="Register New Database"
-            >
-                <RegisterDbForm onSubmit={handleRegisterDbSubmit} isLoading={isProcessing} />
-            </Modal>
-        </Layout>
+            {/* DATABASE REGISTRATION MODAL */}
+            {modalType === 'db' && (
+                <Modal 
+                    isOpen={modalType === 'db'} 
+                    onClose={() => setModalType(null)}
+                    title="Register New Database"
+                >
+                    <RegisterDbForm 
+                        onSubmit={handleRegisterDbSubmit}
+                        isProcessing={isProcessing}
+                        onCancel={() => setModalType(null)}
+                    />
+                </Modal>
+            )}
+
+            {/* SETTINGS MODAL */}
+            {showSettings && (
+                <Modal 
+                    isOpen={showSettings} 
+                    onClose={() => setShowSettings(false)}
+                    title="Settings"
+                >
+                    <SettingsView onClose={() => setShowSettings(false)} />
+                </Modal>
+            )}
+        </>
     );
 }
 

@@ -3,7 +3,7 @@ import { Trash2, Database, Globe, Loader2, AlertCircle, Eye, RefreshCw, Pencil, 
 import { useToast } from './ui/Toast';
 import { AuthProfilesModal } from './AuthProfilesModal';
 
-export const ResourcesView = ({ onEdit }) => {
+export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegisterDb }) => {
     const { success, error: toastError } = useToast();
     const [resources, setResources] = useState({ apis: [], dbs: [] });
     const [loading, setLoading] = useState(true);
@@ -33,10 +33,9 @@ export const ResourcesView = ({ onEdit }) => {
     };
 
     useEffect(() => {
-        console.log('[ResourcesView] Mounted');
+        console.log('[ResourcesView] Mounted (or refreshed)');
         fetchResources();
-        return () => console.log('[ResourcesView] Unmounted');
-    }, []);
+    }, [refreshTrigger]);
 
     const handleDelete = async (type, id) => {
         if (!confirm("Are you sure you want to delete this resource?")) return;
@@ -102,11 +101,25 @@ export const ResourcesView = ({ onEdit }) => {
 
     return (
         <div className="p-6 max-w-4xl mx-auto space-y-8">
-            <h2 className="text-2xl font-semibold text-white mb-6">Managed Resources</h2>
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold text-white">Managed Resources</h2>
+                <div className="flex gap-3">
+                    <button onClick={onRegisterApi} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <Globe size={16} /> Add API
+                    </button>
+                    <button onClick={onRegisterDb} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <Database size={16} /> Add Database
+                    </button>
+                </div>
+            </div>
 
             {!hasResources && (
                 <div className="text-center p-12 bg-slate-900/50 rounded-xl border border-slate-800 text-slate-400">
-                    No resources registered yet. Use the sidebar to add APIs or Databases.
+                    <p className="mb-4">No resources registered yet. Connect your existing systems to give the agent context.</p>
+                    <div className="flex justify-center gap-4">
+                        <button onClick={onRegisterApi} className="px-4 py-2 border border-slate-700 hover:border-indigo-500 hover:text-indigo-400 rounded-lg text-sm transition-colors">Register API</button>
+                        <button onClick={onRegisterDb} className="px-4 py-2 border border-slate-700 hover:border-emerald-500 hover:text-emerald-400 rounded-lg text-sm transition-colors">Register Database</button>
+                    </div>
                 </div>
             )}
 

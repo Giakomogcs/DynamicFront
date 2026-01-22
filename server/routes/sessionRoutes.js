@@ -101,6 +101,27 @@ router.get('/:id/structure', async (req, res) => {
     }
 });
 
+// PUT /api/sessions/:id - Update session
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description } = req.body;
+        
+        const updated = await prisma.session.update({
+            where: { id },
+            data: {
+                title,
+                description,
+                lastActiveAt: new Date()
+            }
+        });
+        
+        res.json(updated);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // DELETE /api/sessions/:id
 router.delete('/:id', async (req, res) => {
     try {

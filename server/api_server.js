@@ -14,11 +14,13 @@ dotenv.config();
 import { toolService } from './services/toolService.js';
 import { storageService } from './services/storageService.js';
 import { orchestrator } from './agents/Orchestrator.js';
+import { modelManager } from './services/ai/ModelManager.js';
 
 // Import routes
 // Import routes
 import sessionRoutes from './routes/sessionRoutes.js';
 import widgetRoutes from './routes/widgetRoutes.js';
+import { resourceEnricher } from './src/core/ResourceEnricher.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,8 +44,7 @@ app.use('/api/widgets', widgetRoutes);
 import testRoutes from './routes/testRoutes.js';
 app.use('/api/test', testRoutes);
 
-// Initialize Gemini
-import { modelManager } from './services/ai/ModelManager.js';
+
 
 // --- Endpoints ---
 
@@ -253,7 +254,7 @@ app.get('/api/resources/:type/:id/tools', async (req, res) => {
 });
 
 // --- AUTH PROFILE MANAGEMENT ---
-import { resourceEnricher } from './src/core/ResourceEnricher.js';
+
 
 app.get('/api/resources/:id/auth-profiles', (req, res) => {
     const profiles = resourceEnricher.getProfiles(req.params.id);
@@ -300,59 +301,92 @@ app.post('/api/resources/:id/auth-profiles/test', async (req, res) => {
         // 2. Execute with credentials
         const result = await toolService.executeTool(authTool.name, credentials);
 
-        // 3. Analyze Result for Role/Success
-        let success = !result.isError;
-        let detectedRole = null;
-        let userData = {};
-        let message = "Auth executed.";
+            // 3. Analyze Result for Role/Success
+            let success = !result.isError;
+            let detectedRole = null;
+            let userData = {};
+            let message = "Auth executed.";
 
-        if (result.content && result.content[0]) {
-            const text = result.content[0].text;
-            message = text;
+            if (result.content && result.content[0]) {
+                const text = result.content[0].text;
+                message = text;
 
-            // Initial Heuristics for success
-            if (text.includes('Error') || text.includes('Falha') || text.includes('401') || text.includes('403')) {
-                success = false;
-            }
-
-            // Try to parse JSON output to extract User Data
-            try {
-                const json = JSON.parse(text);
-                userData = json;
-
-                // Normalize fields
-                if (json.role) detectedRole = json.role;
-                else if (json.type) detectedRole = json.type;
-                else if (json.user && json.user.role) detectedRole = json.user.role;
-
-                // Fallback Heuristics checks if JSON parse didn't find role
-                if (!detectedRole) {
-                    if (text.toLowerCase().includes('admin')) detectedRole = 'Admin';
-                    else if (text.toLowerCase().includes('company') || text.toLowerCase().includes('empresa')) detectedRole = 'Company';
-                    else if (text.toLowerCase().includes('senai')) detectedRole = 'SENAI User';
+                // Initial Heuristics for failure
+                if (text.includes('Error') || text.includes('Falha') || text.includes('401') || text.includes('403')) {
+                    success = false;
                 }
 
-            } catch (e) {
-                // Text fallback
-                if (text.toLowerCase().includes('admin')) detectedRole = 'Admin';
-                else if (text.toLowerCase().includes('company') || text.toLowerCase().includes('empresa')) detectedRole = 'Company';
-                else if (text.toLowerCase().includes('senai')) detectedRole = 'SENAI User';
+                // AI ANALYSIS for Role Detection
+                try {
+                    const prompt = `
+                    Analyze this authentication response context and extract the user's role if present.
+                    
+                    Tool Output:
+                    ${text.substring(0, 2000)}
+
+                    Credentials Used: ${JSON.stringify(credentials)}
+
+                    Return ONLY a JSON object with this structure:
+                    {
+                        "success": boolean, // Does this look like a successful login?
+                        "role": string | null, // The detected user role (e.g. "Admin", "User", "Editor") or normalization of it.
+                        "confidence": number, // 0-1
+                        "explanation": string // Short reason
+                    }
+                    `;
+
+                    const aiRes = await modelManager.generateContent(prompt, { model: 'gemini-1.5-flash' });
+                    const aiText = aiRes.response.text();
+                    
+                    // Cleanup JSON
+                    const jsonStr = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const analysis = JSON.parse(jsonStr);
+
+                    if (analysis.success !== undefined) success = analysis.success;
+                    if (analysis.role) detectedRole = analysis.role;
+                    
+                    console.log(`[Auth Test] AI Analysis:`, analysis);
+
+                } catch (e) {
+                    console.warn("[Auth Test] AI Analysis failed:", e.message);
+                    // Fallback to manual JSON parse if simple
+                     try {
+                        const json = JSON.parse(text);
+                        if (json.role) detectedRole = json.role;
+                    } catch {}
+                }
             }
-        }
 
-        // 4. SYNC PROFILE (If strictly successful and we have a profileId)
-        if (success && profileId) {
-            const updates = {};
-            if (detectedRole) updates.role = detectedRole;
+            // 4. SYNC PROFILE (If strictly successful and we have a profileId)
+            if (success && profileId) {
+                const updates = {};
+                if (detectedRole) updates.role = detectedRole;
 
-            // --- AUTO-ENRICHMENT LOGIC ---
-            // Extract Name
-            let name = userData.name || (userData.user && userData.user.name) || userData.nome || userData.fantasyName;
+                // --- AUTO-ENRICHMENT LOGIC ---
+                // Try to parse basic user data for name
+                try {
+                    const json = JSON.parse(result.content[0].text);
+                    userData = json;
+                } catch {}
+
+                let name = userData.name || (userData.user && userData.user.name) || userData.nome || userData.fantasyName;
             if (name) {
                 // Formatting: "Ubirajara (Petrobras)" or "Rafael (SENAI Admin)"
                 // Heuristic: If name is generic email, use Role. If real name, use it.
+                // Refined Logic: Respect User Label if it's already descriptive.
+                
+                // Get current profile if possible (we have profileId but not the full object easily here without DB fetch, 
+                // but we can assume we want to be append-only or non-destructive).
+                
+                // If it's a completely new profile or we want to overwrite 'New User':
+                // For now, simpler logic: 
+                // matches what user asked: "apenas dar uma detalhada a mais não mudar drasticamente"
+                // So, let's just append the detected role if it's not there, OR update if it looks like an email.
+                
                 if (!name.includes('@')) {
-                    updates.label = `${name} (${detectedRole || 'User'})`;
+                     // e.g. "Ubirajara Sardinha"
+                     // If detectedRole is "Enterprise Admin", we want "Ubirajara Sardinha (Enterprise Admin)"
+                     updates.label = `${name} (${detectedRole || 'User'})`;
                 }
             }
 
@@ -363,14 +397,16 @@ app.post('/api/resources/:id/auth-profiles/test', async (req, res) => {
             if (userData.fantasyName) contextInfo.push(`Fantasy: ${userData.fantasyName}`);
 
             if (contextInfo.length > 0) {
-                updates.description = `[Auto-Synced] Authenticated as ${name || 'User'}. ${contextInfo.join(', ')}.`;
+                updates.description = `[Synced] Authenticated as ${name || 'User'}. ${contextInfo.join(', ')}.`;
             }
 
-            // Sync Credentials if we found better/new ones (e.g. planner guessed email, but response gave correct one? - usually response doesn't give password back, so be careful)
+            // Sync Credentials - DISABLED by request for safety.
+            // User does not want auto-injection of keys like 'cnpj' into the auth body to prevent breakage.
+            /* 
             if (userData.cnpj) {
-                // If it's a company, ensure CNPJ is in credentials for future use
                 updates.credentials = { ...credentials, cnpj: userData.cnpj };
-            }
+            } 
+            */
 
             // Clean sensitive data from userData before saving if needed, but for now strict 1:1 map
             if (userData.id) updates.externalId = userData.id;
@@ -379,7 +415,11 @@ app.post('/api/resources/:id/auth-profiles/test', async (req, res) => {
 
             if (Object.keys(updates).length > 0) {
                 console.log(`[API] Syncing Profile ${profileId} with updates:`, updates);
-                resourceEnricher.updateProfile(id, profileId, updates);
+                try {
+                    await resourceEnricher.updateProfile(id, profileId, updates);
+                } catch (e) {
+                    console.error("[API] Failed to sync profile updates:", e);
+                }
             }
         }
 
@@ -520,7 +560,7 @@ app.get('/api/canvases/:id', async (req, res) => {
 
 app.post('/api/canvases', async (req, res) => {
     try {
-        const { id, title, widgets, messages, groupId } = req.body;
+        const { id, title, widgets, messages, groupId, skipGeneration } = req.body;
 
         // Generate random ID if not provided
         const canvasId = id || Math.random().toString(36).substr(2, 9);
@@ -528,7 +568,7 @@ app.post('/api/canvases', async (req, res) => {
         // CRITICAL FIX: Generate initial widgets if none provided
         let initialWidgets = widgets || [];
 
-        if (!initialWidgets || initialWidgets.length === 0) {
+        if ((!initialWidgets || initialWidgets.length === 0) && !skipGeneration) {
             console.log('[API] Creating new page without widgets. Generating welcome widget...');
 
             // Import Designer dynamically
@@ -651,6 +691,9 @@ app.get('/api/auth/callback', handleCallback);
 
 // Initialize Resource Enricher (Load from DB)
 await resourceEnricher.loadProfiles();
+
+// Initialize Tools Cache
+await toolService.getAllTools();
 
 app.listen(PORT, () => {
     console.log(`API Bridge running on http://localhost:${PORT}`);
