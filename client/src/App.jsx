@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './Layout';
 import { Chat } from './components/Chat';
-import { MessageSquareText, Search, Plus, Save, AlertTriangle } from 'lucide-react';
+import { Canvas } from './components/Canvas';
+import { MessageSquareText, Search, Plus, Save, AlertTriangle, Globe, Database } from 'lucide-react';
+
 import { ResourcesView } from './components/ResourcesView';
 import { SettingsView } from './components/SettingsView';
 import { Modal, RegisterApiForm, RegisterDbForm } from './components/RegistrationModal';
 import { ToastProvider, useToast } from './components/ui/Toast';
 
-import { Canvas } from './components/Canvas';
+import { OnboardingWizard } from './components/OnboardingWizard';
 import { ShowroomView } from './components/ShowroomView';
 import { SidebarNavigation } from './components/SidebarNavigation';
+import { Loader2 } from 'lucide-react';
 
 function AppContent() {
     const { error, success, info } = useToast();
@@ -25,6 +28,22 @@ function AppContent() {
     const [refreshProjectsTrigger, setRefreshProjectsTrigger] = useState(0);
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
     const [newProjectData, setNewProjectData] = useState({ title: '', description: '' });
+    const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+
+
+    // --- Onboarding State ---
+    const [isInitialized, setIsInitialized] = useState(null);
+
+    useEffect(() => {
+        fetch('http://localhost:3000/api/system/status')
+            .then(res => res.json())
+            .then(data => setIsInitialized(data.initialized))
+            .catch(err => {
+                console.warn("[App] Failed to check system status, assuming initialized", err);
+                setIsInitialized(true);
+            });
+    }, [refreshResourcesTrigger]);
+
 
     // --- Session State ---
     const [sessionId, setSessionId] = useState(null);
@@ -47,11 +66,11 @@ function AppContent() {
     const [chatExpanded, setChatExpanded] = useState(false); // For vertical expansion
     const [chatWidth, setChatWidth] = useState(400);
     const [isResizing, setIsResizing] = useState(false);
-    
+
     // --- UI State ---
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [pageToDelete, setPageToDelete] = useState(null); // Lifted state for Delete Modal
-    
+
     // --- History State ---
     const [historyStack, setHistoryStack] = useState([]); // Stack of canvas IDs
 
@@ -79,12 +98,12 @@ function AppContent() {
             const res = await fetch(`http://localhost:3000/api/sessions/${sessId}/structure`);
             if (!res.ok) throw new Error("Failed to load layout");
             const struct = await res.json();
-            
+
             // STABLE SORT: Sort by ID to prevent jumping
             if (struct.canvases) {
                 struct.canvases.sort((a, b) => a.id - b.id);
             }
-            
+
             setSessionStructure(struct);
 
             // Also load chats
@@ -157,7 +176,7 @@ function AppContent() {
         setSessionId(id);
         setActiveTab('project');
         setHistoryStack([]); // Clear history on project switch
-        
+
         // Persist URL
         const newUrl = `${window.location.pathname}?project=${id}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
@@ -307,7 +326,7 @@ function AppContent() {
     const handleCreateNewCanvas = async (sessId = sessionId) => {
         // PERF: Auto-save current work before creating new
         if (canvasId) await saveCanvas();
-        
+
         // Create via API directly
         try {
             setIsProcessing(true);
@@ -329,10 +348,10 @@ function AppContent() {
                 if (!prev) return prev;
                 return {
                     ...prev,
-                    canvases: [...(prev.canvases || []), newCanvas].sort((a,b) => a.id - b.id)
+                    canvases: [...(prev.canvases || []), newCanvas].sort((a, b) => a.id - b.id)
                 };
             });
-            
+
             // Return the new canvas so the UI can select/edit it
             return newCanvas;
         } catch (e) {
@@ -341,7 +360,7 @@ function AppContent() {
         } finally {
             setIsProcessing(false);
             // Background refresh to true-up everything
-             refreshSession(sessId);
+            refreshSession(sessId);
         }
     };
 
@@ -425,7 +444,7 @@ function AppContent() {
             if (!prev) return prev;
             return {
                 ...prev,
-                canvases: prev.canvases?.map(c => 
+                canvases: prev.canvases?.map(c =>
                     c.id === id ? { ...c, title: newTitle } : c
                 ) || []
             };
@@ -459,15 +478,15 @@ function AppContent() {
             });
 
             await fetch(`http://localhost:3000/api/canvases/${id}`, { method: 'DELETE' });
-            
+
             // If deleted current, go home or prev
             if (id === canvasId) {
                 const remaining = sessionStructure?.canvases?.filter(c => c.id !== id) || [];
                 if (remaining.length > 0) {
-                     loadCanvas(remaining[0].id);
+                    loadCanvas(remaining[0].id);
                 }
             }
-            
+
             await refreshSession(sessionId);
         } catch (e) {
             handleError("Delete failed");
@@ -644,290 +663,350 @@ function AppContent() {
 
     // --- Render ---
 
+    if (isInitialized === null) {
+        return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>;
+    }
+
     return (
         <>
-        <Layout
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onToggleSettings={() => setShowSettings(true)}
-            onRegisterApi={() => setModalType('api')}
-            onRegisterDb={() => setModalType('db')}
-            onOpenLoadModal={() => setModalType('load')}
-            // Pass Sidebar Content for Navigation
-            sidebarContent={activeTab === 'project' && sessionStructure ? (
-                <SidebarNavigation
-                    pages={sessionStructure.canvases || []}
-                    activePageId={canvasId}
-                    collapsed={sidebarCollapsed}
-                    onNavigate={handleNavigatePage}
-                    onCreatePage={() => handleCreateNewCanvas()}
-                    onRenamePage={handleRenamePage}
-                    onDeletePage={(pageId) => handleDeletePage(pageId)}
-                    onRequestDelete={(page) => {
-                        console.log("Requesting delete for:", page);
-                        setPageToDelete(page);
-                    }}
+            {/* ONBOARDING OVERLAY */}
+            {!isInitialized && !onboardingDismissed && (
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-500">
+                    <div className="w-full max-w-4xl">
+                        <OnboardingWizard
+                            onComplete={() => {
+                                setIsInitialized(true);
+                                setRefreshProjectsTrigger(prev => prev + 1);
+                            }}
+                            onSkip={() => setOnboardingDismissed(true)}
+                            onOpenApiModal={() => setModalType('api')}
+                            onOpenDbModal={() => setModalType('db')}
+                            refreshTrigger={refreshResourcesTrigger}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* MAIN LAYOUT (Always Rendered in Background) */}
+            <Layout
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+
+                onToggleSettings={() => setShowSettings(true)}
+                onRegisterApi={() => setModalType('api')}
+                onRegisterDb={() => setModalType('db')}
+                onOpenLoadModal={() => setModalType('load')}
+                // Pass Sidebar Content for Navigation
+                sidebarContent={activeTab === 'project' && sessionStructure ? (
+                    <SidebarNavigation
+                        pages={sessionStructure.canvases || []}
+                        activePageId={canvasId}
+                        collapsed={sidebarCollapsed}
+                        onNavigate={handleNavigatePage}
+                        onCreatePage={() => handleCreateNewCanvas()}
+                        onRenamePage={handleRenamePage}
+                        onDeletePage={(pageId) => handleDeletePage(pageId)}
+                        onRequestDelete={(page) => {
+                            console.log("Requesting delete for:", page);
+                            setPageToDelete(page);
+                        }}
 
 
 
-                    onBackToHome={() => {
-                        setActiveTab('showcase');
-                        // Clear URL
-                        window.history.pushState({}, '', window.location.pathname);
-                    }}
-                />
-            ) : null}
-            title={activeTab === 'project' ? (sessionStructure?.title || 'Loading Project...') : undefined}
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-            headerContent={
-                <div className="flex items-center gap-4">
-                    {/* PROJECTS VIEW CONTROLS */}
-                    {activeTab === 'showcase' && (
-                        <>
-                            <div className="relative group">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={16} />
-                                <input
-                                    type="text"
-                                    placeholder="Search projects..."
-                                    value={projectsSearchTerm}
-                                    onChange={(e) => setProjectsSearchTerm(e.target.value)}
-                                    className="pl-9 pr-4 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none w-48 transition-all"
+                        onBackToHome={() => {
+                            setActiveTab('showcase');
+                            // Clear URL
+                            window.history.pushState({}, '', window.location.pathname);
+                        }}
+                    />
+                ) : null}
+                title={activeTab === 'project' ? (sessionStructure?.title || 'Loading Project...') : undefined}
+                collapsed={sidebarCollapsed}
+                onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+                headerContent={
+                    <div className="flex items-center gap-4">
+                        {/* PROJECTS VIEW CONTROLS */}
+                        {activeTab === 'showcase' && (
+                            <>
+                                <div className="relative group">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search projects..."
+                                        value={projectsSearchTerm}
+                                        onChange={(e) => setProjectsSearchTerm(e.target.value)}
+                                        className="pl-9 pr-4 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none w-48 transition-all"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => setShowNewProjectModal(true)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95"
+                                >
+                                    <Plus size={16} />
+                                    <span>New Project</span>
+                                </button>
+                            </>
+                        )}
+
+                        {/* PROJECT CANVAS CONTROLS */}
+                        {activeTab === 'project' && (
+                            <div className="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-lg border border-white/5">
+                                <span className="text-xs font-semibold text-slate-400 px-2">Current Page</span>
+                                <div className="h-4 w-px bg-white/10" />
+                                <button
+                                    onClick={() => saveCanvas()}
+                                    disabled={isSaving}
+                                    title="Save Project"
+                                    className={`
+                                    p-1.5 rounded-md transition-all flex items-center gap-2
+                                    ${isSaving
+                                            ? 'bg-amber-500/10 text-amber-500 cursor-wait'
+                                            : 'hover:bg-indigo-500 hover:text-white text-slate-400'}
+                                `}
+                                >
+                                    <Save size={16} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* RESOURCES VIEW CONTROLS */}
+                        {activeTab === 'resources' && (
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setModalType('api')}
+                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <Globe size={16} /> Add API
+                                </button>
+                                <button
+                                    onClick={() => setModalType('db')}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <Database size={16} /> Add Database
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                }
+            >
+                {/* ACTIVE TAB CONTENT */}
+                {
+                    activeTab === 'showcase' && (
+                        <ShowroomView
+                            searchTerm={projectsSearchTerm}
+                            refreshTrigger={refreshProjectsTrigger}
+                            onSelectSession={handleSelectSession}
+                            onCreateProject={() => setShowNewProjectModal(true)}
+                        />
+                    )
+                }
+                {
+                    activeTab === 'project' && (
+                        <div className="flex h-full w-full relative">
+                            {/* Canvas Area */}
+                            <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
+                                <Canvas
+                                    key={canvasId} // Key ensures remount on swap
+                                    canvasId={canvasId}
+                                    title={canvasTitle}
+                                    widgets={activeWidgets}
+                                    messages={messages}
+                                    isProcessing={isProcessing}
+                                    onSendMessage={handleSendMessage}
+                                    onStopGeneration={handleStopGeneration}
+                                    onWidgetChange={setActiveWidgets}
+                                    activeChatId={activeChatId}
                                 />
+
+                                {/* Floating Trigger (When Collapsed) */}
+                                {chatCollapsed && (
+                                    <div className="absolute bottom-6 right-6 z-50 animate-bounce-in pointer-events-auto">
+                                        <button
+                                            onClick={() => setChatCollapsed(false)}
+                                            className="bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center transform active:scale-95"
+                                            title="Open Chat"
+                                        >
+                                            <span className="sr-only">Open Chat</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
-                            <button
-                                onClick={() => setShowNewProjectModal(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95"
+                            {/* CHAT SIDEBAR (Right) */}
+                            <div
+                                className={`border-l border-slate-800 bg-slate-900/40 backdrop-blur-sm transition-all duration-300 ease-in-out flex flex-col z-20 h-full ${chatCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[450px] opacity-100'}`}
+                                style={{ width: chatCollapsed ? 0 : chatWidth }}
                             >
-                                <Plus size={16} />
-                                <span>New Project</span>
-                            </button>
-                        </>
-                    )}
-
-                    {/* PROJECT CANVAS CONTROLS */}
-                    {activeTab === 'project' && (
-                        <div className="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-lg border border-white/5">
-                            <span className="text-xs font-semibold text-slate-400 px-2">Current Page</span>
-                            <div className="h-4 w-px bg-white/10" />
-                            <button
-                                onClick={() => saveCanvas()}
-                                disabled={isSaving}
-                                title="Save Project"
-                                className={`
-                                    p-1.5 rounded-md transition-all flex items-center gap-2
-                                    ${isSaving 
-                                        ? 'bg-amber-500/10 text-amber-500 cursor-wait' 
-                                        : 'hover:bg-indigo-500 hover:text-white text-slate-400'}
-                                `}
-                            >
-                                <Save size={16} />
-                            </button>
+                                <Chat
+                                    chatId={activeChatId}
+                                    sessionId={sessionId}
+                                    messages={messages}
+                                    isProcessing={isProcessing}
+                                    onSendMessage={handleSendMessage}
+                                    onStopGeneration={handleStopGeneration}
+                                    onEditMessage={handleEditMessage}
+                                    onClose={() => setChatCollapsed(true)}
+                                    width={chatWidth}
+                                    setWidth={setChatWidth}
+                                    isResizing={isResizing}
+                                    onResizeStart={() => setIsResizing(true)}
+                                    onResizeEnd={() => setIsResizing(false)}
+                                    collapsed={chatCollapsed}
+                                    onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
+                                    expanded={chatExpanded}
+                                    onToggleExpand={() => setChatExpanded(!chatExpanded)}
+                                />
+                            </div>
                         </div>
-                    )}
-                </div>
-            }
-        >
-                {/* ACTIVE TAB CONTENT */}
-                {activeTab === 'showcase' && (
-                    <ShowroomView 
-                        searchTerm={projectsSearchTerm} 
-                        refreshTrigger={refreshProjectsTrigger}
-                        onSelectSession={handleSelectSession}
-                        onCreateProject={() => setShowNewProjectModal(true)}
-                    />
-                )}
-                {activeTab === 'project' && (
-                     <div className="flex h-full w-full relative">
-                        {/* Canvas Area */}
-                        <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
-                             <Canvas
-                                key={canvasId} // Key ensures remount on swap
-                                canvasId={canvasId}
-                                title={canvasTitle}
-                                widgets={activeWidgets}
-                                messages={messages}
-                                isProcessing={isProcessing}
-                                onSendMessage={handleSendMessage}
-                                onStopGeneration={handleStopGeneration}
-                                onWidgetChange={setActiveWidgets}
-                                activeChatId={activeChatId}
-                             />
+                    )
+                }
+                {
+                    activeTab === 'resources' && (
+                        <ResourcesView refreshTrigger={refreshResourcesTrigger} />
+                    )
+                }
 
-                            {/* Floating Trigger (When Collapsed) */}
-                            {chatCollapsed && (
-                                <div className="absolute bottom-6 right-6 z-50 animate-bounce-in pointer-events-auto">
-                                    <button
-                                        onClick={() => setChatCollapsed(false)}
-                                        className="bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center transform active:scale-95"
-                                        title="Open Chat"
-                                    >
-                                        <span className="sr-only">Open Chat</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+            </Layout >
 
-                         {/* CHAT SIDEBAR (Right) */}
-                        <div
-                            className={`border-l border-slate-800 bg-slate-900/40 backdrop-blur-sm transition-all duration-300 ease-in-out flex flex-col z-20 h-full ${chatCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[450px] opacity-100'}`}
-                             style={{width: chatCollapsed ? 0 : chatWidth}}
-                        >
-                            <Chat 
-                                chatId={activeChatId}
-                                sessionId={sessionId}
-                                messages={messages}
-                                isProcessing={isProcessing}
-                                onSendMessage={handleSendMessage}
-                                onStopGeneration={handleStopGeneration}
-                                onEditMessage={handleEditMessage}
-                                onClose={() => setChatCollapsed(true)} 
-                                width={chatWidth}
-                                setWidth={setChatWidth}
-                                isResizing={isResizing}
-                                onResizeStart={() => setIsResizing(true)}
-                                onResizeEnd={() => setIsResizing(false)}
-                                collapsed={chatCollapsed}
-                                onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
-                                expanded={chatExpanded}
-                                onToggleExpand={() => setChatExpanded(!chatExpanded)}
-                            />
-                        </div>
-                    </div>
-                )}
-                {activeTab === 'resources' && (
-                     <ResourcesView refreshTrigger={refreshResourcesTrigger} />
-                )}
 
-            </Layout>
 
             {/* GLOBAL MODALS */}
-            
-            {/* DELETE PAGE MODAL */}
-            {pageToDelete && (
-                <Modal
-                    isOpen={!!pageToDelete}
-                    onClose={() => setPageToDelete(null)}
-                    title="Delete Page"
-                >
-                    <div className="flex flex-col items-center text-center p-2 mb-6">
-                        <div className="size-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-                            <AlertTriangle className="text-red-500" size={24} />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">Confirm Deletion</h3>
-                        <p className="text-slate-400 text-sm">
-                            Are you sure you want to delete <span className="text-white font-medium">"{pageToDelete.title}"</span>? 
-                            <br/>This action cannot be undone.
-                        </p>
-                    </div>
 
-                    <div className="flex w-full gap-3">
-                        <button 
-                            onClick={() => setPageToDelete(null)}
-                            className="flex-1 px-4 py-2 rounded-xl text-slate-300 hover:bg-slate-800 transition-colors font-medium text-sm border border-slate-700 hover:text-white"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            onClick={() => {
-                                handleDeletePage(pageToDelete.id);
-                                setPageToDelete(null);
-                            }}
-                            className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium shadow-lg shadow-red-500/20 transition-all text-sm"
-                        >
-                            Delete Page
-                        </button>
-                    </div>
-                </Modal>
-            )}
-            
-            {/* NEW PROJECT MODAL */}
-            {showNewProjectModal && (
-                <Modal 
-                    isOpen={showNewProjectModal} 
-                    onClose={() => setShowNewProjectModal(false)}
-                    title="Create New Project"
-                >
-                     <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Project Name</label>
-                            <input 
-                                type="text"
-                                autoFocus
-                                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
-                                value={newProjectData.title}
-                                onChange={e => setNewProjectData(prev => ({ ...prev, title: e.target.value }))}
-                            />
+            {/* DELETE PAGE MODAL */}
+            {
+                pageToDelete && (
+                    <Modal
+                        isOpen={!!pageToDelete}
+                        onClose={() => setPageToDelete(null)}
+                        title="Delete Page"
+                    >
+                        <div className="flex flex-col items-center text-center p-2 mb-6">
+                            <div className="size-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                                <AlertTriangle className="text-red-500" size={24} />
+                            </div>
+                            <h3 className="text-lg font-bold text-white mb-2">Confirm Deletion</h3>
+                            <p className="text-slate-400 text-sm">
+                                Are you sure you want to delete <span className="text-white font-medium">"{pageToDelete.title}"</span>?
+                                <br />This action cannot be undone.
+                            </p>
                         </div>
-                         <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Description</label>
-                            <textarea 
-                                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-2 focus:ring-indigo-500/50 outline-none h-24 resize-none"
-                                value={newProjectData.description}
-                                onChange={e => setNewProjectData(prev => ({ ...prev, description: e.target.value }))}
-                            />
-                        </div>
-                        <div className="flex justify-end gap-3 pt-4">
-                             <button 
-                                onClick={() => setShowNewProjectModal(false)}
-                                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+
+                        <div className="flex w-full gap-3">
+                            <button
+                                onClick={() => setPageToDelete(null)}
+                                className="flex-1 px-4 py-2 rounded-xl text-slate-300 hover:bg-slate-800 transition-colors font-medium text-sm border border-slate-700 hover:text-white"
                             >
                                 Cancel
                             </button>
-                            <button 
-                                onClick={handleCreateProject}
-                                disabled={!newProjectData.title.trim()}
-                                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            <button
+                                onClick={() => {
+                                    handleDeletePage(pageToDelete.id);
+                                    setPageToDelete(null);
+                                }}
+                                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium shadow-lg shadow-red-500/20 transition-all text-sm"
                             >
-                                Create Project
+                                Delete Page
                             </button>
                         </div>
-                    </div>
-                </Modal>
-            )}
+                    </Modal>
+                )
+            }
+
+            {/* NEW PROJECT MODAL */}
+            {
+                showNewProjectModal && (
+                    <Modal
+                        isOpen={showNewProjectModal}
+                        onClose={() => setShowNewProjectModal(false)}
+                        title="Create New Project"
+                    >
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Project Name</label>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                                    value={newProjectData.title}
+                                    onChange={e => setNewProjectData(prev => ({ ...prev, title: e.target.value }))}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Description</label>
+                                <textarea
+                                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:ring-2 focus:ring-indigo-500/50 outline-none h-24 resize-none"
+                                    value={newProjectData.description}
+                                    onChange={e => setNewProjectData(prev => ({ ...prev, description: e.target.value }))}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button
+                                    onClick={() => setShowNewProjectModal(false)}
+                                    className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreateProject}
+                                    disabled={!newProjectData.title.trim()}
+                                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Create Project
+                                </button>
+                            </div>
+                        </div>
+                    </Modal>
+                )
+            }
 
             {/* API REGISTRATION MODAL */}
-            {modalType === 'api' && (
-                <Modal 
-                    isOpen={modalType === 'api'} 
-                    onClose={() => setModalType(null)}
-                    title="Register New API"
-                >
-                    <RegisterApiForm 
-                        onSubmit={handleRegisterApiSubmit}
-                        isProcessing={isProcessing}
-                        onCancel={() => setModalType(null)}
-                    />
-                </Modal>
-            )}
+            {
+                modalType === 'api' && (
+                    <Modal
+                        isOpen={modalType === 'api'}
+                        onClose={() => setModalType(null)}
+                        title="Register New API"
+                    >
+                        <RegisterApiForm
+                            onSubmit={handleRegisterApiSubmit}
+                            isProcessing={isProcessing}
+                            onCancel={() => setModalType(null)}
+                        />
+                    </Modal>
+                )
+            }
 
             {/* DATABASE REGISTRATION MODAL */}
-            {modalType === 'db' && (
-                <Modal 
-                    isOpen={modalType === 'db'} 
-                    onClose={() => setModalType(null)}
-                    title="Register New Database"
-                >
-                    <RegisterDbForm 
-                        onSubmit={handleRegisterDbSubmit}
-                        isProcessing={isProcessing}
-                        onCancel={() => setModalType(null)}
-                    />
-                </Modal>
-            )}
+            {
+                modalType === 'db' && (
+                    <Modal
+                        isOpen={modalType === 'db'}
+                        onClose={() => setModalType(null)}
+                        title="Register New Database"
+                    >
+                        <RegisterDbForm
+                            onSubmit={handleRegisterDbSubmit}
+                            isProcessing={isProcessing}
+                            onCancel={() => setModalType(null)}
+                        />
+                    </Modal>
+                )
+            }
 
             {/* SETTINGS MODAL */}
-            {showSettings && (
-                <Modal 
-                    isOpen={showSettings} 
-                    onClose={() => setShowSettings(false)}
-                    title="Settings"
-                >
-                    <SettingsView onClose={() => setShowSettings(false)} />
-                </Modal>
-            )}
+            {
+                showSettings && (
+                    <Modal
+                        isOpen={showSettings}
+                        onClose={() => setShowSettings(false)}
+                        title="Settings"
+                    >
+                        <SettingsView onClose={() => setShowSettings(false)} />
+                    </Modal>
+                )
+            }
         </>
     );
 }

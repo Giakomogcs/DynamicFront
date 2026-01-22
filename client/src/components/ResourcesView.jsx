@@ -116,14 +116,6 @@ export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegiste
         <div className="p-6 max-w-4xl mx-auto space-y-8">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-semibold text-white">Managed Resources</h2>
-                <div className="flex gap-3">
-                    <button onClick={onRegisterApi} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                        <Globe size={16} /> Add API
-                    </button>
-                    <button onClick={onRegisterDb} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                        <Database size={16} /> Add Database
-                    </button>
-                </div>
             </div>
 
             {!hasResources && (
@@ -319,8 +311,8 @@ export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegiste
 
             {/* Edit Resource Modal */}
             {editModal && (
-                <Modal 
-                    isOpen={!!editModal} 
+                <Modal
+                    isOpen={!!editModal}
                     onClose={() => setEditModal(null)}
                     title={`Edit ${editModal.type === 'api' ? 'API' : 'Database'}`}
                 >

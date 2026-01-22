@@ -48,6 +48,32 @@ app.use('/api/test', testRoutes);
 
 // --- Endpoints ---
 
+// 1. System Status (Onboarding Check)
+app.get('/api/system/status', async (req, res) => {
+    try {
+        const resources = await toolService.getRegisteredResources();
+        const hasResources = (resources.apis && resources.apis.length > 0) || (resources.dbs && resources.dbs.length > 0);
+
+        // Check for *configured* models (not just default fallback)
+        const models = await modelManager.getAvailableModels();
+        const hasModels = models.length > 0;
+
+        // Check specifically for Saved Keys to differentiate "ENV provided" vs "User Setup"
+        // But for "initialized", simply having working models and resources is enough.
+        // The user requirement is: "if first access... no models, no resources... flow to insert these things"
+
+        res.json({
+            initialized: hasModels && hasResources,
+            hasModels,
+            hasResources,
+            resourceCount: (resources.apis?.length || 0) + (resources.dbs?.length || 0)
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
 
 // 1.5 Chat Endpoint (Models)
 app.get('/api/models', async (req, res) => {
@@ -301,24 +327,24 @@ app.post('/api/resources/:id/auth-profiles/test', async (req, res) => {
         // 2. Execute with credentials
         const result = await toolService.executeTool(authTool.name, credentials);
 
-            // 3. Analyze Result for Role/Success
-            let success = !result.isError;
-            let detectedRole = null;
-            let userData = {};
-            let message = "Auth executed.";
+        // 3. Analyze Result for Role/Success
+        let success = !result.isError;
+        let detectedRole = null;
+        let userData = {};
+        let message = "Auth executed.";
 
-            if (result.content && result.content[0]) {
-                const text = result.content[0].text;
-                message = text;
+        if (result.content && result.content[0]) {
+            const text = result.content[0].text;
+            message = text;
 
-                // Initial Heuristics for failure
-                if (text.includes('Error') || text.includes('Falha') || text.includes('401') || text.includes('403')) {
-                    success = false;
-                }
+            // Initial Heuristics for failure
+            if (text.includes('Error') || text.includes('Falha') || text.includes('401') || text.includes('403')) {
+                success = false;
+            }
 
-                // AI ANALYSIS for Role Detection
-                try {
-                    const prompt = `
+            // AI ANALYSIS for Role Detection
+            try {
+                const prompt = `
                     Analyze this authentication response context and extract the user's role if present.
                     
                     Tool Output:
@@ -335,58 +361,58 @@ app.post('/api/resources/:id/auth-profiles/test', async (req, res) => {
                     }
                     `;
 
-                    const aiRes = await modelManager.generateContent(prompt, { model: 'gemini-1.5-flash' });
-                    const aiText = aiRes.response.text();
-                    
-                    // Cleanup JSON
-                    const jsonStr = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const analysis = JSON.parse(jsonStr);
+                const aiRes = await modelManager.generateContent(prompt, { model: 'gemini-1.5-flash' });
+                const aiText = aiRes.response.text();
 
-                    if (analysis.success !== undefined) success = analysis.success;
-                    if (analysis.role) detectedRole = analysis.role;
-                    
-                    console.log(`[Auth Test] AI Analysis:`, analysis);
+                // Cleanup JSON
+                const jsonStr = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const analysis = JSON.parse(jsonStr);
 
-                } catch (e) {
-                    console.warn("[Auth Test] AI Analysis failed:", e.message);
-                    // Fallback to manual JSON parse if simple
-                     try {
-                        const json = JSON.parse(text);
-                        if (json.role) detectedRole = json.role;
-                    } catch {}
-                }
-            }
+                if (analysis.success !== undefined) success = analysis.success;
+                if (analysis.role) detectedRole = analysis.role;
 
-            // 4. SYNC PROFILE (If strictly successful and we have a profileId)
-            if (success && profileId) {
-                const updates = {};
-                if (detectedRole) updates.role = detectedRole;
+                console.log(`[Auth Test] AI Analysis:`, analysis);
 
-                // --- AUTO-ENRICHMENT LOGIC ---
-                // Try to parse basic user data for name
+            } catch (e) {
+                console.warn("[Auth Test] AI Analysis failed:", e.message);
+                // Fallback to manual JSON parse if simple
                 try {
-                    const json = JSON.parse(result.content[0].text);
-                    userData = json;
-                } catch {}
+                    const json = JSON.parse(text);
+                    if (json.role) detectedRole = json.role;
+                } catch { }
+            }
+        }
 
-                let name = userData.name || (userData.user && userData.user.name) || userData.nome || userData.fantasyName;
+        // 4. SYNC PROFILE (If strictly successful and we have a profileId)
+        if (success && profileId) {
+            const updates = {};
+            if (detectedRole) updates.role = detectedRole;
+
+            // --- AUTO-ENRICHMENT LOGIC ---
+            // Try to parse basic user data for name
+            try {
+                const json = JSON.parse(result.content[0].text);
+                userData = json;
+            } catch { }
+
+            let name = userData.name || (userData.user && userData.user.name) || userData.nome || userData.fantasyName;
             if (name) {
                 // Formatting: "Ubirajara (Petrobras)" or "Rafael (SENAI Admin)"
                 // Heuristic: If name is generic email, use Role. If real name, use it.
                 // Refined Logic: Respect User Label if it's already descriptive.
-                
+
                 // Get current profile if possible (we have profileId but not the full object easily here without DB fetch, 
                 // but we can assume we want to be append-only or non-destructive).
-                
+
                 // If it's a completely new profile or we want to overwrite 'New User':
                 // For now, simpler logic: 
                 // matches what user asked: "apenas dar uma detalhada a mais não mudar drasticamente"
                 // So, let's just append the detected role if it's not there, OR update if it looks like an email.
-                
+
                 if (!name.includes('@')) {
-                     // e.g. "Ubirajara Sardinha"
-                     // If detectedRole is "Enterprise Admin", we want "Ubirajara Sardinha (Enterprise Admin)"
-                     updates.label = `${name} (${detectedRole || 'User'})`;
+                    // e.g. "Ubirajara Sardinha"
+                    // If detectedRole is "Enterprise Admin", we want "Ubirajara Sardinha (Enterprise Admin)"
+                    updates.label = `${name} (${detectedRole || 'User'})`;
                 }
             }
 

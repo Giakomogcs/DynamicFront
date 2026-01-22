@@ -1,8 +1,8 @@
 import { copilotService } from '../services/copilotService.js';
 
 export async function startCopilotAuth(req, res) {
-    const { clientId } = req.body;
-    if (!clientId) return res.status(400).json({ error: "Missing clientId" });
+    const { clientId } = req.body || {}; // Handle potential undefined body
+    // if (!clientId) return res.status(400).json({ error: "Missing clientId" }); // Remove strict check, let Service use default
 
     try {
         const data = await copilotService.requestDeviceCode(clientId);
@@ -13,8 +13,10 @@ export async function startCopilotAuth(req, res) {
 }
 
 export async function pollCopilotToken(req, res) {
-    const { clientId, deviceCode } = req.body;
-    if (!clientId || !deviceCode) return res.status(400).json({ error: "Missing clientId or deviceCode" });
+    let { clientId, deviceCode, device_code } = req.body || {};
+    deviceCode = deviceCode || device_code; // Support both casings
+
+    if (!deviceCode) return res.status(400).json({ error: "Missing deviceCode" }); // clientId is optional (handled by service)
 
     try {
         const result = await copilotService.fetchToken(clientId, deviceCode);

@@ -3,6 +3,8 @@ import { validateAndCoerceParams, generateAIErrorMessage } from '../utils/paramV
 import { enrichParameterSchema, enrichBodySchema } from '../utils/openapiEnricher.js';
 import fs from 'fs/promises';
 
+
+
 /**
  * Validates and fetches an OpenAPI spec from a URL or Local File
  */
@@ -15,7 +17,7 @@ export async function validateApiSpec(url, auth = null) {
             const filePath = url.startsWith('file://') ? new URL(url).pathname : url;
             const content = await fs.readFile(filePath, 'utf-8');
             const spec = JSON.parse(content);
-            
+
             // Basic validation
             if (!spec.openapi && !spec.swagger) {
                 throw new Error("Invalid OpenAPI/Swagger spec");
@@ -23,7 +25,7 @@ export async function validateApiSpec(url, auth = null) {
             console.log(`[API Handler] Spec loaded locally: ${url}`);
             return spec;
         } catch (e) {
-             throw new Error(`Failed to read local spec: ${e.message}`);
+            throw new Error(`Failed to read local spec: ${e.message}`);
         }
     }
 
@@ -176,6 +178,7 @@ export async function getApiTools(api) {
 
         for (const [path, methods] of Object.entries(paths)) {
             for (const [method, operation] of Object.entries(methods)) {
+
                 if (['get', 'post', 'put', 'delete', 'patch'].includes(method.toLowerCase())) {
                     const pathSuffix = path.replace(/[\/{}]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
                     const operationId = operation.operationId || `${method}_${pathSuffix}`;

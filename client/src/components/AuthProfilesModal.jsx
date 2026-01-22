@@ -18,7 +18,7 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
     const [newRole, setNewRole] = useState('user');
     const [credentialsKV, setCredentialsKV] = useState([{ key: 'email', value: '' }]); // Dynamic keys
     const [validationErrors, setValidationErrors] = useState({});
-    
+
     // New: Strict Validation State
     const [testFormResult, setTestFormResult] = useState(null); // null = not tested, { success: true/false }
     const [showCredentials, setShowCredentials] = useState({}); // { id: boolean }
@@ -71,9 +71,7 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
         // Actually, to be strict and ensure they work, let's force re-test if they want to edit? 
         // Or just let them save if they don't touch credentials? 
         // For now: require re-test to be safe, so set to null.
-        setTestFormResult(null); 
-
-        setIsAdding(true);
+        setTestFormResult(null);
     };
 
     const handleCancel = () => {
@@ -111,7 +109,7 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
             if (result.success) {
                 setTestFormResult({ success: true });
                 success("Verified!");
-                
+
                 // Auto-fill Role if detected
                 if (result.detectedRole && result.detectedRole !== 'Unknown') {
                     setNewRole(result.detectedRole);
@@ -132,12 +130,12 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
 
 
 
-// ... (in component)
+    // ... (in component)
 
     const handleSaveProfile = async (formData) => {
         // If formData is passed (from child component), use it.
         // Otherwise use state (legacy/fallback, though we switched to child component now).
-        
+
         const payload = formData ? {
             label: formData.label,
             role: formData.role,
@@ -186,12 +184,12 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
             success(isUpdate ? "Profile updated!" : "Profile added!");
             handleCancel(); // Reset form/state
         } catch (e) {
-             if (e instanceof z.ZodError) {
+            if (e instanceof z.ZodError) {
                 // Zod Error - Extract the user-friendly message from the first issue
                 const errors = {};
                 e.issues.forEach(evt => errors[evt.path[0]] = evt.message);
                 setValidationErrors(errors);
-                
+
                 const msg = e.issues[0]?.message || "Validation error";
                 toastError(msg);
             } else {
@@ -219,9 +217,9 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
             const res = await fetch(`http://localhost:3000/api/resources/${resourceId}/auth-profiles/test`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     credentials: profile.credentials,
-                    profileId: profile.id 
+                    profileId: profile.id
                 })
             });
 
@@ -289,7 +287,7 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                             {profiles.map(profile => (
                                 <div key={profile.id} className="bg-slate-950 border border-slate-800 rounded-xl p-4 transition-all hover:border-slate-700">
                                     {editingId === profile.id ? (
-                                        <AuthProfileForm 
+                                        <AuthProfileForm
                                             initialData={profile}
                                             onCancel={handleCancel}
                                             onSave={handleSaveProfile}
@@ -309,14 +307,14 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                                                         <div key={k} className="flex items-center gap-2">
                                                             <span>{k}:</span>
                                                             <span className="text-slate-400">
-                                                                {showCredentials[profile.id] 
-                                                                    ? String(v) 
+                                                                {showCredentials[profile.id]
+                                                                    ? String(v)
                                                                     : String(v).replace(/./g, '*')
                                                                 }
                                                             </span>
                                                         </div>
                                                     ))}
-                                                    <button 
+                                                    <button
                                                         onClick={() => setShowCredentials(prev => ({ ...prev, [profile.id]: !prev[profile.id] }))}
                                                         className="absolute top-0 right-[-24px] opacity-0 group-hover:opacity-100 p-1 text-slate-600 hover:text-slate-400 transition-opacity"
                                                         title={showCredentials[profile.id] ? "Hide Credentials" : "Show Credentials"}
@@ -369,16 +367,15 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                                     {/* Test Feedack (Only show if NOT editing this one, or show below form?) */}
                                     {/* Actually if editing, the form has its own feedback. The list feedback is for the 'Test Auth' button on the card. */}
                                     {testResult?.id === profile.id && editingId !== profile.id && (
-                                        <div className={`mt-3 p-3 rounded-lg text-xs border relative animate-in slide-in-from-top-2 ${
-                                            testResult.success ? 'bg-green-950/20 border-green-900/50' : 'bg-red-950/20 border-red-900/50'
+                                        <div className={`mt-3 p-3 rounded-lg text-xs border relative animate-in slide-in-from-top-2 ${testResult.success ? 'bg-green-950/20 border-green-900/50' : 'bg-red-950/20 border-red-900/50'
                                             }`}>
-                                            <button 
+                                            <button
                                                 onClick={() => setTestResult(null)}
                                                 className="absolute top-2 right-2 text-slate-500 hover:text-white transition-colors"
                                             >
                                                 <X size={14} />
                                             </button>
-                                            
+
                                             <div className="flex items-center gap-2 mb-1 pr-6">
                                                 <strong className={testResult.success ? 'text-green-400' : 'text-red-400'}>
                                                     {testResult.success ? "Authentication Successful" : "Authentication Failed"}
@@ -398,7 +395,7 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                     {/* Add New Section (Collapsible) */}
                     {isAdding && (
                         <div className="bg-slate-900 border border-indigo-500/30 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 shadow-lg mb-6">
-                             <AuthProfileForm 
+                            <AuthProfileForm
                                 initialData={null}
                                 onCancel={handleCancel}
                                 onSave={handleSaveProfile}
@@ -409,7 +406,7 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
                     )}
 
 
-                    {!isAdding && profiles.length > 0 && (
+                    {!isAdding && !editingId && profiles.length > 0 && (
                         <button onClick={() => setIsAdding(true)} className="w-full py-3 border border-dashed border-slate-800 rounded-xl text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 hover:bg-slate-900/50 transition-all text-sm font-medium flex items-center justify-center gap-2 mb-4">
                             <Plus size={18} /> Register Another User
                         </button>
@@ -423,19 +420,19 @@ export const AuthProfilesModal = ({ resourceId, resourceName, onClose }) => {
 
 const AuthProfileForm = ({ initialData, onCancel, onSave, resourceId, isEditing }) => {
     const { success, error: toastError } = useToast();
-    
+
     // Form State
     const [label, setLabel] = useState(initialData?.label || '');
     const [role, setRole] = useState(initialData?.role || 'user');
-    
+
     // Initialize Creds
-    const initCreds = initialData?.credentials 
+    const initCreds = initialData?.credentials
         ? Object.entries(initialData.credentials).map(([key, value]) => ({ key, value }))
         : [{ key: 'email', value: '' }];
 
     const [credentialsKV, setCredentialsKV] = useState(initCreds);
     const [validationErrors, setValidationErrors] = useState({});
-    
+
     // Validation State
     const [testResult, setTestResult] = useState(isEditing ? { success: true } : null); // Assume valid if editing existing? OR force re-test
     // Actually, user requested strict validation. If editing, we should probably force them to re-verify if they change anything.
@@ -446,7 +443,7 @@ const AuthProfileForm = ({ initialData, onCancel, onSave, resourceId, isEditing 
     // However, for UX, if I just want to change the Label, do I need to re-type password? 
     // Credentials are pre-filled. So I just click "Test".
     // Let's default to null (require test).
-    
+
     const [testing, setTesting] = useState(false);
 
     const handleAddParam = () => setCredentialsKV([...credentialsKV, { key: '', value: '' }]);
@@ -466,7 +463,7 @@ const AuthProfileForm = ({ initialData, onCancel, onSave, resourceId, isEditing 
     const handleTest = async () => {
         const credentials = {};
         credentialsKV.forEach(p => { if (p.key) credentials[p.key] = p.value; });
-        
+
         if (Object.keys(credentials).length === 0) return toastError("Add credentials");
 
         setTesting(true);
@@ -503,7 +500,7 @@ const AuthProfileForm = ({ initialData, onCancel, onSave, resourceId, isEditing 
 
     const handleSubmit = () => {
         if (!testResult?.success) return;
-        
+
         const credentials = {};
         credentialsKV.forEach(p => { if (p.key) credentials[p.key] = p.value; });
 
@@ -574,20 +571,19 @@ const AuthProfileForm = ({ initialData, onCancel, onSave, resourceId, isEditing 
 
             <div className="flex justify-between items-center border-t border-slate-800 pt-3">
                 <div className="flex items-center gap-2">
-                     <button 
+                    <button
                         onClick={handleTest}
                         disabled={testing}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-2 ${
-                            testResult?.success 
-                            ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                            : 'bg-slate-800 text-indigo-300 hover:bg-slate-700 border border-slate-700'
-                        }`}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-2 ${testResult?.success
+                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                : 'bg-slate-800 text-indigo-300 hover:bg-slate-700 border border-slate-700'
+                            }`}
                     >
-                        {testing ? <div className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" /> : 
-                         testResult?.success ? <CheckCircle size={14} /> : <Shield size={14} />}
+                        {testing ? <div className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" /> :
+                            testResult?.success ? <CheckCircle size={14} /> : <Shield size={14} />}
                         {testResult?.success ? "Verified" : "Test Connection"}
                     </button>
-                    
+
                     {testResult && !testResult.success && (
                         <span className="text-xs text-red-400">{testResult.message || 'Test Failed'}</span>
                     )}
@@ -595,14 +591,13 @@ const AuthProfileForm = ({ initialData, onCancel, onSave, resourceId, isEditing 
 
                 <div className="flex gap-2">
                     <button onClick={onCancel} className="px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg">Cancel</button>
-                    <button 
-                        onClick={handleSubmit} 
+                    <button
+                        onClick={handleSubmit}
                         disabled={!testResult?.success}
-                        className={`px-4 py-2 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 ${
-                            testResult?.success 
-                            ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20' 
-                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                        }`}
+                        className={`px-4 py-2 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 ${testResult?.success
+                                ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'
+                                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                            }`}
                     >
                         {isEditing ? 'Update User' : 'Save User'}
                     </button>
