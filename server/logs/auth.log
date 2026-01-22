@@ -482,3 +482,6 @@
 {"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-22T00:39:51.788Z"}
 {"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-22T00:39:51.789Z"}
 {"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-22T00:39:51.789Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"Default","timestamp":"2026-01-22T00:44:54.947Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"filesystem","timestamp":"2026-01-22T00:44:54.947Z"}
+{"event":"NO_PROFILES","level":"warn","message":"No profiles available for resource","resourceId":"dn-api","timestamp":"2026-01-22T00:44:54.948Z"}
