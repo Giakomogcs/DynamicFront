@@ -11,7 +11,7 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction, onRef
     // Group widgets by screen
     const screens = useMemo(() => {
         const groups = {
-            'default': { id: 'default', name: 'Main Screen', widgets: [] }
+            'default': { id: 'default', name: '', widgets: [] }
         };
 
         // If no widgets, just return default
@@ -91,8 +91,8 @@ export const Canvas = ({ widgets, loading, canvasId, onNavigate, onAction, onRef
                     </div>
                 </div>
 
-                {/* Screen Selector - Only show if we have multiple screens or widgets to prompt creation (simulated) */}
-                {screens.length > 0 && (
+                {/* Screen Selector - Only show if we have multiple screens */}
+                {screens.length > 1 && (
                     <ScreenSelector
                         screens={screens}
                         activeScreenId={activeScreenId}

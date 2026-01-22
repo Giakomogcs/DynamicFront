@@ -81,6 +81,17 @@ ${siblingsList}
             }
         }
 
+        // CRITICAL: Force Data Fetching for New Pages
+        if (canvasContext && canvasContext.forceNewPage) {
+            canvasInfo += `
+\n[CRITICAL MANDATE]: The user is creating a NEW PAGE titled "${canvasContext.newPageTitle}".
+You MUST select tools to fetch data to populate this page.
+- If it's a "Schools" page, fetch schools in the area.
+- If it's a "Company" page, fetch company details.
+- DO NOT return empty tools. The page needs data to be useful.
+`;
+        }
+
         // Auth Awareness - (Logic delegated to resourceEnricher)
         let authInfo = ''; // Placeholder if needed in future
 

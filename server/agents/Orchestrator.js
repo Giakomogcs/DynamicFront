@@ -389,7 +389,9 @@ export class AgentOrchestrator {
                         action: 'navigate_canvas',
                         targetSlug: savedCanvas.slug,
                         isNewPage: true
-                    }
+                    },
+                    thought: plan.thought,
+                    toolCalls: executionData?.gatheredData || []
                 };
             }
 
@@ -408,7 +410,9 @@ export class AgentOrchestrator {
 
             return {
                 ...finalResult,
-                usedModel: modelName // Pass the final model back to API
+                thought: plan.thought,
+                toolCalls: executionData?.gatheredData || [],
+                usedModel: modelName
             };
         } catch (designError) {
             console.error("[Orchestrator] Designer failed:", designError.message);

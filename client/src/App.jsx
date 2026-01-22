@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './Layout';
-import { Chat } from './components/Chat';
+import { ChatLayout } from './components/chat/ChatLayout'; // NEW
 import { Canvas } from './components/Canvas';
 import { MessageSquareText, Search, Plus, Save, AlertTriangle, Globe, Database } from 'lucide-react';
 
@@ -60,6 +60,10 @@ function AppContent() {
     const [activeWidgets, setActiveWidgets] = useState([]);
     const [messages, setMessages] = useState([]); // This now reflects CURRENT CHAT messages
     const [isSaving, setIsSaving] = useState(false);
+
+    // --- Agent Mode State (New) ---
+    const [agentMode, setAgentMode] = useState('fast'); // 'fast' | 'planning'
+
 
     const [lastSaved, setLastSaved] = useState(null);
     const [chatCollapsed, setChatCollapsed] = useState(false);
@@ -579,7 +583,12 @@ function AppContent() {
             }
 
             // Add Bot Message
-            setMessages(prev => [...prev, { role: 'model', text: data.text }]);
+            setMessages(prev => [...prev, {
+                role: 'model',
+                text: data.text,
+                thought: data.thought,
+                toolCalls: data.toolCalls
+            }]);
 
             // If implicit creation happened, update ID
             if (data.chatId && data.chatId !== activeChatId) {
@@ -705,6 +714,31 @@ function AppContent() {
             )}
 
             {/* MAIN LAYOUT (Always Rendered in Background) */}
+            <ChatLayout // Replaced Chat with ChatLayout
+                // Data
+                chats={chats}
+                activeChatId={activeChatId}
+                messages={messages}
+
+                // Agents State
+                agentMode={agentMode}
+                setAgentMode={setAgentMode}
+                selectedModel={selectedModel}
+                setSelectedModel={setSelectedModel}
+                availableModels={availableModels}
+
+                // Actions
+                onSendMessage={handleSendMessage}
+                onNewChat={() => handleCreateNewChat()}
+                onNavigateChat={(id) => loadChat(id)} // Use loadChat directly or wrap? loadChat updates activeChatId
+                onDeleteChat={handleDeleteChat}
+                onRenameChat={handleRenameChat}
+
+                // Status
+                isProcessing={isProcessing}
+                onStop={handleStopGeneration}
+            />
+
             <Layout
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
@@ -857,31 +891,7 @@ function AppContent() {
                                 )}
                             </div>
 
-                            {/* CHAT SIDEBAR (Right) */}
-                            <div
-                                className={`border-l border-slate-800 bg-slate-900/40 backdrop-blur-sm transition-all duration-300 ease-in-out flex flex-col z-20 h-full ${chatCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[450px] opacity-100'}`}
-                                style={{ width: chatCollapsed ? 0 : chatWidth }}
-                            >
-                                <Chat
-                                    chatId={activeChatId}
-                                    sessionId={sessionId}
-                                    messages={messages}
-                                    isProcessing={isProcessing}
-                                    onSendMessage={handleSendMessage}
-                                    onStopGeneration={handleStopGeneration}
-                                    onEditMessage={handleEditMessage}
-                                    onClose={() => setChatCollapsed(true)}
-                                    width={chatWidth}
-                                    setWidth={setChatWidth}
-                                    isResizing={isResizing}
-                                    onResizeStart={() => setIsResizing(true)}
-                                    onResizeEnd={() => setIsResizing(false)}
-                                    collapsed={chatCollapsed}
-                                    onToggleCollapse={() => setChatCollapsed(!chatCollapsed)}
-                                    expanded={chatExpanded}
-                                    onToggleExpand={() => setChatExpanded(!chatExpanded)}
-                                />
-                            </div>
+
                         </div>
                     )
                 }
