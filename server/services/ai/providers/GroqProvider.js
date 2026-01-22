@@ -19,22 +19,39 @@ export class GroqProvider extends AIProvider {
             if (!response.ok) throw new Error(await response.text());
             const data = await response.json();
 
-            const WHITELIST = [
-                'llama-3.3-70b-versatile',
-                'llama-3.1-8b-instant',
-                'mixtral-8x7b-32768'
-            ];
+            const { HybridModelFilter } = await import('./utils/HybridModelFilter.js');
 
-            return data.data
-                .filter(m => WHITELIST.includes(m.id))
+            const filter = new HybridModelFilter({
+                priority: [
+                    'deepseek-r1-distill-llama-70b', // New Reasoning
+                    'llama-3.3-70b-versatile',
+                    'llama-3.1-8b-instant',
+                    'mixtral-8x7b-32768',
+                    'gemma2-9b-it'
+                ],
+                discovery: [
+                    /^llama-[3-9]\./,       // Llama 3, 4, 5... and up
+                    /^mixtral/,             // Mixtral
+                    /^deepseek/,            // DeepSeek
+                    /^gemma[2-9]/           // Gemma 2, 3...
+                ],
+                exclude: [
+                    'llama-2',              // Old
+                    'whisper',              // Audio
+                    '70b-8192',             // Old aliases
+                    'Tool-Use-Preview'      // Old previews
+                ]
+            });
+
+            return filter.process(data.data, m => m.id)
                 .map(m => ({
                     id: m.id,
                     name: m.id,
                     displayName: `Groq/${m.id}`,
                     provider: 'groq',
                     description: `Groq hosted model: ${m.id}`
-                }))
-                .sort((a, b) => WHITELIST.indexOf(a.id) - WHITELIST.indexOf(b.id));
+                }));
+
         } catch (e) {
             console.error("[GroqProvider] List models failed:", e);
             return [];

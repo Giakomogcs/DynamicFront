@@ -19,14 +19,34 @@ export class XAIProvider extends AIProvider {
             if (!response.ok) throw new Error(await response.text());
             const data = await response.json();
 
-            return data.data.map(m => ({
+            const { HybridModelFilter } = await import('./utils/HybridModelFilter.js');
+
+            const filter = new HybridModelFilter({
+                priority: [
+                    'grok-2',
+                    'grok-2-mini',
+                    'grok-beta',
+                    'grok-2-1212'
+                ],
+                discovery: [
+                    /^grok/                 // All Grok variants
+                ]
+            });
+
+            const filtered = filter.process(data.data, m => m.id);
+
+            if (filtered.length === 0) return this.getDefaultModels();
+
+            return filtered.map(m => ({
                 id: m.id,
                 name: m.id,
                 displayName: `xAI/${m.id}`,
                 provider: 'xai',
                 description: `Grok Model: ${m.id}`
             }));
+
         } catch (e) {
+            // ... error handling ...
             let msg = e.message;
             try {
                 // Try to parse xAI JSON error for cleaner logging

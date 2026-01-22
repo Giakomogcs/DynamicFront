@@ -406,7 +406,10 @@ export class AgentOrchestrator {
                 };
             }
 
-            return finalResult;
+            return {
+                ...finalResult,
+                usedModel: modelName // Pass the final model back to API
+            };
         } catch (designError) {
             console.error("[Orchestrator] Designer failed:", designError.message);
 
@@ -414,7 +417,8 @@ export class AgentOrchestrator {
             console.log("=== [Orchestrator] Process Complete (with fallback) ===\n");
             return {
                 text: this._sanitizeResponse(executionResult.result?.text),
-                widgets: []
+                widgets: [],
+                usedModel: modelName // Return the model that was actually used (persisted)
             };
         }
     }

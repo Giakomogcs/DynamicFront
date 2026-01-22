@@ -27,8 +27,32 @@ export class CopilotProvider {
 
             // Pass the potentially exchanged token to service
             const models = await copilotService.getModels(tokenToUse);
+
+            const { HybridModelFilter } = await import('./utils/HybridModelFilter.js');
+            const filter = new HybridModelFilter({
+                priority: [
+                    'gpt-4o',
+                    'claude-3.5-sonnet',
+                    'o1-preview',
+                    'o1-mini',
+                    'gpt-4'
+                ],
+                discovery: [
+                    /^gpt-[4-9]/,           // GPT-4, 5...
+                    /^claude-[3-9]\./,      // Claude 3.5, 4, 5...
+                    /^o[1-9]/               // o1, o2...
+                ],
+                exclude: [
+                    'gpt-3',
+                    'davinci'
+                ]
+            });
+
             if (Array.isArray(models)) {
-                return models.map(m => {
+                // Copilot models usually have 'id' or 'name'
+                const filtered = filter.process(models, m => m.id || m.name);
+
+                return filtered.map(m => {
                     const modelId = m.id || m.name;
                     return {
                         name: `copilot/${modelId}`,
@@ -41,11 +65,12 @@ export class CopilotProvider {
             return [];
         } catch (e) {
             console.warn("[CopilotProvider] Failed to list models:", e.message);
-            // Fallback to static known models
+            // Fallback to static known models (Updated)
             return [
+                { name: 'copilot/gpt-4o', displayName: '(Copilot) GPT-4o', provider: 'copilot', description: 'GitHub Copilot GPT-4o' },
+                { name: 'copilot/claude-3.5-sonnet', displayName: '(Copilot) Claude 3.5 Sonnet', provider: 'copilot', description: 'GitHub Copilot Claude 3.5 Sonnet' },
                 { name: 'copilot/gpt-4', displayName: '(Copilot) GPT-4', provider: 'copilot', description: 'GitHub Copilot GPT-4' },
-                { name: 'copilot/gpt-3.5-turbo', displayName: '(Copilot) GPT-3.5 Turbo', provider: 'copilot', description: 'GitHub Copilot GPT-3.5' },
-                { name: 'copilot/claude-3.5-sonnet', displayName: '(Copilot) Claude 3.5 Sonnet', provider: 'copilot', description: 'GitHub Copilot Claude 3.5 Sonnet' }
+                { name: 'copilot/o1-preview', displayName: '(Copilot) o1 Preview', provider: 'copilot', description: 'GitHub Copilot o1 Preview' }
             ];
         }
     }

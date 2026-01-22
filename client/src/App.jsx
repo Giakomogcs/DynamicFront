@@ -568,7 +568,15 @@ function AppContent() {
 
             const data = await response.json();
 
-            if (!response.ok) throw new Error(data.error);
+            if (!response.ok) {
+                // If backend sent a friendly text along with the error (e.g. Quota Exceeded), show it
+                if (data.text) {
+                    setMessages(prev => [...prev, { role: 'model', text: data.text }]);
+                    // Don't throw if handled gracefully
+                    return;
+                }
+                throw new Error(data.error || "Unknown Error");
+            }
 
             // Add Bot Message
             setMessages(prev => [...prev, { role: 'model', text: data.text }]);
@@ -582,6 +590,14 @@ function AppContent() {
 
             // Handle Widgets - DEFER update if navigating
             let nextWidgets = data.widgets || [];
+
+            // FALLBACK: Update Model if backend switched it (Context Preservation)
+            if (data.usedModel && data.usedModel !== selectedModel) {
+                console.log(`[App] 🔄 Backend switched model to: ${data.usedModel}`);
+                setSelectedModel(data.usedModel);
+                // Optional: Notify user?
+                // success(`Switched to ${data.usedModel} for better performance`);
+            }
 
 
             // Handle Navigation / Actions

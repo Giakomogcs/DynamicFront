@@ -25,43 +25,63 @@ export class GeminiProvider extends AIProvider {
             if (!response.ok) throw new Error("Failed to fetch models");
             const data = await response.json();
 
-            const WHITELIST = [
-                //  Gemini 2.0 (Latest)
-                'gemini-2.0-flash-exp',
-                'gemini-2.0-flash-thinking-exp',
-                'gemini-2.0-flash',
+            // Import dynamically to avoid circular deps if any (though here it's fine statically, keeping clean)
+            const { HybridModelFilter } = await import('./utils/HybridModelFilter.js');
 
-                // Gemini 1.5 (Stable)
-                'gemini-1.5-pro',
-                'gemini-1.5-pro-exp',
-                'gemini-1.5-flash',
-                'gemini-1.5-flash-8b',
-                'gemini-1.5-flash-exp',
+            const filter = new HybridModelFilter({
+                priority: [
+                    'gemini-2.0-flash',
+                    'gemini-2.0-flash-latest',
+                    'gemini-2.0-pro-exp', // Potential 2.0 Pro
+                    'gemini-2.0-flash-thinking-exp-01-21',
+                    'gemini-1.5-pro-latest',
+                    'gemini-1.5-flash-latest',
+                    'gemini-1.5-pro',
+                    'gemini-1.5-flash'
+                ],
+                discovery: [
+                    /^gemini-[2-9]\./,      // Gemini 2.0, 3.0...
+                    /^gemini-1\.[5-9]/,     // Gemini 1.5+
+                    /^gemini-exp/,          // Experimental
+                    /latest$/               // Any model ending in 'latest'
+                ],
+                exclude: [
+                    '001', '002', '004',    // Old numbered versions
+                    'vision',               // Legacy standalone
+                    'tuning',
+                    'embedding',            // Embeddings
+                    'aqa',                  // Attributed Question Answering
+                    'imagen',               // Image generation only
+                    'image-generation',     // Explicit image gen tag 
+                    'face',                 // Face detection
+                    'legacy',
+                    'tts',                  // Text to speech
+                    'nano',                 // On-device/small
+                    'banana',               // Internal/Test artifacts
+                    'computer-use'          // Agentic specific (keep only if user wants agents)
+                ]
+            });
 
-                // Experimental/Preview
-                'gemini-exp-1206',
-                'learnlm-1.5-pro-experimental'
-            ];
+            const rawModels = (data.models || []).filter(m => m.supportedGenerationMethods.includes("generateContent"));
 
-            return (data.models || [])
-                .filter(m => {
-                    const id = m.name.replace('models/', '');
-                    return m.supportedGenerationMethods.includes("generateContent") && WHITELIST.includes(id);
-                })
-                .map(m => ({
-                    id: m.name.replace('models/', ''),
-                    name: m.name.replace('models/', ''),
-                    displayName: m.displayName,
-                    provider: 'gemini',
-                    description: m.description,
-                    version: m.version
-                }))
-                .sort((a, b) => {
-                    // Sort by WHITELIST order
-                    const idA = a.name;
-                    const idB = b.name;
-                    return WHITELIST.indexOf(idA) - WHITELIST.indexOf(idB);
-                });
+            // Clean names (remove models/ prefix)
+            const cleanedModels = rawModels.map(m => ({
+                ...m,
+                id: m.name.replace('models/', ''),
+                name: m.name.replace('models/', '')
+            }));
+
+            const filtered = filter.process(cleanedModels, m => m.id);
+
+            return filtered.map(m => ({
+                id: m.id,
+                name: m.id,
+                displayName: m.displayName,
+                provider: 'gemini',
+                description: m.description,
+                version: m.version
+            }));
+
         } catch (e) {
             console.warn("[GeminiProvider] List models failed:", e.message);
             return [];

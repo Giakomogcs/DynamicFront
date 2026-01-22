@@ -245,18 +245,39 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
         return () => clearTimeout(timer);
     }, [apiKeys, hasApiKeyChanges]);
 
+    // Clean up Orphaned Models (Models saved in DB but no longer returned by API/Filter)
+    useEffect(() => {
+        if (loading || availableModels.length === 0) return;
 
-    // Refactored Save Functions to be granular
+        // Get set of valid IDs
+        const validIds = new Set(availableModels.map(m => m.id || m.name));
+
+        // Find enabled models that are invalid
+        const orphans = enabledModels.filter(id => !validIds.has(id));
+
+        if (orphans.length > 0) {
+            console.log("Removing orphaned models:", orphans);
+            setEnabledModels(prev => prev.filter(id => validIds.has(id)));
+            // This state change will trigger the auto-save effect automatically, cleaning DB.
+        }
+    }, [availableModels, loading]); // Depend only on availableModels change
+
+
+    // Refactored Save Functions
     const saveNonKeySettings = async () => {
         setSaving(true);
         try {
             const promises = [];
-            promises.push(fetch('http://localhost:3000/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key: 'enabledModels', value: enabledModels })
-            }));
+            // Check if models actually changed vs initial
+            if (JSON.stringify(enabledModels) !== JSON.stringify(initialEnabledModels)) {
+                promises.push(fetch('http://localhost:3000/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'enabledModels', value: enabledModels })
+                }));
+            }
 
+            // Check General Settings
             Object.entries(generalSettings).forEach(([key, val]) => {
                 promises.push(fetch('http://localhost:3000/api/settings', {
                     method: 'POST',
@@ -265,6 +286,8 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                 }));
             });
 
+            // Check Provider Settings
+            let providersChanged = false;
             Object.entries(providerSettings).forEach(([id, isEnabled]) => {
                 promises.push(fetch('http://localhost:3000/api/settings', {
                     method: 'POST',
@@ -275,8 +298,13 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
 
             await Promise.all(promises);
 
-            // Refresh models list when provider settings change
-            await fetchData();
+            // Update initial state to prevent loop and reflect current committed state
+            setInitialEnabledModels(enabledModels);
+
+            // Only refresh full data if PROVIDERS were toggled (as that affects available models)
+            // We can detect this by checking if providerSettings changed.
+            // For now, let's skip fetchData here unless necessary to stop the loop.
+            // The user interaction 'handleProviderToggle' already calls fetchData, so we don't need it here.
 
             if (onSettingsChanged) onSettingsChanged();
         } catch (e) {
@@ -949,7 +977,7 @@ const ApiKeyInput = ({ label, value, onChange, placeholder, type = 'password', d
             <div className="flex justify-between items-center">
                 <label className="text-xs font-medium text-slate-400 group-focus-within:text-indigo-400 transition-colors flex items-center gap-2">
                     {label}
-                    {hasValue && (status || validating || error) && (
+                    {hasValue && isEnabled && (
                         <span className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full border ${statusInfo.color === 'green' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                             statusInfo.color === 'yellow' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
                                 statusInfo.color === 'red' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
