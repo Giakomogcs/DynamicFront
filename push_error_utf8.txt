@@ -1,0 +1,136 @@
+﻿git : remote: error: GH013: 
+Repository rule violations 
+found for refs/heads/Project
+-canvas-front.        
+No linha:1 caractere:1
++ git push origin 
+Project-canvas-front > 
+push_error.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo          
+    : NotSpecified: (remot  
+  e: error: ...-front.      
+      :String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+remote: 
+remote: - GITHUB PUSH 
+PROTECTION        
+remote:   ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö
+ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö
+ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö       
+ 
+remote:     Resolve the 
+following violations before 
+pushing again        
+remote: 
+remote:     - Push cannot 
+contain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how 
+to resolve a blocked push   
+     
+remote:      https://docs.gi
+thub.com/code-security/secre
+t-scanning/working-with-secr
+et-scanning-and-push-protect
+ion/working-with-push-protec
+tion-from-the-command-line#r
+esolving-a-blocked-push     
+   
+remote:             
+remote:             
+remote:       ÔÇöÔÇö Google 
+OAuth Client ID ÔÇöÔÇöÔÇöÔÇö
+ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇö        
+remote:        locations:   
+     
+remote:          - commit: 9
+b2cfdf56f22c76b1177cebb66c76
+39c23027e97        
+remote:            path: 
+server/routes/auth.js:13    
+    
+remote:          - commit: 6
+97b7f73af1405ba6241fcc24f732
+6436d03f1ba        
+remote:            path: 
+server/routes/auth.js:13    
+    
+remote:          - commit: 9
+b2cfdf56f22c76b1177cebb66c76
+39c23027e97        
+remote:            path: ser
+ver/services/gemini/GeminiIn
+ternalProvider.js:11        
+remote:             
+remote:        (?) To push, 
+remove secret from 
+commit(s) or follow this 
+URL to allow the secret.    
+    
+remote:        https://githu
+b.com/Giakomogcs/DynamicFron
+t/security/secret-scanning/u
+nblock-secret/38dUaJkd1uS1bV
+tIq6fIdZ2ZJ7i        
+remote:             
+remote:             
+remote:       ÔÇöÔÇö Google 
+OAuth Client Secret ÔÇöÔÇöÔÇ
+öÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇö
+ÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔÇöÔ
+ÇöÔÇöÔÇö        
+remote:        locations:   
+     
+remote:          - commit: 9
+b2cfdf56f22c76b1177cebb66c76
+39c23027e97        
+remote:            path: 
+server/routes/auth.js:14    
+    
+remote:          - commit: 6
+97b7f73af1405ba6241fcc24f732
+6436d03f1ba        
+remote:            path: 
+server/routes/auth.js:14    
+    
+remote:          - commit: 9
+b2cfdf56f22c76b1177cebb66c76
+39c23027e97        
+remote:            path: ser
+ver/services/gemini/GeminiIn
+ternalProvider.js:12        
+remote:             
+remote:        (?) To push, 
+remove secret from 
+commit(s) or follow this 
+URL to allow the secret.    
+    
+remote:        https://githu
+b.com/Giakomogcs/DynamicFron
+t/security/secret-scanning/u
+nblock-secret/38dUaMNlj8xcx9
+ZK2RZugJLhUAH        
+remote:             
+remote: 
+remote: 
+To https://github.com/Giakom
+ogcs/DynamicFront.git
+ ! [remote rejected] 
+Project-canvas-front -> 
+Project-canvas-front (push 
+declined due to repository 
+rule violations)
+error: failed to push some 
+refs to 'https://github.com/
+Giakomogcs/DynamicFront.git'

@@ -32,15 +32,32 @@ export class CopilotProvider {
             const filter = new HybridModelFilter({
                 priority: [
                     'gpt-4o',
-                    'claude-3.5-sonnet'
+                    'gpt-4',
+                    'gpt-3.5-turbo',
+                    'claude-3.5-sonnet',
+                    'o1-preview',
+                    'o1-mini'
                 ],
-                discovery: [], // Strict Mode to prevent clutter
+                discovery: [
+                    /^gpt-/i,
+                    /^claude-/i,
+                    /^o1-/i
+                ],
                 exclude: []
             });
 
             if (Array.isArray(models)) {
                 // Copilot models usually have 'id' or 'name'
                 const filtered = filter.process(models, m => m.id || m.name);
+
+                if (filtered.length === 0) {
+                    return [{
+                        name: 'copilot/gpt-4',
+                        displayName: '(Copilot) GPT-4 (Default)',
+                        provider: 'copilot',
+                        description: 'GitHub Copilot Default Model'
+                    }];
+                }
 
                 return filtered.map(m => {
                     const modelId = m.id || m.name;
@@ -52,6 +69,13 @@ export class CopilotProvider {
                     };
                 });
             }
+            // Also fallback if not array
+            return [{
+                name: 'copilot/gpt-4',
+                displayName: '(Copilot) GPT-4 (Default)',
+                provider: 'copilot',
+                description: 'GitHub Copilot Default Model'
+            }];
             return [];
         } catch (e) {
             console.warn("[CopilotProvider] Failed to list models:", e.message);

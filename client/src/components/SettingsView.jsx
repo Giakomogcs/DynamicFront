@@ -13,7 +13,7 @@ const FLAGSHIP_PRIORITY = [
     'llama-3.1-70b', 'llama-3.1-8b', 'llama3-70b', 'llama3-8b', 'mixtral-8x7b'
 ];
 
-export const SettingsView = ({ onClose, onSettingsChanged }) => {
+export const SettingsView = ({ onClose, onSettingsChanged, isOpen }) => {
     const { success, error, info } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -21,12 +21,20 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
 
     // Data State
     const [availableModels, setAvailableModels] = useState([]);
+
     const [enabledModels, setEnabledModels] = useState([]);
+    const [initialEnabledModels, setInitialEnabledModels] = useState([]); // Added missing state
+
     const [userSettings, setUserSettings] = useState({});
+
     const [generalSettings, setGeneralSettings] = useState({
         FAILOVER_ENABLED: true
     });
+    const [initialGeneralSettings, setInitialGeneralSettings] = useState({ FAILOVER_ENABLED: true }); // Added missing state
+
     const [providerSettings, setProviderSettings] = useState({});
+    const [initialProviderSettings, setInitialProviderSettings] = useState({}); // Added missing state
+
     const [providerStatuses, setProviderStatuses] = useState({});
 
     // UI State for "Show More"
@@ -43,11 +51,15 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
         LM_STUDIO_URL: '',
         OLLAMA_URL: ''
     });
+    const [initialApiKeys, setInitialApiKeys] = useState({}); // Added missing state
 
     // Validation Tracking State
     const [validatingKeys, setValidatingKeys] = useState(new Set());
     const [keyErrors, setKeyErrors] = useState({}); // { GEMINI_API_KEY: "Erro..." }
     const [refreshingProviders, setRefreshingProviders] = useState(false);
+
+    // Save State
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // GitHub Copilot Auth State
     const [copilotStatus, setCopilotStatus] = useState('disconnected');
@@ -55,17 +67,26 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
     const [copilotUser, setCopilotUser] = useState(null);
 
     useEffect(() => {
+        // Fetch on mount to ensure data is loaded even if isOpen is not passed
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchData();
+        }
+    }, [isOpen]);
 
     const fetchData = async (options = {}) => {
         const { skipSettings = false } = options;
         try {
-            // 1. Fetch All Models (Backend now filters this list to only HEALTHY providers)
-            // Use timestamp to bypass potential browser cache if needed
-            const modelsRes = await fetch(`http://localhost:3000/api/models?t=${Date.now()}`);
-            const modelsData = await modelsRes.json();
-            const allModels = Array.isArray(modelsData.models) ? modelsData.models : (modelsData || []);
+            // 1. Fetch All Models (In settings, we want to see ALL discovered models to enable/disable them)
+            const modelsRes = await fetch(`http://localhost:3000/api/models?all=true&t=${Date.now()}`);
+            let allModels = [];
+            if (modelsRes.ok) {
+                const modelsData = await modelsRes.json();
+                allModels = Array.isArray(modelsData.models) ? modelsData.models : (Array.isArray(modelsData) ? modelsData : []);
+            }
             setAvailableModels(allModels);
 
             // 2. Fetch Provider Statuses
@@ -92,26 +113,32 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
             setGeneralSettings({
                 FAILOVER_ENABLED: settings.FAILOVER_ENABLED !== false // Default true
             });
+            setInitialGeneralSettings({
+                FAILOVER_ENABLED: settings.FAILOVER_ENABLED !== false
+            });
 
             // Extract provider enabled states
             const provSettings = {};
-            ['gemini', 'groq', 'openai', 'anthropic', 'xai', 'copilot', 'lmstudio', 'ollama'].forEach(p => {
+            ['gemini', 'groq', 'openai', 'anthropic', 'xai', 'copilot', 'lmstudio', 'ollama', 'gemini-internal'].forEach(p => {
                 provSettings[p] = settings[`PROVIDER_ENABLED_${p.toUpperCase()}`] !== false; // Default true
             });
             setProviderSettings(provSettings);
+            setInitialProviderSettings(provSettings);
 
             // Load Enabled Models
             if (settings.enabledModels && settings.enabledModels.length > 0) {
                 setEnabledModels(settings.enabledModels);
+                setInitialEnabledModels(settings.enabledModels);
             } else {
                 // DEFAULT: Enable all available models (Minimalist approach: Backend already filtered them)
                 // If user wants to hide some, they can. But default to showing what works.
-                const defaultEnabled = allModels.map(m => m.name);
+                const defaultEnabled = Array.isArray(allModels) ? allModels.map(m => m.name) : [];
                 setEnabledModels(defaultEnabled);
+                setInitialEnabledModels(defaultEnabled);
             }
 
             // Load Keys
-            setApiKeys({
+            const loadedKeys = {
                 GEMINI_API_KEY: settings.GEMINI_API_KEY || '',
                 GROQ_API_KEY: settings.GROQ_API_KEY || '',
                 OPENAI_API_KEY: settings.OPENAI_API_KEY || '',
@@ -120,7 +147,9 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                 GITHUB_COPILOT_TOKEN: settings.GITHUB_COPILOT_TOKEN || '',
                 LM_STUDIO_URL: settings.LM_STUDIO_URL || '',
                 OLLAMA_URL: settings.OLLAMA_URL || ''
-            });
+            };
+            setApiKeys(loadedKeys);
+            setInitialApiKeys(loadedKeys);
 
             if (settings.GITHUB_COPILOT_TOKEN && settings.GITHUB_COPILOT_TOKEN.length > 10) {
                 setCopilotStatus('connected');
@@ -134,6 +163,64 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
             error("Failed to load settings");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const disconnectGemini = async () => {
+        try {
+            setRefreshingProviders(true);
+            await fetch('http://localhost:3000/auth/gemini-cli/disconnect', { method: 'POST' });
+            await fetchData({ skipSettings: false });
+            if (onSettingsChanged) onSettingsChanged();
+            success("Disconnected Gemini CLI");
+        } catch (e) {
+            error("Failed to disconnect");
+        } finally {
+            setRefreshingProviders(false);
+        }
+    };
+
+
+
+    const disconnectCopilot = async () => {
+        try {
+            setRefreshingProviders(true);
+            setCopilotStatus('disconnected');
+            setCopilotUser(null);
+
+            // Clear Token in DB
+            await fetch('http://localhost:3000/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'GITHUB_COPILOT_TOKEN', value: '' })
+            });
+
+            // Also disable the provider to be safe?
+            // await fetch('http://localhost:3000/api/settings', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify({ key: 'PROVIDER_ENABLED_COPILOT', value: false })
+            // });
+            // Updating local state for the toggle to 'Disabled' would be consistent, 
+            // but user might want to keep it 'Active' but disconnected? 
+            // Usually if disconnected, it can't be active. 
+            // Let's force disable it too.
+
+            await fetch('http://localhost:3000/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'PROVIDER_ENABLED_COPILOT', value: false })
+            });
+            setProviderSettings(prev => ({ ...prev, copilot: false }));
+
+            await fetchData({ skipSettings: false });
+            if (onSettingsChanged) onSettingsChanged();
+            success("Disconnected GitHub Copilot");
+        } catch (e) {
+            console.error("Disconnect failed", e);
+            error("Failed to disconnect");
+        } finally {
+            setRefreshingProviders(false);
         }
     };
 
@@ -184,16 +271,40 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
     };
 
     const handleProviderToggle = async (providerId, isEnabled) => {
-        setProviderSettings(prev => ({ ...prev, [providerId]: isEnabled }));
-
-        // Optimistic UI update logic handled by state
-        // But we want to refresh lists quickly
+        // 1. Optimistic UI update
+        const newSettings = { ...providerSettings, [providerId]: isEnabled };
+        setProviderSettings(newSettings);
         setRefreshingProviders(true);
-        setTimeout(async () => {
-            // Fetch only models and statuses, skip full settings reload
-            await fetchData({ skipSettings: true });
+
+        try {
+            // 2. Explicit Save to DB immediately to avoid race conditions
+            await fetch('http://localhost:3000/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: `PROVIDER_ENABLED_${providerId.toUpperCase()}`, value: isEnabled })
+            });
+
+            // Update initial state so auto-saver doesn't get confused if it runs later
+            setInitialProviderSettings(prev => ({ ...prev, [providerId]: isEnabled }));
+
+            // 3. Refresh Data (Models might change)
+            // FORCE FULL RELOAD to ensure DB persistence is verified by UI
+            await fetchData({ skipSettings: false });
+
+            if (onSettingsChanged) {
+                onSettingsChanged();
+            }
+
+            info(`${isEnabled ? 'Enabled' : 'Disabled'} ${providerId}`);
+
+        } catch (e) {
+            console.error("Failed to toggle provider", e);
+            error("Failed to save setting");
+            // Revert on error
+            setProviderSettings(prev => ({ ...prev, [providerId]: !isEnabled }));
+        } finally {
             setRefreshingProviders(false);
-        }, 500); // Small delay to allow backend to process updateSetting call if happening in parallel
+        }
     };
 
     const handleGeneralChange = (key, value) => {
@@ -202,18 +313,8 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
 
     // --- SMART SAVE LOGIC ---
 
-    // Track initial values to detect real changes
-    const [initialApiKeys, setInitialApiKeys] = useState({});
-    const [initialEnabledModels, setInitialEnabledModels] = useState([]);
-    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-    // Store initial values after load
-    useEffect(() => {
-        if (!loading && Object.keys(initialApiKeys).length === 0) {
-            setInitialApiKeys(apiKeys);
-            setInitialEnabledModels(enabledModels);
-        }
-    }, [loading]);
+    // --- SMART SAVE LOGIC ---
+    // (Initial values are now set in fetchData)
 
     // Detect if API keys actually changed
     const hasApiKeyChanges = useMemo(() => {
@@ -221,17 +322,19 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
         return Object.keys(apiKeys).some(key => apiKeys[key] !== initialApiKeys[key]);
     }, [apiKeys, initialApiKeys, loading]);
 
-    // 1. Auto-save Enabled Models, General Settings, Provider Settings (Immediate)
+    // 1. Auto-save Enabled Models, General Settings (Immediate)
     useEffect(() => {
         if (loading) return;
         if (initialEnabledModels.length === 0) return; // Skip initial render
 
         // Only save if actually changed
         const modelsChanged = JSON.stringify(enabledModels) !== JSON.stringify(initialEnabledModels);
+        const generalChanged = JSON.stringify(generalSettings) !== JSON.stringify(initialGeneralSettings);
+
         if (modelsChanged) {
             saveNonKeySettings();
         }
-    }, [enabledModels, generalSettings, providerSettings]);
+    }, [enabledModels, generalSettings]);
 
     // 2. Smart API Keys save (only on real changes, debounced)
     useEffect(() => {
@@ -287,7 +390,7 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
             });
 
             // Check Provider Settings
-            let providersChanged = false;
+            // We save ALL provider settings to ensure consistency, but only if we are here.
             Object.entries(providerSettings).forEach(([id, isEnabled]) => {
                 promises.push(fetch('http://localhost:3000/api/settings', {
                     method: 'POST',
@@ -300,6 +403,7 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
 
             // Update initial state to prevent loop and reflect current committed state
             setInitialEnabledModels(enabledModels);
+            setInitialProviderSettings(providerSettings);
 
             // Only refresh full data if PROVIDERS were toggled (as that affects available models)
             // We can detect this by checking if providerSettings changed.
@@ -493,31 +597,21 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
         setTimeout(poll, interval * 1000);
     };
 
-    const disconnectCopilot = async () => {
-        setApiKeys(prev => ({ ...prev, GITHUB_COPILOT_TOKEN: '' }));
-        setCopilotStatus('disconnected');
-        setCopilotUser(null);
-        await fetch('http://localhost:3000/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: 'GITHUB_COPILOT_TOKEN', value: '' })
-        });
 
-        info("Copilot disconnected");
-        setTimeout(async () => {
-            await fetchData();
-            if (onSettingsChanged) onSettingsChanged();
-        }, 500);
-    };
+
+
 
     // --- SMART MODEL FILTERING ---
     const processedModels = useMemo(() => {
         const groups = {};
 
+        // Safety check if API failed
+        const safeModels = Array.isArray(availableModels) ? availableModels : [];
+
         // Backend now strictly returns only validated models from healthy providers.
         // We just need to group them by provider.
 
-        availableModels.forEach(m => {
+        safeModels.forEach(m => {
             const provider = m.provider || 'unknown';
             if (!groups[provider]) groups[provider] = [];
             groups[provider].push(m);
@@ -654,10 +748,13 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     <span className="font-medium text-white">Gemini CLI (Internal)</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {(providerStatuses['gemini-internal']?.healthy || providerStatuses['gemini-internal']?.valid) && (
-                                        <div className="cursor-default px-2 py-0.5 text-xs rounded-full border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
-                                            <div className="size-1.5 rounded-full bg-green-500" />
-                                            Active
+                                    {(providerStatuses['gemini-internal']?.connected) && (
+                                        <div
+                                            onClick={() => handleProviderToggle('gemini-internal', !providerSettings['gemini-internal'])}
+                                            className={`cursor-pointer px-2 py-0.5 text-xs rounded-full border flex items-center gap-1 opacity-80 hover:opacity-100 ${providerSettings['gemini-internal'] !== false ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-slate-700 text-slate-400'}`}
+                                        >
+                                            <div className={`size-1.5 rounded-full ${providerSettings['gemini-internal'] !== false ? 'bg-green-500' : 'bg-slate-500'}`} />
+                                            {providerSettings['gemini-internal'] !== false ? 'Active' : 'Disabled'}
                                         </div>
                                     )}
                                 </div>
@@ -665,25 +762,41 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
 
                             <div className="p-6 space-y-4">
                                 <p className="text-sm text-slate-400">
-                                    Connect your Google Cloud account to unlock internal Gemini models (e.g. <code>gemini-2.5-flash</code>).
+                                    Connect your Google Cloud account to unlock internal Gemini models.
                                 </p>
 
-                                {(providerStatuses['gemini-internal']?.healthy || providerStatuses['gemini-internal']?.valid) ? (
+                                {(providerStatuses['gemini-internal']?.connected) ? (
                                     <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm text-slate-300">Connected to <strong>Google Cloud</strong></span>
                                         </div>
 
-                                        <button 
-                                            onClick={() => window.location.href = `http://localhost:3000/auth/gemini-cli/connect?redirect=${encodeURIComponent(window.location.href)}`}
-                                            className="text-xs text-indigo-400 hover:bg-slate-800 px-2 py-1 rounded transition-colors"
-                                        >
-                                            Reconnect
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    const redirectUrl = new URL(window.location.href);
+                                                    redirectUrl.searchParams.set('settings', 'true');
+                                                    window.location.href = `http://localhost:3000/auth/gemini-cli/connect?redirect=${encodeURIComponent(redirectUrl.toString())}`;
+                                                }}
+                                                className="text-xs text-indigo-400 hover:bg-slate-800 px-2 py-1 rounded transition-colors"
+                                            >
+                                                Reconnect
+                                            </button>
+                                            <button
+                                                onClick={disconnectGemini}
+                                                className="text-xs text-red-400 hover:bg-red-500/10 px-2 py-1 rounded transition-colors"
+                                            >
+                                                Disconnect
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <button
-                                        onClick={() => window.location.href = `http://localhost:3000/auth/gemini-cli/connect?redirect=${encodeURIComponent(window.location.href)}`}
+                                        onClick={() => {
+                                            const redirectUrl = new URL(window.location.href);
+                                            redirectUrl.searchParams.set('settings', 'true');
+                                            window.location.href = `http://localhost:3000/auth/gemini-cli/connect?redirect=${encodeURIComponent(redirectUrl.toString())}`;
+                                        }}
                                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
                                     >
                                         <Globe className="size-4" />
@@ -701,7 +814,7 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                     <span className="font-medium text-white">GitHub Copilot</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {copilotStatus === 'connected' && (
+                                    {(copilotStatus === 'connected' || providerStatuses['copilot']?.connected) && (
                                         <div
                                             onClick={() => handleProviderToggle('copilot', !providerSettings.copilot)}
                                             className={`cursor-pointer px-2 py-0.5 text-xs rounded-full border flex items-center gap-1 opacity-80 hover:opacity-100 ${providerSettings.copilot !== false ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-slate-700 text-slate-400'}`}
@@ -716,7 +829,7 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                             <div className="p-6 space-y-4">
                                 <p className="text-sm text-slate-400">Connect to your GitHub account to access Copilot models.</p>
 
-                                {copilotStatus === 'connected' ? (
+                                {(copilotStatus === 'connected' || providerStatuses['copilot']?.connected) ? (
                                     <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm text-slate-300">Logged in as <strong>{copilotUser}</strong></span>
@@ -915,7 +1028,7 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                         </div>
                                         <div className="divide-y divide-slate-800/50">
                                             {visibleModels.map(m => (
-                                                <label key={m.id} className="flex items-center gap-3 p-3 hover:bg-slate-800 cursor-pointer transition-colors group">
+                                                <label key={m.id || m.name} className="flex items-center gap-3 p-3 hover:bg-slate-800 cursor-pointer transition-colors group">
                                                     <div className="relative flex items-center justify-center pt-0.5">
                                                         <input
                                                             type="checkbox"

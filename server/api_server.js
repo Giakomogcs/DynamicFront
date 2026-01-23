@@ -10,7 +10,7 @@ import prisma from './registry.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Import our MCP Logic
+// Import our MCP Logic (Force Restart 2)
 import { toolService } from './services/toolService.js';
 import { storageService } from './services/storageService.js';
 import { orchestrator } from './agents/Orchestrator.js';
@@ -65,17 +65,33 @@ app.get('/api/system/status', async (req, res) => {
 
         // Check for *configured* models (not just default fallback)
         const models = await modelManager.getAvailableModels();
-        const hasModels = models.length > 0;
 
-        // Check specifically for Saved Keys to differentiate "ENV provided" vs "User Setup"
-        // But for "initialized", simply having working models and resources is enough.
-        // The user requirement is: "if first access... no models, no resources... flow to insert these things"
+        // Also check for ConnectedProvider (Gemini CLI) even if models list is empty
+        const connectedProviders = await prisma.connectedProvider.findMany({
+            where: { isEnabled: true }
+        });
+
+        // Check for Copilot Token AND Enabled Status
+        const copilotSetting = await prisma.systemSetting.findUnique({
+            where: { key: 'GITHUB_COPILOT_TOKEN' }
+        });
+        const copilotEnabledSetting = await prisma.systemSetting.findUnique({
+            where: { key: 'PROVIDER_ENABLED_COPILOT' }
+        });
+
+        // Copilot is only "active" if token exists AND it's not explicitly disabled
+        const hasCopilot = copilotSetting && copilotSetting.value && copilotSetting.value.length > 10 &&
+            (copilotEnabledSetting?.value !== 'false');
+
+        const hasModels = models.length > 0;
 
         res.json({
             initialized: hasModels && hasResources,
             hasModels,
             hasResources,
-            resourceCount: (resources.apis?.length || 0) + (resources.dbs?.length || 0)
+            resourceCount: (resources.apis?.length || 0) + (resources.dbs?.length || 0),
+            connectedProviders: connectedProviders.length,
+            hasCopilot
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -87,7 +103,8 @@ app.get('/api/system/status', async (req, res) => {
 // 1.5 Chat Endpoint (Models)
 app.get('/api/models', async (req, res) => {
     try {
-        const models = await modelManager.getAvailableModels();
+        const showAll = req.query.all === 'true';
+        const models = await modelManager.getAvailableModels(true, !showAll);
 
         // Dynamic Default: Pick the flagship model of the first available healthy provider
         let defaultModel = "gemini-2.0-flash";
@@ -119,9 +136,8 @@ app.post('/api/providers/:id/validate', async (req, res) => {
         const { id } = req.params;
 
         // 1. Force settings reload to ensure we have the latest keys from DB
-        // We use a private internal reload or simply init again (init checks isInitialized, but reload forces reset)
-        // We need to make sure the specific provider is reconstructed with the new key.
-        await modelManager.reload(true); // true = forceful immediate reload
+        // Optimized: Refresh ONLY this provider instead of reloading the entire system
+        await modelManager.refreshProvider(id);
 
         // 2. Force validation
         const isValid = await modelManager.forceRevalidate(id);
@@ -256,7 +272,13 @@ app.post('/api/chat', async (req, res) => {
 
             const newMessages = [
                 ...history,
-                { role: 'model', text: result.text, error: result.error } // Store error in msg if needed?
+                {
+                    role: 'model',
+                    text: result.text,
+                    thought: result.thought, // Persist thought
+                    toolCalls: result.toolCalls, // Persist tool calls
+                    error: result.error
+                }
             ];
 
             // Background save (fire and forget for speed, or await for consistency)

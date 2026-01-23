@@ -44,8 +44,7 @@ class ModelManager {
 
         this.settings = settings; // Store for runtime access (e.g. failover check)
 
-        // DYNAMIC PROVIDER REGISTRATION
-        const providerConfigs = [
+        this.providerConfigs = [
             { Provider: GeminiProvider, key: 'GEMINI_API_KEY', name: 'Gemini', id: 'gemini' },
             { Provider: GroqProvider, key: 'GROQ_API_KEY', name: 'Groq', id: 'groq' },
             { Provider: OpenAIProvider, key: 'OPENAI_API_KEY', name: 'OpenAI', id: 'openai' },
@@ -54,6 +53,9 @@ class ModelManager {
             { Provider: CopilotProvider, key: 'GITHUB_COPILOT_TOKEN', name: 'Copilot', id: 'copilot' }
         ];
 
+        // DYNAMIC PROVIDER REGISTRATION
+        const providerConfigs = this.providerConfigs;
+
         let availableCount = 0;
 
         // Helper to check if provider is globally enabled (default true)
@@ -61,6 +63,8 @@ class ModelManager {
             const settingKey = `PROVIDER_ENABLED_${id.toUpperCase()}`;
             return settings[settingKey] !== false; // Default true if undefined
         };
+
+        const isGeminiInternalEnabled = isProviderEnabled('gemini-internal');
 
         // LOCAL LLM REGISTRATION
         if (settings.LM_STUDIO_URL && isProviderEnabled('lmstudio')) {
@@ -126,7 +130,7 @@ class ModelManager {
             }
         }
 
-        if (availableCount === 0) {
+        if (availableCount === 0 && !isGeminiInternalEnabled) {
             console.warn('[ModelManager] WARN: No AI providers available! Chat will fail.');
         }
 
@@ -134,15 +138,19 @@ class ModelManager {
         await this.loadDynamicProviders();
 
         this.isInitialized = true;
-        console.log(`[ModelManager] Initialized with ${availableCount} providers.`);
+        console.log(`[ModelManager] Initialized. Total Providers Registered: ${this.providers.size}`);
     }
 
     async reload(force = false) {
         // If force is true, bypass throttle and execute immediately
         if (force) {
-            if (this.reloadTimer) clearTimeout(this.reloadTimer);
+            if (this.reloadTimer) {
+                clearTimeout(this.reloadTimer);
+                if (this.reloadResolve) this.reloadResolve(); // Resolve pending
+            }
             console.log("[ModelManager] 🔄 Forcing immediate reload...");
             this.providers = new Map();
+            this.modelsCache = null; // FORCE CLEAR CACHE
             this.isInitialized = false;
             await this.init();
             this.lastReloadTime = Date.now();
@@ -151,25 +159,87 @@ class ModelManager {
 
         // Standard debounce logic
         const now = Date.now();
-        if (now - this.lastReloadTime < 3000) {
+        if (now - this.lastReloadTime < 3000 && !this.reloadTimer) {
+            // Too soon, but if no timer, we are done.
             return;
         }
 
-        if (this.reloadTimer) clearTimeout(this.reloadTimer);
+        if (this.reloadTimer) {
+            clearTimeout(this.reloadTimer);
+            if (this.reloadResolve) {
+                this.reloadResolve(); // Resolve the previous caller immediately (superseded)
+                this.reloadResolve = null;
+            }
+        }
 
         // Return a promise that resolves when the reloaded completes
         return new Promise((resolve) => {
+            // Keep track of resolve to call it if superseded
+            this.reloadResolve = resolve;
+
             this.reloadTimer = setTimeout(async () => {
                 this.lastReloadTime = Date.now();
                 this._logThrottled('reload', () => {
                     console.log("[ModelManager] Reloading settings and providers...");
                 }, 5000);
                 this.providers = new Map();
+                this.modelsCache = null; // Clear cache on reload
                 this.isInitialized = false;
                 await this.init();
-                resolve();
-            }, 500);
+
+                if (this.reloadResolve) this.reloadResolve();
+                this.reloadResolve = null;
+                this.reloadTimer = null;
+            }, 1000); // 1s debounce
         });
+    }
+
+    // NEW: Targeted refresh for a single provider (avoids full reload/crash)
+    async refreshProvider(providerId) {
+        if (!this.isInitialized) await this.init();
+
+        console.log(`[ModelManager] 🔄 Refreshing provider: ${providerId}`);
+
+        // 1. Reload settings from DB to get new keys
+        const settings = await this.loadSettings();
+        this.settings = settings;
+
+        // 2. Find config for this provider
+        const config = this.providerConfigs.find(p => p.id === providerId);
+
+        if (!config) {
+            // Handle Special Cases (Local, Internal)
+            // TODO: Add support for refreshing Local/Internal via this method if needed
+            console.warn(`[ModelManager] Cannot refresh ${providerId} (not in standard configs)`);
+            return false;
+        }
+
+        // 3. Re-instantiate
+        const { Provider, key, name } = config;
+        let apiKey = settings[key];
+
+        if (apiKey && apiKey.trim() === "") apiKey = undefined;
+
+        const isEnabled = settings[`PROVIDER_ENABLED_${providerId.toUpperCase()}`] !== false;
+
+        if (apiKey && apiKey.length > 5 && isEnabled) {
+            const provider = new Provider({ apiKey });
+            this.registerProvider(provider);
+            console.log(`[ModelManager] ➕ Refreshed ${name}`);
+
+            // Clear specific health cache
+            this.providerHealth.delete(providerId);
+
+            // Clear global models cache to force re-fetch
+            this.modelsCache = null;
+
+            return true;
+        } else {
+            console.log(`[ModelManager] 🚫 ${name} disabled or missing key after refresh`);
+            this.providers.delete(providerId);
+            this.modelsCache = null;
+            return false;
+        }
     }
 
     async loadSettings() {
@@ -179,7 +249,16 @@ class ModelManager {
             all.forEach(s => {
                 let val = s.value;
                 try { val = JSON.parse(s.value); } catch { }
+
+                // EXTRA ROBUSTNESS: Handle stringified booleans if JSON.parse didn't catch them
+                if (val === 'false') val = false;
+                if (val === 'true') val = true;
+
                 config[s.key] = val;
+
+                if (s.key && s.key.startsWith('PROVIDER_ENABLED')) {
+                    console.log(`[ModelManager] Loaded Setting: ${s.key} = ${val} (Type: ${typeof val})`);
+                }
             });
             return config;
         } catch (e) {
@@ -190,6 +269,14 @@ class ModelManager {
 
     async loadDynamicProviders() {
         try {
+            // Check if Gemini Internal is enabled in settings
+            const isGeminiInternalEnabled = this.settings?.['PROVIDER_ENABLED_GEMINI-INTERNAL'] !== false;
+
+            if (!isGeminiInternalEnabled) {
+                console.log('[ModelManager] 🚫 Gemini Internal provider disabled by user setting.');
+                return;
+            }
+
             // Find OAuth-based providers from ConnectedProvider table
             const providers = await prisma.connectedProvider.findMany({
                 where: {
@@ -205,10 +292,10 @@ class ModelManager {
                         refresh_token: conn.refreshToken,
                         expiry_date: conn.tokenExpiry ? conn.tokenExpiry.getTime() : null
                     };
-                    
+
                     const provider = new GeminiInternalProvider(tokens);
                     await provider.initialize();
-                    
+
                     if (provider.projectId) {
                         this.registerProvider(provider);
                         console.log(`[ModelManager] ➕ Registered Gemini Internal (${conn.accountEmail})`);
@@ -222,24 +309,30 @@ class ModelManager {
         }
     }
 
+
     registerProvider(provider) {
         this.providers.set(provider.id, provider);
     }
 
-    async getAvailableModels(useCache = true) {
+    async getAvailableModels(useCache = true, onlyEnabled = true) {
         await this.init();
 
-        // Check cache first if enabled
+        // Check cache first if enabled - separate cache for enabled/all?
+        // To be safe, bypass cache if onlyEnabled is false (usually for settings view)
         const now = Date.now();
-        if (useCache && this.modelsCache && (now - this.modelsCacheTimestamp) < this.modelsCacheTTL) {
-            console.log('[ModelManager] Returning cached models');
+        if (useCache && onlyEnabled && this.modelsCache && (now - this.modelsCacheTimestamp) < this.modelsCacheTTL) {
             return this.modelsCache;
         }
 
         let allModels = [];
 
-        // Strict Validation: Only return models from providers that are HEALTHY and VERIFIED
+        // Strict Validation: Only return models from providers that are HEALTHY, VERIFIED, and ENABLED
         for (const provider of this.providers.values()) {
+            // Check if provider is enabled in current settings
+            const settingKey = `PROVIDER_ENABLED_${provider.id.toUpperCase()}`;
+            if (this.settings?.[settingKey] === false) {
+                continue;
+            }
 
             // Check health cache
             if (!this.isProviderHealthy(provider.id)) {
@@ -266,6 +359,13 @@ class ModelManager {
         }
 
         // Update cache
+
+        // Filter by enabledModels if configured
+        if (onlyEnabled && this.settings?.enabledModels && Array.isArray(this.settings.enabledModels)) {
+            const enabledSet = new Set(this.settings.enabledModels);
+            allModels = allModels.filter(m => enabledSet.has(m.name));
+        }
+
         this.modelsCache = allModels;
         this.modelsCacheTimestamp = now;
 
@@ -297,7 +397,7 @@ class ModelManager {
         // Provider detection map
         const detectionMap = [
             { pattern: /^gemini-2\.5/i, providerId: 'gemini-internal' }, // Specific for internal
-            { pattern: /^gemini-3/i, providerId: 'gemini-internal' }, 
+            { pattern: /^gemini-3/i, providerId: 'gemini-internal' },
             { pattern: /^gemini/i, providerId: 'gemini' },
             { pattern: /llama|mixtral|gemma/i, providerId: 'groq' },
             { pattern: /^gpt|^o1/i, providerId: 'openai' },
@@ -590,6 +690,10 @@ class ModelManager {
 
         this.providerHealth.set(providerId, health);
 
+        // CRITICAL: Invalidate models cache to immediately remove this provider's models
+        this.modelsCache = null;
+        this.modelsCacheTimestamp = 0;
+
         console.log(`[ModelManager] ❌ Provider ${providerId} marked unhealthy (fail count: ${health.failCount})`);
 
         // Auto-recover after 5 minutes
@@ -698,22 +802,19 @@ class ModelManager {
 
     async getProviderStatuses() {
         const statuses = {};
+
+        // 1. Get statuses for active providers
         for (const [id, provider] of this.providers.entries()) {
             const health = this.providerHealth.get(id) || { available: true };
             const isHealthy = this.isProviderHealthy(id);
-
-            // Get quota status
             const quotaStatus = await tokenTracker.getQuotaStatus(id).catch(() => null);
 
-            // Get available models
             let models = [];
             try {
                 if (isHealthy) {
                     models = await provider.listModels().catch(() => []);
                 }
-            } catch (e) {
-                // Silent fail - already logged by provider
-            }
+            } catch (e) { }
 
             statuses[id] = {
                 id,
@@ -722,6 +823,7 @@ class ModelManager {
                 available: isHealthy,
                 healthy: isHealthy,
                 valid: isHealthy,
+                connected: true, // If it's in this.providers, it's connected
                 lastError: health.lastError,
                 errorMessage: health.errorMessage,
                 failCount: health.failCount,
@@ -729,6 +831,44 @@ class ModelManager {
                 quota: quotaStatus
             };
         }
+
+        // 2. Add statuses for connected but disabled providers (Gemini CLI)
+        if (!statuses['gemini-internal']) {
+            const geminiConn = await prisma.connectedProvider.findFirst({
+                where: { providerId: 'gemini-internal' }
+            });
+            if (geminiConn) {
+                statuses['gemini-internal'] = {
+                    id: 'gemini-internal',
+                    name: 'Gemini Internal (CLI)',
+                    status: 'offline',
+                    available: false,
+                    healthy: false,
+                    valid: false,
+                    connected: true,
+                    accountEmail: geminiConn.accountEmail
+                };
+            }
+        }
+
+        // 3. Add status for connected but disabled Copilot
+        if (!statuses['copilot']) {
+            const copilotSetting = await prisma.systemSetting.findUnique({
+                where: { key: 'GITHUB_COPILOT_TOKEN' }
+            });
+            if (copilotSetting && copilotSetting.value && copilotSetting.value.length > 10) {
+                statuses['copilot'] = {
+                    id: 'copilot',
+                    name: 'Copilot',
+                    status: 'offline',
+                    available: false,
+                    healthy: false,
+                    valid: false,
+                    connected: true
+                };
+            }
+        }
+
         return statuses;
     }
 

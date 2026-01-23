@@ -12,7 +12,7 @@ import { ToastProvider, useToast } from './components/ui/Toast';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { ShowroomView } from './components/ShowroomView';
 import { SidebarNavigation } from './components/SidebarNavigation';
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2, Lock, Building } from 'lucide-react';
 import { AuthorizedUserProvider, useAuth } from './contexts/AuthorizedUserContext';
 import Login from './pages/Login';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -39,17 +39,41 @@ function AppContent() {
     // --- Onboarding State ---
     const [systemStatus, setSystemStatus] = useState(null); // { initialized, hasModels, hasResources }
 
+    // Auto-close settings if onboarding is triggered
+    useEffect(() => {
+        if (systemStatus && (!systemStatus.initialized || !systemStatus.hasModels || !systemStatus.hasResources) && !onboardingDismissed) {
+            if (showSettings) {
+                console.log("[App] Closing settings because onboarding was triggered");
+                setShowSettings(false);
+            }
+        }
+    }, [systemStatus, onboardingDismissed, showSettings]);
+
     useEffect(() => {
         // Only run if user is authenticated to assume protected API access, 
         // OR run always but handle 401? System status might be public?
         // Let's keep it safe. If not auth, we don't care about system status yet (login first).
         if (isAuthenticated) {
             fetch('http://localhost:3000/api/system/status')
-                .then(res => res.json())
-                .then(data => setSystemStatus(data))
+                .then(async res => {
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.error || `Status check failed: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    setSystemStatus(data);
+                    if (data && data.initialized === false) {
+                        setOnboardingDismissed(false);
+                    }
+                })
                 .catch(err => {
-                    console.warn("[App] Failed to check system status, assuming initialized", err);
-                    setSystemStatus({ initialized: true, hasModels: true, hasResources: true });
+                    console.warn("[App] Failed to check system status:", err);
+                    // If it's a 500 or connection error, we stay in "loading" or "error" state
+                    // rather than assuming everything is fine.
+                    // But we don't want to block the user forever if the server is actually fine but the endpoint is bugged.
+                    // However, for onboarding, it's safer to not skip it.
                 });
         }
     }, [refreshResourcesTrigger, isAuthenticated]);
@@ -89,7 +113,7 @@ function AppContent() {
     // --- History State ---
     const [historyStack, setHistoryStack] = useState([]); // Stack of canvas IDs
 
-     // --- Custom Model Selector State ---
+    // --- Custom Model Selector State ---
     const [availableModels, setAvailableModels] = useState([]);
     const [selectedModel, setSelectedModel] = useState(null);
 
@@ -99,42 +123,88 @@ function AppContent() {
         error(msg);
     };
 
-    // --- Persistence (F5 Support) ---
+    // --- Persistence (F5 Support & OAuth Redirects) ---
     useEffect(() => {
         if (!isAuthenticated) return;
-        
+
         const params = new URLSearchParams(window.location.search);
+
+        // 1. Restore Project Session
         const urlProjectId = params.get('project');
         if (urlProjectId) {
             console.log("Restoring session from URL:", urlProjectId);
-            // We need to restore the session
-            // Note: We don't have the full session object here, but handleSelectSession fetches it.
-            // We just need to make sure we don't duplicate logic.
             handleSelectSession(urlProjectId);
         }
-    }, [isAuthenticated]); // Run ONCE on mount (sort of, deps)
+
+        // 2. Restore Settings State (Crucial for Gemini CLI callback)
+        if (params.get('settings') === 'true') {
+            setShowSettings(true);
+            // Optional: Clean up URL after restoring state to keep it tidy
+            // const newParams = new URLSearchParams(window.location.search);
+            // newParams.delete('settings');
+            // const newUrl = window.location.pathname + (newParams.toString() ? '?' + newParams.toString() : '');
+            // window.history.replaceState({}, '', newUrl);
+        }
+    }, [isAuthenticated]); // Run on auth/mount
 
     // --- Location & Models ---
-    useEffect(() => {
-         if (!isAuthenticated) return;
+    const refreshModels = useCallback(async () => {
+        try {
+            // Parallel fetch
+            const [modelsRes, settingsRes] = await Promise.all([
+                fetch('http://localhost:3000/api/models?t=' + Date.now()), // Cache bust
+                fetch('http://localhost:3000/api/settings')
+            ]);
 
-        fetch('http://localhost:3000/api/models')
-            .then(r => r.json())
-            .then(d => {
-                setAvailableModels(d.models || []);
-                // If NO model is currently selected (e.g. initial load), use the API's default
-                if (!selectedModel) {
-                   if (d.defaultModel) {
-                       setSelectedModel(d.defaultModel);
-                   } else if (d.models && d.models.length > 0) {
-                       setSelectedModel(d.models[0].name);
-                   }
+            const modelsData = await modelsRes.json();
+            let allModels = modelsData.models || [];
+
+            // Update system status in background to re-check health/resources
+            fetch('http://localhost:3000/api/system/status')
+                .then(res => res.json())
+                .then(data => {
+                    setSystemStatus(data);
+                    if (data && data.initialized === false) {
+                        setOnboardingDismissed(false);
+                    }
+                })
+                .catch(() => { });
+
+            setAvailableModels(allModels);
+
+            // Validate current selection - if selected model is no longer available, switch to default
+            if (selectedModel && !allModels.some(m => m.name === selectedModel)) {
+                console.log(`[App] ⚠️ Selected model '${selectedModel}' no longer available, switching to default`);
+                if (modelsData.defaultModel && allModels.some(m => m.name === modelsData.defaultModel)) {
+                    setSelectedModel(modelsData.defaultModel);
+                } else if (allModels.length > 0) {
+                    setSelectedModel(allModels[0].name);
+                } else {
+                    setSelectedModel(null);
                 }
-            })
-            .catch(e => console.error(e));
+            }
+
+            // Default selection logic (only if no model selected)
+            if (!selectedModel) {
+                if (modelsData.defaultModel && allModels.some(m => m.name === modelsData.defaultModel)) {
+                    setSelectedModel(modelsData.defaultModel);
+                } else if (allModels.length > 0) {
+                    setSelectedModel(allModels[0].name);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load models/settings", e);
+        }
+    }, [selectedModel]);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        refreshModels();
 
         // Fetch Location
         if (navigator.geolocation) {
+
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const loc = {
@@ -150,24 +220,24 @@ function AppContent() {
                 }
             );
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, refreshResourcesTrigger, refreshModels]);
 
     // Handle OAuth Callbacks (e.g., Gemini CLI Connection)
     useEffect(() => {
         if (!isAuthenticated) return;
-        
+
         const params = new URLSearchParams(window.location.search);
         const successParam = params.get('success');
-        
+
         if (successParam === 'gemini_connected') {
             console.log('[App] Gemini CLI connection detected, refreshing resources...');
-            
+
             // Trigger resource refresh
             setRefreshResourcesTrigger(prev => prev + 1);
-            
+
             // Show success toast
             success('Gemini CLI connected successfully!');
-            
+
             // Clean URL
             window.history.replaceState({}, '', window.location.pathname);
         }
@@ -176,13 +246,13 @@ function AppContent() {
 
 
     if (isLoading) {
-         return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>;
+        return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>;
     }
 
     if (!isAuthenticated) {
         return <Login />;
     }
-    
+
     // Global Lock for Deactivated Users (Double check client side)
     if (user && (!user.isActive || (user.expiresAt && new Date(user.expiresAt) < new Date()))) {
         return (
@@ -193,7 +263,7 @@ function AppContent() {
                     </div>
                     <h1 className="text-2xl font-bold text-slate-100 mb-2">Access Suspended</h1>
                     <p className="text-slate-400">
-                        Your account has been deactivated or your subscription has expired. 
+                        Your account has been deactivated or your subscription has expired.
                         Please contact support or your administrator.
                     </p>
                 </div>
@@ -680,36 +750,36 @@ function AppContent() {
                 toolCalls: data.toolCalls
             }]);
 
-                // Reflexive update to chat list if we just got a real ID
-                if (data.chatId && data.chatId !== activeChatId) {
-                    setActiveChatId(data.chatId);
-                    await loadChats(sessionId);
-                }
+            // Reflexive update to chat list if we just got a real ID
+            if (data.chatId && data.chatId !== activeChatId) {
+                setActiveChatId(data.chatId);
+                await loadChats(sessionId);
+            }
 
-                // Check if we need to auto-rename (First Message)
-                // Use 'messages' from closure (state at start of function call)
-                if (messages.length === 0) { 
-                    const preview = text.substring(0, 21).trim();
-                    if (preview) {
-                        try {
-                            // Update DB
-                            await fetch(`http://localhost:3000/api/chats/${data.chatId}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ title: preview })
-                            });
-                            
-                            // Update Local State IMMEDIATELY
-                            setChats(prev => prev.map(c => 
-                                c.id === data.chatId 
-                                    ? { ...c, title: preview } 
-                                    : c
-                            ));
-                        } catch (e) {
-                            console.error("Auto-rename failed", e);
-                        }
+            // Check if we need to auto-rename (First Message)
+            // Use 'messages' from closure (state at start of function call)
+            if (messages.length === 0) {
+                const preview = text.substring(0, 21).trim();
+                if (preview) {
+                    try {
+                        // Update DB
+                        await fetch(`http://localhost:3000/api/chats/${data.chatId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ title: preview })
+                        });
+
+                        // Update Local State IMMEDIATELY
+                        setChats(prev => prev.map(c =>
+                            c.id === data.chatId
+                                ? { ...c, title: preview }
+                                : c
+                        ));
+                    } catch (e) {
+                        console.error("Auto-rename failed", e);
                     }
                 }
+            }
 
             // Handle Widgets - DEFER update if navigating
             let nextWidgets = data.widgets || [];
@@ -809,13 +879,17 @@ function AppContent() {
     return (
         <>
             {/* ONBOARDING OVERLAY */}
-            {!systemStatus.initialized && !onboardingDismissed && (
-                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-500">
+            {(!systemStatus.initialized || !systemStatus.hasModels || !systemStatus.hasResources) && !onboardingDismissed && (
+                <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-500">
                     <div className="w-full max-w-4xl">
                         <OnboardingWizard
                             status={systemStatus}
                             onComplete={() => {
-                                setSystemStatus(prev => ({ ...prev, initialized: true })); // Optimistic
+                                // Re-fetch status to clear the overlay
+                                fetch('http://localhost:3000/api/system/status')
+                                    .then(res => res.json())
+                                    .then(data => setSystemStatus(data));
+
                                 setRefreshProjectsTrigger(prev => prev + 1);
                             }}
                             onSkip={() => setOnboardingDismissed(true)}
@@ -842,7 +916,15 @@ function AppContent() {
                 // Settings Drawer Props
                 isSettingsOpen={showSettings}
                 onSettingsClose={() => setShowSettings(false)}
-                settingsContent={<SettingsView onClose={() => setShowSettings(false)} />}
+                settingsContent={<SettingsView
+                    isOpen={showSettings}
+                    onClose={() => setShowSettings(false)}
+                    onSettingsChanged={() => {
+                        setRefreshResourcesTrigger(prev => prev + 1);
+                        // Refresh models list to reflect provider changes
+                        refreshModels();
+                    }}
+                />}
 
                 // Pass Sidebar Content for Navigation
                 sidebarContent={activeTab === 'project' && sessionStructure ? (
@@ -903,7 +985,7 @@ function AppContent() {
                                 <MessageSquareText size={18} />
                             </button>
                         )}
-                        
+
                         {/* PROJECTS VIEW CONTROLS */}
                         {activeTab === 'showcase' && (
                             <>

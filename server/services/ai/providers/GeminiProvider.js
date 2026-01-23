@@ -35,8 +35,8 @@ export class GeminiProvider extends AIProvider {
                 ],
                 discovery: [
                     // Safe Auto-Discovery: Only Pro/Flash major versions, BLOCK little/nano/8b
-                    /^gemini-[2-9]\.\d+-(pro|flash)$/, 
-                ], 
+                    /^gemini-[2-9]\.\d+-(pro|flash)$/,
+                ],
                 exclude: [
                     'exp', 'preview', 'thinking', // Remove experimental clutter
                     'flash-8b', 'nano'            // Remove efficiency models
@@ -119,7 +119,7 @@ export class GeminiProvider extends AIProvider {
             // Easier: Convert to history + last message
             const history = input.slice(0, -1).map(msg => ({
                 role: this._mapRole(msg.role),
-                parts: [{ text: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content) }]
+                parts: [{ text: (typeof msg.content === 'string' && msg.content) ? msg.content : (JSON.stringify(msg.content) || " ") }]
             }));
 
             // Handle Tool Outputs in history? 
@@ -184,6 +184,11 @@ export class GeminiProvider extends AIProvider {
 
         const sanitized = { ...tool };
 
+        // TRUNCATE NAME TO 64 CHARS
+        if (sanitized.name && sanitized.name.length > 64) {
+            sanitized.name = sanitized.name.substring(0, 64);
+        }
+
         // Deep clone parameters to avoid mutation
         sanitized.parameters = JSON.parse(JSON.stringify(tool.parameters));
 
@@ -229,7 +234,7 @@ export class GeminiProvider extends AIProvider {
             }
             return {
                 role: this._mapRole(m.role),
-                parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
+                parts: [{ text: (typeof m.content === 'string' && m.content) ? m.content : (JSON.stringify(m.content) || " ") }]
             };
         });
     }

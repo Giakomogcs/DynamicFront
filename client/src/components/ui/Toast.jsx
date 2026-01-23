@@ -24,9 +24,9 @@ export const ToastProvider = ({ children }) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     }, []);
 
-    const success = (msg) => addToast(msg, 'success');
-    const error = (msg) => addToast(msg, 'error');
-    const info = (msg) => addToast(msg, 'info');
+    const success = (msg, duration) => addToast(msg, 'success', duration);
+    const error = (msg, duration) => addToast(msg, 'error', duration);
+    const info = (msg, duration) => addToast(msg, 'info', duration);
 
     return (
         <ToastContext.Provider value={{ addToast, removeToast, success, error, info }}>

@@ -1,4 +1,4 @@
-[2026-01-23T00:25:53.547Z] Error: [{
+[2026-01-23T14:15:03.891Z] Error: [{
   "error": {
     "code": 429,
     "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
@@ -16,15 +16,15 @@
         "reason": "RATE_LIMIT_EXCEEDED",
         "domain": "cloudcode-pa.googleapis.com",
         "metadata": {
+          "quotaResetTimeStamp": "2026-01-23T14:15:23Z",
+          "uiMessage": "true",
           "model": "gemini-2.0-flash",
-          "quotaResetDelay": "527.378411ms",
-          "quotaResetTimeStamp": "2026-01-23T00:25:54Z",
-          "uiMessage": "true"
+          "quotaResetDelay": "849.499068ms"
         }
       },
       {
         "@type": "type.googleapis.com/google.rpc.RetryInfo",
-        "retryDelay": "0.527378411s"
+        "retryDelay": "0.849499068s"
       }
     ]
   }
@@ -48,22 +48,22 @@ Error: [{
         "reason": "RATE_LIMIT_EXCEEDED",
         "domain": "cloudcode-pa.googleapis.com",
         "metadata": {
+          "quotaResetTimeStamp": "2026-01-23T14:15:23Z",
+          "uiMessage": "true",
           "model": "gemini-2.0-flash",
-          "quotaResetDelay": "527.378411ms",
-          "quotaResetTimeStamp": "2026-01-23T00:25:54Z",
-          "uiMessage": "true"
+          "quotaResetDelay": "849.499068ms"
         }
       },
       {
         "@type": "type.googleapis.com/google.rpc.RetryInfo",
-        "retryDelay": "0.527378411s"
+        "retryDelay": "0.849499068s"
       }
     ]
   }
 }
 ]
-    at Gaxios._request (/Users/giovanics/Documents/Repostórios/DynamicFront/node_modules/gaxios/build/cjs/src/gaxios.js:155:23)
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async OAuth2Client.requestAsync (/Users/giovanics/Documents/Repostórios/DynamicFront/node_modules/google-auth-library/build/src/auth/oauth2client.js:463:20)
-    at async GeminiInternalProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/gemini/GeminiInternalProvider.js:95:21)
-    at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/ModelManager.js:818:29)
+    at Gaxios._request (C:\Github\DynamicFront\node_modules\gaxios\build\cjs\src\gaxios.js:155:23)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async OAuth2Client.requestAsync (C:\Github\DynamicFront\node_modules\google-auth-library\build\src\auth\oauth2client.js:463:20)
+    at async GeminiInternalProvider.generateContent (file:///C:/Github/DynamicFront/server/services/gemini/GeminiInternalProvider.js:95:21)
+    at async RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:816:29)

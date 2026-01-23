@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 const ENDPOINT = 'https://cloudcode-pa.googleapis.com/v1internal';
 
 // Specific Client ID for the Internal API
+// Specific Client ID for the Internal API (Hardcoded to match reference/auth.js)
 const CLI_CLIENT_ID = process.env.GEMINI_CLI_CLIENT_ID;
 const CLI_CLIENT_SECRET = process.env.GEMINI_CLI_CLIENT_SECRET;
 
@@ -15,10 +16,10 @@ export class GeminiInternalProvider {
         this.id = 'gemini-internal';
         this.name = 'Gemini Internal (CLI)';
         this.models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview'];
-        
+
         // This provider expects { access_token, refresh_token } in credentials
         this.credentials = credentials;
-        
+
         this.client = new OAuth2Client(CLI_CLIENT_ID, CLI_CLIENT_SECRET);
         if (credentials.access_token) {
             this.client.setCredentials(credentials);
@@ -48,7 +49,7 @@ export class GeminiInternalProvider {
     async listModels() {
         if (!this.projectId) await this.initialize();
         if (!this.projectId) return [];
-        
+
         return this.models.map(m => ({
             id: m,
             name: m,
@@ -56,7 +57,7 @@ export class GeminiInternalProvider {
             description: 'Google Internal (Cloud Code)'
         }));
     }
-    
+
     // Interface for ModelManager
     async generateContent(prompt, options = {}) {
         if (!this.projectId) await this.initialize();
@@ -70,7 +71,7 @@ export class GeminiInternalProvider {
             role: msg.role === 'model' ? 'model' : 'user',
             parts: [{ text: msg.text || msg.content }]
         }));
-        
+
         // Add current prompt
         contents.push({ role: 'user', parts: [{ text: prompt }] });
 
@@ -91,7 +92,7 @@ export class GeminiInternalProvider {
         // For simplicity in this v1, we'll wait for the full response if possible or gather chunks
         // But the internal API *only* supports streamGenerateContent according to the guide?
         // Actually guide says "streamGenerateContent?alt=sse".
-        
+
         const res = await this.client.request({
             url: url,
             method: 'POST',
@@ -104,7 +105,7 @@ export class GeminiInternalProvider {
         return new Promise((resolve, reject) => {
             let fullText = '';
             const stream = res.data;
-            
+
             stream.on('data', (chunk) => {
                 const str = chunk.toString();
                 // Parse SEE data: line starts with "data: "
@@ -115,13 +116,13 @@ export class GeminiInternalProvider {
                             const jsonStr = line.substring(6).trim();
                             if (jsonStr === '[DONE]') continue;
                             const json = JSON.parse(jsonStr);
-                            
+
                             // Extract text
-                           if (json.candidates && json.candidates[0].content && json.candidates[0].content.parts) {
-                               const part = json.candidates[0].content.parts[0];
-                               if (part.text) fullText += part.text;
-                           }
-                        } catch (e) { 
+                            if (json.candidates && json.candidates[0].content && json.candidates[0].content.parts) {
+                                const part = json.candidates[0].content.parts[0];
+                                if (part.text) fullText += part.text;
+                            }
+                        } catch (e) {
                             // ignore parse errors for partial chunks 
                         }
                     }

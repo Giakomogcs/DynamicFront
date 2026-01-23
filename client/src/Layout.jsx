@@ -213,7 +213,7 @@ const Layout = ({
                             <Menu size={20} className="text-slate-400" />
                         </button>
                         <h2 className="text-lg font-semibold text-slate-100">
-                            {title || (activeTab === 'chat' ? 'Agentic Canvas' : activeTab === 'resources' ? 'My Resources' : activeTab === 'settings' ? 'Settings' : activeTab === 'showcase' ? 'Projects' : activeTab === 'admin' ? 'Admin Dashboard' : activeTab)}
+                            {title || (activeTab === 'chat' ? 'Agentic Canvas' : activeTab === 'resources' ? 'My Resources' : activeTab === 'companies' ? 'Minha Empresa' : activeTab === 'settings' ? 'Settings' : activeTab === 'showcase' ? 'Projects' : activeTab === 'admin' ? 'Admin Dashboard' : activeTab)}
                         </h2>
                     </div>
                     <div className="flex items-center gap-3">
