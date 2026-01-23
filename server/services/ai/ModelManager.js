@@ -294,12 +294,13 @@ class ModelManager {
                     };
 
                     const provider = new GeminiInternalProvider(tokens);
-                    await provider.initialize();
+                    // Try initialize but don't block registration on failure
+                    await provider.initialize().catch(e => {
+                        console.warn(`[ModelManager] Handshake failed for ${conn.accountEmail} during load, but registering anyway:`, e.message);
+                    });
 
-                    if (provider.projectId) {
-                        this.registerProvider(provider);
-                        console.log(`[ModelManager] ➕ Registered Gemini Internal (${conn.accountEmail})`);
-                    }
+                    this.registerProvider(provider);
+                    console.log(`[ModelManager] ➕ Registered Gemini Internal (${conn.accountEmail})`);
                 } catch (e) {
                     console.warn(`[ModelManager] Failed to load provider ${conn.providerName}:`, e);
                 }

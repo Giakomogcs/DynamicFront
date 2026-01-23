@@ -9,17 +9,10 @@ const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key';
 
-// CREDENTIALS FROM CLI REFERENCE (https://github.com/marcos2872/ia-chat)
+// CREDENTIALS FROM CLI REFERENCE
 const CLI_CLIENT_ID = process.env.GEMINI_CLI_CLIENT_ID;
 const CLI_CLIENT_SECRET = process.env.GEMINI_CLI_CLIENT_SECRET;
-
-// The reference implementation uses http://localhost:3003/oauth2callback
-// But we are running on 3000. 
-// If the Google Client is configured strictly for 3003, we might need to spawn a temp server or the user needs to update the port.
-// However, 'redirect_uri_mismatch' usually implies checking against the whitelist.
-// Let's try to match the reference logic exactly if possible, or assume 3000 is allowed if the user says "use this base".
-// Actually, if this is a NATIVE APP client type (likely for CLI), it might allow localhost anywhere.
-const DEFAULT_REDIRECT_URI = process.env.GEMINI_CLI_REDIRECT_URI || 'http://localhost:3000/auth/gemini-cli/callback';
+const DEFAULT_REDIRECT_URI = 'http://localhost:3000/auth/gemini-cli/callback';
 import { OAuth2Client } from 'google-auth-library';
 import { modelManager } from '../services/ai/ModelManager.js';
 
@@ -159,22 +152,22 @@ router.get('/me', async (req, res) => {
 });
 
 // --- Gemini CLI Connection Routes ---
-
 router.get('/gemini-cli/connect', (req, res) => {
-    // Check for overridden redirect uri from query param (useful for dev tunnels)
-    // BE CAREFUL: This allows open redirects potentially if not validated, 
-    // but the OAuth provider (Google) will reject if not whitelisted anyway.
-    const customRedirect = req.query.redirect_uri;
-    const redirectUri = customRedirect || DEFAULT_REDIRECT_URI;
+    const redirectUri = DEFAULT_REDIRECT_URI;
 
     const client = new OAuth2Client(CLI_CLIENT_ID, CLI_CLIENT_SECRET, redirectUri);
     const url = client.generateAuthUrl({
         access_type: 'offline', // Required for Refresh Token
-        scope: ['https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email'],
-        prompt: 'consent' // Force prompts to ensure Refresh Token is returned
+        scope: [
+            'https://www.googleapis.com/auth/cloud-platform',
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/userinfo.profile'
+        ],
+        prompt: 'consent', // Force prompts to ensure Refresh Token is returned
+        redirect_uri: redirectUri // Explicitly pass it again to be absolutely sure
     });
 
-    console.log("[Auth] Generatred Gemini CLI Auth URL:", url);
+    console.log("[Auth] Generated Gemini CLI Auth URL:", url);
     console.log("[Auth] Using Redirect URI:", redirectUri);
 
     // Pass state
@@ -312,10 +305,9 @@ router.get('/gemini-cli/callback', async (req, res) => {
 
 router.post('/gemini-cli/disconnect', async (req, res) => {
     try {
-        // Just disable it instead of deleting, to preserve tokens if they want to re-enable
-        await prisma.connectedProvider.updateMany({
-            where: { providerId: 'gemini-internal' },
-            data: { isEnabled: false }
+        // Complete removal for total disconnect
+        await prisma.connectedProvider.deleteMany({
+            where: { providerId: 'gemini-internal' }
         });
 
         // Also update the global setting

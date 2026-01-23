@@ -10,10 +10,8 @@ export class GeminiHandshakeService {
         if (existingProjectId) return existingProjectId;
 
         log.debug('Performing handshake...');
-        const userProjectId = undefined;
         const loadReq = {
-            cloudaicompanionProject: userProjectId,
-            metadata: { ideType: 'IDE_UNSPECIFIED', pluginType: 'GEMINI' },
+            metadata: { ideType: 'VSCODE', pluginType: 'GEMINI' },
         };
 
         const loadRes = await this.postRequest(client, 'loadCodeAssist', loadReq);
@@ -25,8 +23,7 @@ export class GeminiHandshakeService {
         const tierId = loadRes.currentTier?.id || 'FREE';
         const onboardReq = {
             tierId: tierId,
-            cloudaicompanionProject: tierId === 'FREE' ? undefined : userProjectId,
-            metadata: { ideType: 'IDE_UNSPECIFIED', pluginType: 'GEMINI' },
+            metadata: { ideType: 'VSCODE', pluginType: 'GEMINI' },
         };
 
         let lro = await this.postRequest(client, 'onboardUser', onboardReq);
@@ -34,7 +31,7 @@ export class GeminiHandshakeService {
         while (!lro.done && lro.name) {
             log.debug('Waiting for onboarding...');
             await new Promise((r) => setTimeout(r, 2000));
-            
+
             const opRes = await client.request({
                 url: `${ENDPOINT}/${lro.name}`,
                 method: 'GET',
