@@ -21,6 +21,8 @@ import { tokenTracker } from './services/ai/TokenTrackingService.js';
 // Import routes
 import sessionRoutes from './routes/sessionRoutes.js';
 import widgetRoutes from './routes/widgetRoutes.js';
+import authRoutes from './routes/auth.js';
+import passport from './config/passport.js';
 import { resourceEnricher } from './src/core/ResourceEnricher.js';
 
 const app = express();
@@ -30,6 +32,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(passport.initialize());
+
 
 // Ensure UTF-8 for all responses
 app.use((req, res, next) => {
@@ -38,8 +42,12 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.use('/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/widgets', widgetRoutes);
+
+import adminRoutes from './routes/admin.js';
+app.use('/api/admin', adminRoutes);
 
 // Test Routes (Phase 1 Dev Only)
 import testRoutes from './routes/testRoutes.js';

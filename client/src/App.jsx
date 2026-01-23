@@ -12,9 +12,14 @@ import { ToastProvider, useToast } from './components/ui/Toast';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { ShowroomView } from './components/ShowroomView';
 import { SidebarNavigation } from './components/SidebarNavigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock } from 'lucide-react';
+import { AuthorizedUserProvider, useAuth } from './contexts/AuthorizedUserContext';
+import Login from './pages/Login';
+import { AdminDashboard } from './pages/AdminDashboard';
+
 
 function AppContent() {
+    const { user, isAuthenticated, isLoading } = useAuth();
     const { error, success, info } = useToast();
 
     // --- Global State ---
@@ -35,14 +40,19 @@ function AppContent() {
     const [systemStatus, setSystemStatus] = useState(null); // { initialized, hasModels, hasResources }
 
     useEffect(() => {
-        fetch('http://localhost:3000/api/system/status')
-            .then(res => res.json())
-            .then(data => setSystemStatus(data))
-            .catch(err => {
-                console.warn("[App] Failed to check system status, assuming initialized", err);
-                setSystemStatus({ initialized: true, hasModels: true, hasResources: true });
-            });
-    }, [refreshResourcesTrigger]);
+        // Only run if user is authenticated to assume protected API access, 
+        // OR run always but handle 401? System status might be public?
+        // Let's keep it safe. If not auth, we don't care about system status yet (login first).
+        if (isAuthenticated) {
+            fetch('http://localhost:3000/api/system/status')
+                .then(res => res.json())
+                .then(data => setSystemStatus(data))
+                .catch(err => {
+                    console.warn("[App] Failed to check system status, assuming initialized", err);
+                    setSystemStatus({ initialized: true, hasModels: true, hasResources: true });
+                });
+        }
+    }, [refreshResourcesTrigger, isAuthenticated]);
 
 
     // --- Session State ---
@@ -79,6 +89,10 @@ function AppContent() {
     // --- History State ---
     const [historyStack, setHistoryStack] = useState([]); // Stack of canvas IDs
 
+     // --- Custom Model Selector State ---
+    const [availableModels, setAvailableModels] = useState([]);
+    const [selectedModel, setSelectedModel] = useState(null);
+
     // --- Handlers ---
     const handleError = (msg) => {
         console.error(msg);
@@ -87,6 +101,8 @@ function AppContent() {
 
     // --- Persistence (F5 Support) ---
     useEffect(() => {
+        if (!isAuthenticated) return;
+        
         const params = new URLSearchParams(window.location.search);
         const urlProjectId = params.get('project');
         if (urlProjectId) {
@@ -96,7 +112,97 @@ function AppContent() {
             // We just need to make sure we don't duplicate logic.
             handleSelectSession(urlProjectId);
         }
-    }, []); // Run ONCE on mount
+    }, [isAuthenticated]); // Run ONCE on mount (sort of, deps)
+
+    // --- Location & Models ---
+    useEffect(() => {
+         if (!isAuthenticated) return;
+
+        fetch('http://localhost:3000/api/models')
+            .then(r => r.json())
+            .then(d => {
+                setAvailableModels(d.models || []);
+                // If NO model is currently selected (e.g. initial load), use the API's default
+                if (!selectedModel) {
+                   if (d.defaultModel) {
+                       setSelectedModel(d.defaultModel);
+                   } else if (d.models && d.models.length > 0) {
+                       setSelectedModel(d.models[0].name);
+                   }
+                }
+            })
+            .catch(e => console.error(e));
+
+        // Fetch Location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const loc = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        // accuracy: position.coords.accuracy
+                    };
+                    console.log("Device Location obtained:", loc);
+                    setLocation(loc);
+                },
+                (err) => {
+                    console.warn("Location access denied or failed", err);
+                }
+            );
+        }
+    }, [isAuthenticated]);
+
+    // Handle OAuth Callbacks (e.g., Gemini CLI Connection)
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        
+        const params = new URLSearchParams(window.location.search);
+        const successParam = params.get('success');
+        
+        if (successParam === 'gemini_connected') {
+            console.log('[App] Gemini CLI connection detected, refreshing resources...');
+            
+            // Trigger resource refresh
+            setRefreshResourcesTrigger(prev => prev + 1);
+            
+            // Show success toast
+            success('Gemini CLI connected successfully!');
+            
+            // Clean URL
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, [isAuthenticated, success]);
+
+
+
+    if (isLoading) {
+         return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>;
+    }
+
+    if (!isAuthenticated) {
+        return <Login />;
+    }
+    
+    // Global Lock for Deactivated Users (Double check client side)
+    if (user && (!user.isActive || (user.expiresAt && new Date(user.expiresAt) < new Date()))) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+                <div className="max-w-md text-center">
+                    <div className="mx-auto w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+                        <Lock className="w-8 h-8 text-red-500" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-slate-100 mb-2">Access Suspended</h1>
+                    <p className="text-slate-400">
+                        Your account has been deactivated or your subscription has expired. 
+                        Please contact support or your administrator.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+
+
 
     const refreshSession = async (sessId) => {
         try {
@@ -510,37 +616,7 @@ function AppContent() {
 
     // --- Agent & Chat ---
 
-    // Custom Model Selector (Keep existing logic simplified for brevity but functional)
-    // ... (ModelSelector component logic reused from previous, but imported or inline)
-    // For now let's use the basic state
-    const [availableModels, setAvailableModels] = useState([]);
-    const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
-
-    // Fetch models on load
-    useEffect(() => {
-        fetch('http://localhost:3000/api/models')
-            .then(r => r.json())
-            .then(d => setAvailableModels(d.models || []))
-            .catch(e => console.error(e));
-
-        // Fetch Location
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const loc = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                        // accuracy: position.coords.accuracy
-                    };
-                    console.log("Device Location obtained:", loc);
-                    setLocation(loc);
-                },
-                (err) => {
-                    console.warn("Location access denied or failed", err);
-                }
-            );
-        }
-    }, []);
+    // --- Models Effect moved up ---
 
 
     const handleStopGeneration = () => {
@@ -756,6 +832,7 @@ function AppContent() {
             <Layout
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
+                showAdminLink={user?.role === 'ADMIN'}
 
                 onToggleSettings={() => setShowSettings(prev => !prev)}
                 onRegisterApi={() => setModalType('api')}
@@ -872,6 +949,11 @@ function AppContent() {
                 }
             >
                 {/* ACTIVE TAB CONTENT */}
+                {
+                    activeTab === 'admin' && (
+                        <AdminDashboard />
+                    )
+                }
                 {
                     activeTab === 'showcase' && (
                         <ShowroomView
@@ -1127,9 +1209,11 @@ function AppContent() {
 // Wrapper for Toast Provider
 function App() {
     return (
-        <ToastProvider>
-            <AppContent />
-        </ToastProvider>
+        <AuthorizedUserProvider>
+            <ToastProvider>
+                <AppContent />
+            </ToastProvider>
+        </AuthorizedUserProvider>
     );
 }
 

@@ -1,5 +1,0 @@
-[2026-01-16T20:07:28.183Z] Error: unable to get local issuer certificate
-Error: unable to get local issuer certificate
-    at CopilotProvider.generateContent (file:///C:/Github/DynamicFront/server/services/ai/providers/CopilotProvider.js:182:25)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:525:29)

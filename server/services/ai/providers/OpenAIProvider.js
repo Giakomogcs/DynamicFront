@@ -24,30 +24,15 @@ export class OpenAIProvider extends AIProvider {
             const filter = new HybridModelFilter({
                 priority: [
                     'gpt-4o',
-                    'gpt-4o-mini',
-                    'o1',
-                    'o1-mini'
+                    'o1'
                 ],
                 discovery: [
-                    /^gpt-[4-9]/,           // GPT-4, 5, 6... variants
-                    /^o[1-9]/,              // o1, o2... variants
-                    /^chatgpt-[4-9]o/       // ChatGPT-4o... aliases
+                    // Safe Auto-Discovery - Block Mini/Turbo explicitly via exclude or regex logic refinement
+                    /^gpt-[4-9]o$/,      // gpt-4o, gpt-5o (Flagship only)
+                    /^o[1-9]$/           // o1, o2 (Reasoning Flagship)
                 ],
                 exclude: [
-                    'instruct',             // Instruct legacy
-                    '0314', '0613',         // Old snapshots
-                    'realtime',             // Realtime audio models
-                    'audio',                // Audio
-                    'tts',                  // Text to speech
-                    'dall-e',               // Image only
-                    'gpt-3.5',              // Legacy
-                    'davinci', 'curie', 'babbage', 'ada', // Ancient
-                    'transcribe',           // Audio transcription
-                    'diarize',              // Audio diarization
-                    'search',               // Search specific endpoints
-                    'codex',                // Code specific (usually deprecated)
-                    'embedding',
-                    'mod'                   // Moderation models
+                    'preview', 'instruct', 'realtime', 'audio', 'mini', 'turbo'
                 ]
             });
 

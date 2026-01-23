@@ -30,35 +30,16 @@ export class GeminiProvider extends AIProvider {
 
             const filter = new HybridModelFilter({
                 priority: [
-                    'gemini-2.0-flash',
-                    'gemini-2.0-flash-latest',
-                    'gemini-2.0-pro-exp', // Potential 2.0 Pro
-                    'gemini-2.0-flash-thinking-exp-01-21',
-                    'gemini-1.5-pro-latest',
-                    'gemini-1.5-flash-latest',
-                    'gemini-1.5-pro',
-                    'gemini-1.5-flash'
+                    'gemini-2.0-flash', // Current Best All-Rounder
+                    'gemini-1.5-pro'    // High Context Flagship
                 ],
                 discovery: [
-                    /^gemini-[2-9]\./,      // Gemini 2.0, 3.0...
-                    /^gemini-1\.[5-9]/,     // Gemini 1.5+
-                    /^gemini-exp/,          // Experimental
-                    /latest$/               // Any model ending in 'latest'
-                ],
+                    // Safe Auto-Discovery: Only Pro/Flash major versions, BLOCK little/nano/8b
+                    /^gemini-[2-9]\.\d+-(pro|flash)$/, 
+                ], 
                 exclude: [
-                    '001', '002', '004',    // Old numbered versions
-                    'vision',               // Legacy standalone
-                    'tuning',
-                    'embedding',            // Embeddings
-                    'aqa',                  // Attributed Question Answering
-                    'imagen',               // Image generation only
-                    'image-generation',     // Explicit image gen tag 
-                    'face',                 // Face detection
-                    'legacy',
-                    'tts',                  // Text to speech
-                    'nano',                 // On-device/small
-                    'banana',               // Internal/Test artifacts
-                    'computer-use'          // Agentic specific (keep only if user wants agents)
+                    'exp', 'preview', 'thinking', // Remove experimental clutter
+                    'flash-8b', 'nano'            // Remove efficiency models
                 ]
             });
 

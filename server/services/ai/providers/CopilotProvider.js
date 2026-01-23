@@ -32,20 +32,10 @@ export class CopilotProvider {
             const filter = new HybridModelFilter({
                 priority: [
                     'gpt-4o',
-                    'claude-3.5-sonnet',
-                    'o1-preview',
-                    'o1-mini',
-                    'gpt-4'
+                    'claude-3.5-sonnet'
                 ],
-                discovery: [
-                    /^gpt-[4-9]/,           // GPT-4, 5...
-                    /^claude-[3-9]\./,      // Claude 3.5, 4, 5...
-                    /^o[1-9]/               // o1, o2...
-                ],
-                exclude: [
-                    'gpt-3',
-                    'davinci'
-                ]
+                discovery: [], // Strict Mode to prevent clutter
+                exclude: []
             });
 
             if (Array.isArray(models)) {
@@ -65,13 +55,8 @@ export class CopilotProvider {
             return [];
         } catch (e) {
             console.warn("[CopilotProvider] Failed to list models:", e.message);
-            // Fallback to static known models (Updated)
-            return [
-                { name: 'copilot/gpt-4o', displayName: '(Copilot) GPT-4o', provider: 'copilot', description: 'GitHub Copilot GPT-4o' },
-                { name: 'copilot/claude-3.5-sonnet', displayName: '(Copilot) Claude 3.5 Sonnet', provider: 'copilot', description: 'GitHub Copilot Claude 3.5 Sonnet' },
-                { name: 'copilot/gpt-4', displayName: '(Copilot) GPT-4', provider: 'copilot', description: 'GitHub Copilot GPT-4' },
-                { name: 'copilot/o1-preview', displayName: '(Copilot) o1 Preview', provider: 'copilot', description: 'GitHub Copilot o1 Preview' }
-            ];
+            // Fallback: Return empty list if validation fails
+            return [];
         }
     }
 

@@ -1,0 +1,5 @@
+[2026-01-22T23:19:25.236Z] Error: [Groq] 400: tool call validation failed: parameters for tool dn_schoolscontroller_getshools did not match schema: errors: [missing properties: 'search_bar']
+Error: [Groq] 400: tool call validation failed: parameters for tool dn_schoolscontroller_getshools did not match schema: errors: [missing properties: 'search_bar']
+    at GroqProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/providers/GroqProvider.js:114:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/services/ai/ModelManager.js:761:29)

@@ -6,6 +6,7 @@ import { AnthropicProvider } from './providers/AnthropicProvider.js';
 import { XAIProvider } from './providers/XAIProvider.js';
 import { CopilotProvider } from './providers/CopilotProvider.js';
 import { GenericOpenAIProvider } from './providers/GenericOpenAIProvider.js';
+import { GeminiInternalProvider } from '../gemini/GeminiInternalProvider.js';
 import { tokenTracker } from './TokenTrackingService.js';
 
 class ModelManager {
@@ -129,6 +130,9 @@ class ModelManager {
             console.warn('[ModelManager] WARN: No AI providers available! Chat will fail.');
         }
 
+        // LOAD DYNAMIC PROVIDERS (Gemini Internal)
+        await this.loadDynamicProviders();
+
         this.isInitialized = true;
         console.log(`[ModelManager] Initialized with ${availableCount} providers.`);
     }
@@ -181,6 +185,40 @@ class ModelManager {
         } catch (e) {
             console.warn("[ModelManager] Failed to load settings from DB:", e.message);
             return {};
+        }
+    }
+
+    async loadDynamicProviders() {
+        try {
+            // Find OAuth-based providers from ConnectedProvider table
+            const providers = await prisma.connectedProvider.findMany({
+                where: {
+                    isEnabled: true,
+                    providerId: 'gemini-internal'
+                }
+            });
+
+            for (const conn of providers) {
+                try {
+                    const tokens = {
+                        access_token: conn.accessToken,
+                        refresh_token: conn.refreshToken,
+                        expiry_date: conn.tokenExpiry ? conn.tokenExpiry.getTime() : null
+                    };
+                    
+                    const provider = new GeminiInternalProvider(tokens);
+                    await provider.initialize();
+                    
+                    if (provider.projectId) {
+                        this.registerProvider(provider);
+                        console.log(`[ModelManager] ➕ Registered Gemini Internal (${conn.accountEmail})`);
+                    }
+                } catch (e) {
+                    console.warn(`[ModelManager] Failed to load provider ${conn.providerName}:`, e);
+                }
+            }
+        } catch (e) {
+            console.error("[ModelManager] Dynamic load error:", e);
         }
     }
 
@@ -255,8 +293,11 @@ class ModelManager {
             return this.providers.values().next().value;
         }
 
+
         // Provider detection map
         const detectionMap = [
+            { pattern: /^gemini-2\.5/i, providerId: 'gemini-internal' }, // Specific for internal
+            { pattern: /^gemini-3/i, providerId: 'gemini-internal' }, 
             { pattern: /^gemini/i, providerId: 'gemini' },
             { pattern: /llama|mixtral|gemma/i, providerId: 'groq' },
             { pattern: /^gpt|^o1/i, providerId: 'openai' },
@@ -679,7 +720,10 @@ class ModelManager {
                 name: provider.name,
                 status: isHealthy ? 'online' : 'offline',
                 available: isHealthy,
+                healthy: isHealthy,
+                valid: isHealthy,
                 lastError: health.lastError,
+                errorMessage: health.errorMessage,
                 failCount: health.failCount,
                 models: models,
                 quota: quotaStatus

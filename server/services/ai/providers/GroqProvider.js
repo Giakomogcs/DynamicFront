@@ -23,24 +23,13 @@ export class GroqProvider extends AIProvider {
 
             const filter = new HybridModelFilter({
                 priority: [
-                    'deepseek-r1-distill-llama-70b', // New Reasoning
-                    'llama-3.3-70b-versatile',
-                    'llama-3.1-8b-instant',
-                    'mixtral-8x7b-32768',
-                    'gemma2-9b-it'
+                    'llama-3.3-70b-versatile'
                 ],
                 discovery: [
-                    /^llama-[3-9]\./,       // Llama 3, 4, 5... and up
-                    /^mixtral/,             // Mixtral
-                    /^deepseek/,            // DeepSeek
-                    /^gemma[2-9]/           // Gemma 2, 3...
+                   // Safe Auto-Discovery: Only 70b+ models
+                   /^llama-3\.\d+-70b-versatile$/
                 ],
-                exclude: [
-                    'llama-2',              // Old
-                    'whisper',              // Audio
-                    '70b-8192',             // Old aliases
-                    'Tool-Use-Preview'      // Old previews
-                ]
+                exclude: ['preview', 'distill', '8b', 'instant', 'mixtral']
             });
 
             return filter.process(data.data, m => m.id)

@@ -12,16 +12,49 @@ export class AnthropicProvider extends AIProvider {
     }
 
     async listModels() {
-        // Anthropic doesn't have a public List Models API like OpenAI yet (or it's limited).
-        // We will return a static list if API key is present.
+        // Validation: Try to list models or perform a lightweight check
         if (!this.apiKey) return [];
 
-        return [
-            { id: "claude-3-5-sonnet-latest", name: "claude-3-5-sonnet-latest", displayName: "Claude 3.5 Sonnet (Latest)", provider: "anthropic" },
-            { id: "claude-3-5-haiku-latest", name: "claude-3-5-haiku-latest", displayName: "Claude 3.5 Haiku (Latest)", provider: "anthropic" },
-            { id: "claude-3-opus-latest", name: "claude-3-opus-latest", displayName: "Claude 3 Opus (Latest)", provider: "anthropic" },
-            { id: "claude-3-haiku-20240307", name: "claude-3-haiku-20240307", displayName: "Claude 3 Haiku (Legacy)", provider: "anthropic" }
-        ];
+        try {
+            // Anthropic now supports a models endpoint
+            const response = await fetch(`${this.baseUrl}/models`, {
+                headers: {
+                    "x-api-key": this.apiKey,
+                    "anthropic-version": this.defaultVersion
+                }
+            });
+
+            if (!response.ok) {
+                // If endpoint fails (e.g. 401), treat as invalid key
+                console.warn(`[AnthropicProvider] Validation failed: ${response.status}`);
+                return [];
+            }
+            
+            // If native list works, great! If not, we might fall back to static list BUT only if response was OK (meaning key is valid)
+            // Currently Anthropic API returns models list.
+            const data = await response.json();
+             if (data && data.data) {
+                 return data.data.map(m => ({
+                     id: m.id,
+                     name: m.id,
+                     displayName: m.display_name || m.id,
+                     provider: 'anthropic',
+                     description: `Anthropic Model: ${m.id}`
+                 }));
+             }
+
+             // If structure differs but auth worked, return static list as fallback
+             return [
+                { id: "claude-3-5-sonnet-latest", name: "claude-3-5-sonnet-latest", displayName: "Claude 3.5 Sonnet (Latest)", provider: "anthropic" },
+                { id: "claude-3-5-haiku-latest", name: "claude-3-5-haiku-latest", displayName: "Claude 3.5 Haiku (Latest)", provider: "anthropic" },
+                { id: "claude-3-opus-latest", name: "claude-3-opus-latest", displayName: "Claude 3 Opus (Latest)", provider: "anthropic" },
+                { id: "claude-3-haiku-20240307", name: "claude-3-haiku-20240307", displayName: "Claude 3 Haiku (Legacy)", provider: "anthropic" }
+            ];
+
+        } catch (e) {
+            console.warn("[AnthropicProvider] Validation/List failed:", e.message);
+            return [];
+        }
     }
 
     async generateContent(input, options = {}) {

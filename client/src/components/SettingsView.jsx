@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2, Save, Key, Cpu, AlertTriangle, Settings, Shield, Server, X, RefreshCw, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Save, Key, Cpu, AlertTriangle, Settings, Shield, Server, X, RefreshCw, ChevronDown, ChevronUp, Eye, EyeOff, Globe, Power } from 'lucide-react';
 import { useToast } from './ui/Toast';
 
 const FLAGSHIP_PRIORITY = [
@@ -622,6 +622,22 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                                 check={generalSettings.FAILOVER_ENABLED}
                                 onChange={(val) => handleGeneralChange('FAILOVER_ENABLED', val)}
                             />
+
+                            <div className="pt-6 border-t border-slate-800">
+                                <h3 className="text-lg font-semibold text-white mb-4">Account</h3>
+                                <button
+                                    onClick={() => {
+                                        // Simple logout: clear token and reload
+                                        // In a real app we might want to call an endpoint, but JWT is stateless mostly.
+                                        localStorage.removeItem('authToken');
+                                        window.location.href = '/login';
+                                    }}
+                                    className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors flex items-center gap-2"
+                                >
+                                    <Power className="size-4" />
+                                    Log Out
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -629,6 +645,53 @@ export const SettingsView = ({ onClose, onSettingsChanged }) => {
                 {/* KEYS TAB */}
                 {activeTab === 'keys' && (
                     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2">
+
+                        {/* Gemini Internal (CLI) Block */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                            <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-slate-800 rounded-lg text-indigo-400"><Globe className="size-4" /></div>
+                                    <span className="font-medium text-white">Gemini CLI (Internal)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {(providerStatuses['gemini-internal']?.healthy || providerStatuses['gemini-internal']?.valid) && (
+                                        <div className="cursor-default px-2 py-0.5 text-xs rounded-full border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
+                                            <div className="size-1.5 rounded-full bg-green-500" />
+                                            Active
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <p className="text-sm text-slate-400">
+                                    Connect your Google Cloud account to unlock internal Gemini models (e.g. <code>gemini-2.5-flash</code>).
+                                </p>
+
+                                {(providerStatuses['gemini-internal']?.healthy || providerStatuses['gemini-internal']?.valid) ? (
+                                    <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-lg border border-slate-800">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-slate-300">Connected to <strong>Google Cloud</strong></span>
+                                        </div>
+
+                                        <button 
+                                            onClick={() => window.location.href = `http://localhost:3000/auth/gemini-cli/connect?redirect=${encodeURIComponent(window.location.href)}`}
+                                            className="text-xs text-indigo-400 hover:bg-slate-800 px-2 py-1 rounded transition-colors"
+                                        >
+                                            Reconnect
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => window.location.href = `http://localhost:3000/auth/gemini-cli/connect?redirect=${encodeURIComponent(window.location.href)}`}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
+                                    >
+                                        <Globe className="size-4" />
+                                        Connect Gemini CLI
+                                    </button>
+                                )}
+                            </div>
+                        </div>
 
                         {/* GitHub Copilot Block */}
                         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">

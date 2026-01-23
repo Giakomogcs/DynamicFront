@@ -23,14 +23,10 @@ export class XAIProvider extends AIProvider {
 
             const filter = new HybridModelFilter({
                 priority: [
-                    'grok-2',
-                    'grok-2-mini',
-                    'grok-beta',
                     'grok-2-1212'
                 ],
-                discovery: [
-                    /^grok/                 // All Grok variants
-                ]
+                discovery: [], // Strict Mode (Grok beta is older)
+                exclude: ['beta']
             });
 
             const filtered = filter.process(data.data, m => m.id);
@@ -58,8 +54,8 @@ export class XAIProvider extends AIProvider {
             } catch { }
 
             console.warn("[XAIProvider] List models failed:", msg);
-            // Return default models so users can still select them
-            return this.getDefaultModels();
+            // Return empty list on failure, do NOT fallback to defaults if auth failed
+            return [];
         }
     }
 

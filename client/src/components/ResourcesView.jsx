@@ -107,8 +107,8 @@ export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegiste
     if (loading) return <div className="flex h-full items-center justify-center text-slate-500"><Loader2 className="animate-spin mr-2" /> Loading resources...</div>;
     if (error) return <div className="flex h-full items-center justify-center text-red-500"><AlertCircle className="mr-2" /> {error}</div>;
 
-    // Defensive access
-    const apis = resources?.apis || [];
+    // Defensive access + Filter out Gemini Internal (it's a provider, not a resource)
+    const apis = (resources?.apis || []).filter(api => !api.name?.includes('Gemini Internal'));
     const dbs = resources?.dbs || [];
     const hasResources = apis.length > 0 || dbs.length > 0;
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Database, MessageSquareText, Plus, Settings2, Menu, X, ChevronLeft, ChevronRight, LayoutGrid, Cloud, CloudLightning } from 'lucide-react';
+import { Layers, Database, MessageSquareText, Plus, Settings2, Menu, X, ChevronLeft, ChevronRight, LayoutGrid, Cloud, CloudLightning, Shield } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -23,7 +23,9 @@ const Layout = ({
     // Settings Drawer Props
     isSettingsOpen = false,
     onSettingsClose,
-    settingsContent
+
+    settingsContent,
+    showAdminLink = false
 }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -113,6 +115,18 @@ const Layout = ({
                                     setSidebarOpen(false);
                                 }}
                             />
+                            {showAdminLink && (
+                                <SidebarItem
+                                    icon={<Shield size={20} />} // Shield needs import
+                                    label="Admin"
+                                    isActive={activeTab === 'admin'}
+                                    collapsed={collapsed}
+                                    onClick={() => {
+                                        setActiveTab('admin');
+                                        setSidebarOpen(false);
+                                    }}
+                                />
+                            )}
                         </>
                     )}
 
@@ -199,7 +213,7 @@ const Layout = ({
                             <Menu size={20} className="text-slate-400" />
                         </button>
                         <h2 className="text-lg font-semibold text-slate-100">
-                            {title || (activeTab === 'chat' ? 'Agentic Canvas' : activeTab === 'resources' ? 'My Resources' : activeTab === 'settings' ? 'Settings' : activeTab === 'showcase' ? 'Projects' : activeTab)}
+                            {title || (activeTab === 'chat' ? 'Agentic Canvas' : activeTab === 'resources' ? 'My Resources' : activeTab === 'settings' ? 'Settings' : activeTab === 'showcase' ? 'Projects' : activeTab === 'admin' ? 'Admin Dashboard' : activeTab)}
                         </h2>
                     </div>
                     <div className="flex items-center gap-3">

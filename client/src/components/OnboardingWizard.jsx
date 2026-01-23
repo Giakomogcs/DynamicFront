@@ -360,6 +360,37 @@ export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, o
                         </div>
                     </ProviderRow>
 
+                    {/* Gemini CLI Special Case */}
+                    <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+                        <button
+                            onClick={() => toggleProvider('gemini-cli')}
+                            className="w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
+                        >
+                            <label className="flex items-center gap-2 text-white font-medium cursor-pointer">
+                                <Globe size={18} /> Gemini CLI (Internal)
+                            </label>
+                            <div className="flex items-center gap-2">
+                                {/* Use providers prop if available or some other check. For now assume disconnected unless found in providers list (if we sync status) */}
+                                {/* Since providers object from settings usually only has keys, we might need to rely on if 'gemini-internal' status is passed or if we just want to offer the connect button always */}
+                                <ChevronRight className={`text-slate-500 transition-transform ${openProvider === 'gemini-cli' ? 'rotate-90' : ''}`} size={16} />
+                            </div>
+                        </button>
+
+                        {openProvider === 'gemini-cli' && (
+                            <div className="p-4 pt-0 animate-in slide-in-from-top-2 border-t border-slate-800/50 mt-2">
+                                <p className="text-sm text-slate-400 mb-3">
+                                    Connect your Google Cloud account to access internal Gemini models.
+                                </p>
+                                <button
+                                    onClick={() => window.location.href = `http://localhost:3000/auth/gemini-cli/connect?redirect=${encodeURIComponent(window.location.origin)}`}
+                                    className="w-full py-2 rounded-lg transition-colors flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                                >
+                                    <Globe size={16} /> Connect Google Account
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Copilot Special Case */}
                     <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
                         <button

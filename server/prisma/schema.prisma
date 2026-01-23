@@ -85,6 +85,34 @@ model ProviderQuota {
   updatedAt     DateTime @updatedAt
 }
 
+// ========================================
+// CONNECTED AI PROVIDERS (OAuth-based)
+// ========================================
+
+model ConnectedProvider {
+  id            String   @id @default(uuid())
+  providerId    String   // "gemini-internal", "copilot"
+  providerName  String   // "Gemini Internal", "GitHub Copilot"
+  
+  // OAuth Credentials
+  accessToken   String
+  refreshToken  String?
+  tokenExpiry   DateTime?
+  
+  // User/Account Info
+  accountEmail  String?
+  accountId     String?
+  
+  // Provider-specific config (JSON)
+  config        String?  // e.g., { "project_id": "...", "client_id": "..." }
+  
+  isEnabled     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([providerId, accountEmail])
+}
+
 
 model Resource {
   id          String   @id @default(uuid())
@@ -113,7 +141,31 @@ model AuthProfile {
 // APP BUILDER ARCHITECTURE (Phase 1)
 // ========================================
 
-model Session {
+
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String?
+  avatarUrl     String?  // Google profile picture
+  password      String?  // Hashed password for manual auth
+  role          String   @default("USER") // "ADMIN", "USER"
+  
+  googleId      String?  @unique
+  
+  isActive      Boolean  @default(true) // Global kill-switch for user
+  expiresAt     DateTime? // For subscription/trial expiration validation
+  
+  projectLimit  Int      @default(5)
+  pageLimit     Int      @default(8)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      Session[]
+}
+
+model Session { // Conceptual: "Project"
   id               String   @id @default(uuid())
   conversationId   String   @unique // One session per chat conversation logic
   title            String?  @default("New Project")
@@ -123,7 +175,8 @@ model Session {
   lastActiveCanvasId String? // Resume where left off
   
   metadata         Json?    
-  userId           String?  
+  userId           String?  // Optional for now (backward compatibility), will be required for new projects
+  user             User?    @relation(fields: [userId], references: [id])
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
