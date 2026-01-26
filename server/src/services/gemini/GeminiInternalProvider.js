@@ -62,12 +62,23 @@ export class GeminiInternalProvider {
            We fall back to the known hardcoded list from the reference implementation (ia-chat).
         */
         
-        const models = this.models.map(m => ({
-            id: m,
-            name: m,
-            provider: 'gemini-internal',
-            description: 'Google Internal (Cloud Code)'
-        }));
+        const models = this.models.map(m => {
+            // Make name more human-readable and distinct
+            const prettyName = m
+                .replace('gemini-', 'Gemini ')
+                .replace('-', ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+
+            return {
+                id: m,
+                name: `${prettyName} (CLI)`, // Distinctive name for the UI
+                displayName: `${prettyName} (CLI)`,
+                provider: 'gemini-internal',
+                description: 'Google Internal (Cloud Code)'
+            };
+        });
 
         console.log(`[GeminiInternal] Loaded ${models.length} models:`, models.map(m => m.id).join(', '));
         return models;
