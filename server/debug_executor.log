@@ -1,57 +1,6 @@
-[2026-01-26T21:45:46.863Z] Error: [{
-  "error": {
-    "code": 429,
-    "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
-    "errors": [
-      {
-        "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
-        "domain": "global",
-        "reason": "rateLimitExceeded"
-      }
-    ],
-    "status": "RESOURCE_EXHAUSTED",
-    "details": [
-      {
-        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-        "reason": "RATE_LIMIT_EXCEEDED",
-        "domain": "cloudcode-pa.googleapis.com",
-        "metadata": {
-          "uiMessage": "true",
-          "model": "gemini-2.5-flash"
-        }
-      }
-    ]
-  }
-}
-]
-Error: [{
-  "error": {
-    "code": 429,
-    "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
-    "errors": [
-      {
-        "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
-        "domain": "global",
-        "reason": "rateLimitExceeded"
-      }
-    ],
-    "status": "RESOURCE_EXHAUSTED",
-    "details": [
-      {
-        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-        "reason": "RATE_LIMIT_EXCEEDED",
-        "domain": "cloudcode-pa.googleapis.com",
-        "metadata": {
-          "uiMessage": "true",
-          "model": "gemini-2.5-flash"
-        }
-      }
-    ]
-  }
-}
-]
-    at Gaxios._request (/Users/giovanics/Documents/Repostórios/DynamicFront/node_modules/gaxios/build/cjs/src/gaxios.js:155:23)
+[2026-01-26T23:36:05.008Z] Error: Cannot access 'toolResult' before initialization
+ReferenceError: Cannot access 'toolResult' before initialization
+    at ExecutorAgent.execute (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/src/agents/Executor.js:324:40)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async OAuth2Client.requestAsync (/Users/giovanics/Documents/Repostórios/DynamicFront/node_modules/google-auth-library/build/src/auth/oauth2client.js:463:20)
-    at async GeminiInternalProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/src/services/gemini/GeminiInternalProvider.js:102:21)
-    at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/src/services/ai/ModelManager.js:948:29)
+    at async AgentOrchestrator.processRequest (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/src/agents/Orchestrator.js:238:31)
+    at async file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/api_server.js:275:24

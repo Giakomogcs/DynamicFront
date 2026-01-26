@@ -83,7 +83,7 @@ export class ResourceEnricher {
 
     /**
      * Get profiles for SPECIFIC resource only (no fallback)
-     * @param {string} resourceId - Resource identifier
+     * @param {string} resourceId - Resource identifier (UUID or shortened prefix)
      * @returns {Array} Array of profiles for this resource (empty if none)
      */
     getProfiles(resourceId) {
@@ -92,7 +92,16 @@ export class ResourceEnricher {
             resourceId
         });
 
-        const profiles = this.authRegistry[resourceId] || [];
+        let profiles = this.authRegistry[resourceId] || [];
+
+        // FALLBACK: Handle shortened IDs (8 chars) from McpClient tool naming
+        if (profiles.length === 0 && resourceId.length === 8) {
+            const fullId = Object.keys(this.authRegistry).find(k => k.startsWith(resourceId));
+            if (fullId) {
+                log.debug(`Matched shortened ID ${resourceId} to full ID ${fullId}`, { component: 'ResourceEnricher' });
+                profiles = this.authRegistry[fullId] || [];
+            }
+        }
 
         if (profiles.length === 0) {
             log.auth.noProfilesAvailable(resourceId);

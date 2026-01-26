@@ -164,16 +164,39 @@ class McpClientService {
 
         try {
             const result = await client.listTools();
-            const tools = result.tools.map(t => ({
-                ...t,
-                // Name-spacing to avoid collisions: "serverName__toolName"
-                name: `${serverName}__${t.name}`,
-                _exec: {
-                    type: 'mcp',
-                    serverName: serverName,
-                    originalName: t.name
+            const tools = result.tools.map(t => {
+                const fullName = `${serverName}__${t.name}`;
+                
+                // OpenAI/Copilot limit is 64 characters
+                let toolName = fullName;
+                if (fullName.length > 64) {
+                    // Strategy: Shorten the prefix. 
+                    // UUIDs are roughly 36 chars. api_ + 36 + __ = ~41 chars.
+                    // If we use only the first 8 chars of the ID: api_8chars + __ = 12 chars.
+                    const serverPrefix = serverName.startsWith('api_') || serverName.startsWith('db_') 
+                        ? serverName.split('_')[0] + '_' + serverName.split('_')[1].substring(0, 8)
+                        : serverName.substring(0, 12);
+                    
+                    toolName = `${serverPrefix}__${t.name}`;
+                    
+                    // If still too long, truncate tool name
+                    if (toolName.length > 64) {
+                        const overflow = toolName.length - 64;
+                        toolName = `${serverPrefix}__${t.name.substring(0, t.name.length - overflow)}`;
+                    }
+                    console.log(`[McpClient] ⚠️ Shortened tool name: '${fullName}' -> '${toolName}'`);
                 }
-            }));
+
+                return {
+                    ...t,
+                    name: toolName,
+                    _exec: {
+                        type: 'mcp',
+                        serverName: serverName,
+                        originalName: t.name
+                    }
+                };
+            });
 
             this.toolsCache.set(serverName, tools);
             console.log(`[McpClient] Loaded ${tools.length} tools from '${serverName}'`);
@@ -208,4 +231,5 @@ class McpClientService {
     }
 }
 
+export { McpClientService };
 export const mcpClientService = new McpClientService();

@@ -368,9 +368,26 @@ class ModelManager {
         // Update cache
 
         // Filter by enabledModels if configured
-        if (onlyEnabled && this.settings?.enabledModels && Array.isArray(this.settings.enabledModels)) {
+        if (onlyEnabled && this.settings?.enabledModels && Array.isArray(this.settings.enabledModels) && this.settings.enabledModels.length > 0) {
             const enabledSet = new Set(this.settings.enabledModels);
-            allModels = allModels.filter(m => enabledSet.has(m.name));
+            allModels = allModels.filter(m => {
+                // Check direct name match
+                if (enabledSet.has(m.name)) return true;
+                if (m.id && enabledSet.has(m.id)) return true;
+                
+                // Legacy support for Gemini Internal: check if technical ID matches a pretty name in the set
+                if (m.provider === 'gemini-internal' || m.id?.includes('gemini-2.5') || m.id?.includes('gemini-3')) {
+                     // If we have "Gemini 2.5 Flash (CLI)" in set, but model name is "gemini-2.5-flash"
+                     // We should effectively match them.
+                     return Array.from(enabledSet).some(e => 
+                         typeof e === 'string' && (
+                             e.toLowerCase().replace(' ', '-').includes(m.name) ||
+                             m.name.toLowerCase().replace(' ', '-').includes(e.replace(' (CLI)', '').toLowerCase().replace(' ', '-'))
+                         )
+                     );
+                }
+                return false;
+            });
         }
 
         if (onlyEnabled) {
@@ -406,8 +423,7 @@ class ModelManager {
 
         // Provider detection map
         const detectionMap = [
-            { pattern: /^gemini-2\.5/i, providerId: 'gemini-internal' }, // Specific for internal
-            { pattern: /^gemini-3/i, providerId: 'gemini-internal' },
+            { pattern: /gemini-2\.5|gemini-3|.*\(CLI\)/i, providerId: 'gemini-internal' }, // Internal models or anything with (CLI)
             { pattern: /^gemini/i, providerId: 'gemini' },
             { pattern: /llama|mixtral|gemma/i, providerId: 'groq' },
             { pattern: /^gpt|^o1/i, providerId: 'openai' },

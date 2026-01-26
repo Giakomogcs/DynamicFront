@@ -73,8 +73,8 @@ export class GeminiInternalProvider {
 
             return {
                 id: m,
-                name: `${prettyName} (CLI)`, // Distinctive name for the UI
-                displayName: `${prettyName} (CLI)`,
+                name: m, // Technical ID for routing
+                displayName: `${prettyName} (CLI)`, // Pretty name for UI
                 provider: 'gemini-internal',
                 description: 'Google Internal (Cloud Code)'
             };
@@ -90,7 +90,15 @@ export class GeminiInternalProvider {
         if (!this.projectId) await this.initialize();
         if (!this.projectId) throw new Error('Gemini Internal not initialized');
 
-        const modelName = options.model || 'gemini-2.5-flash';
+        let modelName = options.model || 'gemini-2.5-flash';
+        
+        // Sanitization: Remove " (CLI)" or pretty formatting if passed accidentally
+        if (modelName.includes(' (CLI)')) {
+            modelName = modelName.replace(' (CLI)', '')
+                .toLowerCase()
+                .replace('gemini ', 'gemini-')
+                .replace(' ', '-');
+        }
         const history = options.history || []; // Message[]
 
         // Convert History to Gemini Format

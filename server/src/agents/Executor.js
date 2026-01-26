@@ -321,7 +321,7 @@ CRITICAL MULTI-AUTH RULES:
                             console.log(`[Executor] ⚠️ Tool params invalid: ${validation.reason}`);
 
                             // Return structured error that StrategicAgent can understand
-                            toolResult = {
+                            const toolResultError = {
                                 isError: true,
                                 content: [{
                                     text: JSON.stringify({
@@ -334,11 +334,11 @@ CRITICAL MULTI-AUTH RULES:
                             };
 
                             // Add to gathered data and continue
-                            gatheredData.push({ tool: call.name, result: toolResult });
+                            gatheredData.push({ tool: call.name, result: toolResultError });
                             messages.push({
                                 role: 'tool',
                                 name: call.name,
-                                content: toolResult.content
+                                content: toolResultError.content
                             });
 
                             continue; // Skip actual execution

@@ -1,4 +1,5 @@
 import { modelManager } from '../services/ai/ModelManager.js';
+import { aiUtils } from '../utils/aiUtils.js';
 
 /**
  * CanvasContextAnalyzer - Phase 1.1
@@ -251,7 +252,10 @@ Respond in JSON format:
                 jsonMode: true
             });
 
-            const themeData = JSON.parse(result.response.text());
+            const themeData = aiUtils.extractJson(result.response.text());
+            if (!themeData) {
+                throw new Error("Failed to extract JSON from theme analysis result");
+            }
             return themeData;
 
         } catch (error) {

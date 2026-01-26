@@ -1,6 +1,7 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 import fs from 'fs';
 import { resourceEnricher } from '../core/ResourceEnricher.js';
+import { aiUtils } from '../utils/aiUtils.js';
 import { PlannerOutputSchema } from '../schemas/PlannerOutput.schema.js';
 import { NoProfilesAvailableError } from '../errors/AuthErrors.js';
 
@@ -201,7 +202,7 @@ INSTRUCTIONS:
             });
             const text = result.response.text();
 
-            const planJson = this.extractJson(text);
+            const planJson = aiUtils.extractJson(text);
             if (planJson && Array.isArray(planJson.tools)) {
                 if (planJson.thought) {
                     console.log(`[Planner] Thought: "${planJson.thought}"`);
@@ -233,16 +234,7 @@ INSTRUCTIONS:
         }
     }
 
-    extractJson(text) {
-        try {
-            const match = text.match(/```json\s*([\s\S]*?)\s*```/);
-            if (match) return JSON.parse(match[1]);
-            const start = text.indexOf('{');
-            const end = text.lastIndexOf('}');
-            if (start !== -1 && end !== -1) return JSON.parse(text.substring(start, end + 1));
-        } catch (e) { return null; }
-        return null;
-    }
+    // Method removed, using aiUtils instead
 
     /**
      * Extract resource IDs from tool names

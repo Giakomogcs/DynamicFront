@@ -1,4 +1,5 @@
 import { modelManager } from '../services/ai/ModelManager.js';
+import { aiUtils } from '../utils/aiUtils.js';
 
 // Phase 3 & 4: Canvas Management & Layout
 import { canvasMerger } from '../canvas/CanvasMerger.js';
@@ -136,7 +137,7 @@ WIDGET TYPES (Visual Hierarchy):
             jsonMode: true // Force JSON response
          });
          const designText = result.response.text();
-         let widgets = this.extractJsonArray(designText) || [];
+         let widgets = aiUtils.extractJsonArray(designText) || [];
 
          // PHASE 3: Canvas Merge (if needed)
          if (canvasDecision && canvasDecision.action === 'merge' && canvasContext) {
@@ -265,19 +266,7 @@ WIDGET TYPES (Visual Hierarchy):
       return 600000; // 10 minutes
    }
 
-   extractJsonArray(text) {
-      try {
-         const match = text.match(/```json\s*([\s\S]*?)\s*```/);
-         if (match) {
-            const parsed = JSON.parse(match[1]);
-            return Array.isArray(parsed) ? parsed : [parsed];
-         }
-         const start = text.indexOf('[');
-         const end = text.lastIndexOf(']');
-         if (start !== -1 && end !== -1) return JSON.parse(text.substring(start, end + 1));
-      } catch (e) { return []; }
-      return [];
-   }
+    // Method removed, using aiUtils instead
 }
 
 export const designerAgent = new DesignerAgent();
