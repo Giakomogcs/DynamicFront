@@ -1,7 +1,7 @@
 import prisma from '../registry.js';
 import { registerTools, handleRegisterTool, processApiRegistration } from '../handlers/register.js';
 import { mcpClientService } from './mcpClientService.js';
-import { resourceEnricher } from '../src/core/ResourceEnricher.js';
+import { resourceEnricher } from '../core/ResourceEnricher.js';
 import { testConnection } from '../handlers/test_connection.js';
 import { pageManagerTool, handlePageManager } from '../tools/PageManager.js';
 

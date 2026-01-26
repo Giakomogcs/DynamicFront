@@ -15,7 +15,7 @@ export const retryService = {
                 if (attempt >= maxAttempts) throw error;
                 if (options.signal?.aborted) throw new Error('Aborted');
                 
-                console.warn(`[RetryService] Attempt ${attempt} failed. Retrying in ${delay}ms...`);
+                console.warn(`[RetryService] Attempt ${attempt} failed: ${error.message}. Retrying in ${delay}ms...`);
                 await new Promise(r => setTimeout(r, delay));
                 
                 attempt++;

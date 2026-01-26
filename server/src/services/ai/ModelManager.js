@@ -209,6 +209,12 @@ class ModelManager {
 
         if (!config) {
             // Handle Special Cases (Local, Internal)
+            if (providerId === 'gemini-internal') {
+                console.log(`[ModelManager] 🔄 Refreshing Gemini Internal...`);
+                await this.loadDynamicProviders();
+                this.modelsCache = null;
+                return true;
+            }
             // TODO: Add support for refreshing Local/Internal via this method if needed
             console.warn(`[ModelManager] Cannot refresh ${providerId} (not in standard configs)`);
             return false;
@@ -367,14 +373,17 @@ class ModelManager {
             allModels = allModels.filter(m => enabledSet.has(m.name));
         }
 
-        this.modelsCache = allModels;
-        this.modelsCacheTimestamp = now;
+        if (onlyEnabled) {
+            this.modelsCache = allModels;
+            this.modelsCacheTimestamp = now;
+        }
 
         return allModels;
     }
 
     getSmartDefaultModel(providerId) {
         const defaults = {
+            'gemini-internal': 'gemini-2.5-flash',
             'gemini': 'gemini-2.0-flash',
             'openai': 'gpt-4o',
             'anthropic': 'claude-3-5-sonnet-20240620',
@@ -527,8 +536,17 @@ class ModelManager {
     async isModelSupportedByProvider(provider, modelName) {
         // Quick check using regex patterns or provider prefix
         if (modelName.toLowerCase().includes(provider.id)) return true;
-        // Check actual list if cached
-        // (For now, heuristic is enough for major providers to avoid extra API calls)
+        
+        // STRICT CHECK for Gemini Internal (CLI)
+        // It only supports a specific set of models (2.5, 3.0-preview)
+        // We must NOT allow it to take generic 'gemini-2.0-flash' or 'gemini-1.5' requests
+        if (provider.id === 'gemini-internal') {
+             // Retrieve the list of supported models from the provider instance
+             const supportedModels = await provider.listModels();
+             return supportedModels.some(m => m.id === modelName || m.name === modelName);
+        }
+
+        // Default heuristic for other providers
         if (provider.id === 'openai' && modelName.startsWith('gpt')) return true;
         if (provider.id === 'anthropic' && modelName.startsWith('claude')) return true;
         return false;

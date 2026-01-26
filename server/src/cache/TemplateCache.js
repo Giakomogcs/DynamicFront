@@ -3,7 +3,7 @@
  * Armazena e reutiliza estratégias bem-sucedidas para queries similares
  */
 
-import prisma from '../../registry.js';
+import prisma from '../registry.js';
 
 export class TemplateCache {
     constructor() {

@@ -90,7 +90,7 @@ class McpClientService {
             }
         }
 
-        const wrapperPath = path.resolve("./mcp-servers/openapi-wrapper.js");
+        const wrapperPath = path.resolve("./src/mcp-servers/openapi-wrapper.js");
 
         // Use Base64 to avoid Windows command line quote escaping issues
         const configJson = JSON.stringify(apiConfig);

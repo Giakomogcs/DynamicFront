@@ -1,6 +1,6 @@
 import express from 'express';
 import { toolService } from '../services/toolService.js';
-import { authStrategyManager } from '../src/auth/AuthStrategyManager.js';
+import { authStrategyManager } from '../auth/AuthStrategyManager.js';
 
 const router = express.Router();
 

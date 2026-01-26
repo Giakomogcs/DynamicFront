@@ -10,8 +10,10 @@ export class GeminiHandshakeService {
         if (existingProjectId) return existingProjectId;
 
         log.debug('Performing handshake...');
+        const userProjectId = undefined; 
         const loadReq = {
-            metadata: { ideType: 'VSCODE', pluginType: 'GEMINI' },
+            cloudaicompanionProject: userProjectId,
+            metadata: { ideType: 'IDE_UNSPECIFIED', pluginType: 'GEMINI' },
         };
 
         const loadRes = await this.postRequest(client, 'loadCodeAssist', loadReq);
@@ -23,7 +25,8 @@ export class GeminiHandshakeService {
         const tierId = loadRes.currentTier?.id || 'FREE';
         const onboardReq = {
             tierId: tierId,
-            metadata: { ideType: 'VSCODE', pluginType: 'GEMINI' },
+            cloudaicompanionProject: tierId === 'FREE' ? undefined : userProjectId,
+            metadata: { ideType: 'IDE_UNSPECIFIED', pluginType: 'GEMINI' },
         };
 
         let lro = await this.postRequest(client, 'onboardUser', onboardReq);

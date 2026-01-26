@@ -4,7 +4,7 @@ import { useToast } from './ui/Toast';
 import { AuthProfilesModal } from './AuthProfilesModal';
 import { Modal, RegisterApiForm, RegisterDbForm } from './RegistrationModal';
 
-export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegisterDb }) => {
+export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegisterDb, onResourcesUpdated }) => {
     const { success, error: toastError } = useToast();
     const [resources, setResources] = useState({ apis: [], dbs: [] });
     const [loading, setLoading] = useState(true);
@@ -52,6 +52,7 @@ export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegiste
             const res = await fetch(`http://localhost:3000/api/resources/${type}/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error("Failed to delete");
             await fetchResources();
+            if (onResourcesUpdated) onResourcesUpdated();
             success("Resource deleted successfully");
             setDeleteModal(null);
         } catch (e) {
@@ -98,6 +99,7 @@ export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegiste
             const res = await fetch(`http://localhost:3000/api/resources/${type}/${id}/toggle`, { method: 'PATCH' });
             if (!res.ok) throw new Error("Toggle failed");
             await fetchResources();
+            if (onResourcesUpdated) onResourcesUpdated();
             success("Resource status updated");
         } catch (e) {
             toastError(e.message);
@@ -328,6 +330,7 @@ export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegiste
                                     });
                                     if (!res.ok) throw new Error("Failed to update API");
                                     await fetchResources();
+                                    if (onResourcesUpdated) onResourcesUpdated();
                                     success("API updated successfully!");
                                     setEditModal(null);
                                 } catch (e) {
@@ -348,6 +351,7 @@ export const ResourcesView = ({ onEdit, refreshTrigger, onRegisterApi, onRegiste
                                     });
                                     if (!res.ok) throw new Error("Failed to update database");
                                     await fetchResources();
+                                    if (onResourcesUpdated) onResourcesUpdated();
                                     success("Database updated successfully!");
                                     setEditModal(null);
                                 } catch (e) {

@@ -6,23 +6,23 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import prisma from './registry.js';
+import prisma from './src/registry.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
 // Import our MCP Logic (Force Restart 2)
-import { toolService } from './services/toolService.js';
-import { storageService } from './services/storageService.js';
-import { orchestrator } from './agents/Orchestrator.js';
-import { modelManager } from './services/ai/ModelManager.js';
-import { tokenTracker } from './services/ai/TokenTrackingService.js';
+import { toolService } from './src/services/toolService.js';
+import { storageService } from './src/services/storageService.js';
+import { orchestrator } from './src/agents/Orchestrator.js';
+import { modelManager } from './src/services/ai/ModelManager.js';
+import { tokenTracker } from './src/services/ai/TokenTrackingService.js';
 
 // Import routes
 // Import routes
-import sessionRoutes from './routes/sessionRoutes.js';
-import widgetRoutes from './routes/widgetRoutes.js';
-import authRoutes from './routes/auth.js';
-import passport from './config/passport.js';
+import sessionRoutes from './src/routes/sessionRoutes.js';
+import widgetRoutes from './src/routes/widgetRoutes.js';
+import authRoutes from './src/routes/auth.js';
+import passport from './src/config/passport.js';
 import { resourceEnricher } from './src/core/ResourceEnricher.js';
 
 const app = express();
@@ -46,11 +46,11 @@ app.use('/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/widgets', widgetRoutes);
 
-import adminRoutes from './routes/admin.js';
+import adminRoutes from './src/routes/admin.js';
 app.use('/api/admin', adminRoutes);
 
 // Test Routes (Phase 1 Dev Only)
-import testRoutes from './routes/testRoutes.js';
+import testRoutes from './src/routes/testRoutes.js';
 app.use('/api/test', testRoutes);
 
 
@@ -58,10 +58,25 @@ app.use('/api/test', testRoutes);
 // --- Endpoints ---
 
 // 1. System Status (Onboarding Check)
+// 1. System Status (Onboarding Check)
 app.get('/api/system/status', async (req, res) => {
     try {
+        // Clear models cache to ensure we pick up recent provider toggles/keys
+        await modelManager.reload(); 
+        
         const resources = await toolService.getRegisteredResources();
-        const hasResources = (resources.apis && resources.apis.length > 0) || (resources.dbs && resources.dbs.length > 0);
+        // User Request: Status only counts ENABLED resources AND valid USER resources (not system/internal)
+        // Filter out INTERNAL system resources so they don't count towards user resources
+        const activeApis = resources.apis?.filter(a => 
+            a.isEnabled !== false && 
+            !a.name?.includes('Gemini Internal') && 
+            !a.name?.includes('DataNavigator') &&
+            !a.name?.includes('Gemini CLI') &&
+            !a.idString?.startsWith('sys-') // Future proofing for system IDs
+        ) || [];
+        
+        const activeDbs = resources.dbs?.filter(d => d.isEnabled !== false) || [];
+        const hasResources = activeApis.length > 0 || activeDbs.length > 0;
 
         // Check for *configured* models (not just default fallback)
         const models = await modelManager.getAvailableModels();
@@ -100,10 +115,15 @@ app.get('/api/system/status', async (req, res) => {
 
 
 
+
 // 1.5 Chat Endpoint (Models)
 app.get('/api/models', async (req, res) => {
     try {
         const showAll = req.query.all === 'true';
+        // Ensure settings are fresh if we are in a configuration phase
+        if (showAll || req.query.refresh === 'true') {
+            await modelManager.reload();
+        }
         const models = await modelManager.getAvailableModels(true, !showAll);
 
         // Dynamic Default: Pick the flagship model of the first available healthy provider
@@ -324,7 +344,7 @@ app.post('/api/tools/execute', async (req, res) => {
 });
 
 // 2.5 Test Connection Endpoint
-import { testConnection } from './handlers/test_connection.js';
+import { testConnection } from './src/handlers/test_connection.js';
 app.post('/api/tools/test-connection', async (req, res) => {
     try {
         const { baseUrl, authConfig } = req.body;
@@ -336,7 +356,7 @@ app.post('/api/tools/test-connection', async (req, res) => {
 });
 
 // 2.6 Analyze Auth Endpoint
-import { analyzeAuthFromDocs } from './handlers/auth_analyzer.js';
+import { analyzeAuthFromDocs } from './src/handlers/auth_analyzer.js';
 app.post('/api/tools/analyze-auth', async (req, res) => {
     try {
         const { docsUrl, docsContent, docsAuth } = req.body;
@@ -633,7 +653,7 @@ app.patch('/api/resources/:type/:id/toggle', async (req, res) => {
 
         // Reload MCP Client to reflect changes
         console.log(`[API] Reloading MCP Client...`);
-        const { mcpClientService } = await import('./services/mcpClientService.js');
+        const { mcpClientService } = await import('./src/services/mcpClientService.js');
         await mcpClientService.reload();
         console.log(`[API] MCP Client reloaded successfully`);
 
@@ -700,7 +720,7 @@ app.post('/api/canvases', async (req, res) => {
             console.log('[API] Creating new page without widgets. Generating welcome widget...');
 
             // Import Designer dynamically
-            const { designerAgent } = await import('./agents/Designer.js');
+            const { designerAgent } = await import('./src/agents/Designer.js');
 
             try {
                 // Call Designer to generate initial widgets
@@ -804,12 +824,12 @@ app.delete('/api/canvases/:id', async (req, res) => {
 });
 
 // 6. Settings
-import { getSettings, updateSetting } from './handlers/settings.js';
+import { getSettings, updateSetting } from './src/handlers/settings.js';
 app.get('/api/settings', getSettings);
 app.post('/api/settings', updateSetting);
 
 // 7. GitHub Copilot Auth
-import { startCopilotAuth, pollCopilotToken, listCopilotModels, getCopilotUser, handleCallback } from './handlers/copilot_auth.js';
+import { startCopilotAuth, pollCopilotToken, listCopilotModels, getCopilotUser, handleCallback } from './src/handlers/copilot_auth.js';
 app.post('/api/auth/copilot/start', startCopilotAuth);
 app.post('/api/auth/copilot/poll', pollCopilotToken);
 app.get('/api/copilot/models', listCopilotModels);

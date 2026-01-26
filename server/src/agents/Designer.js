@@ -1,11 +1,11 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 
 // Phase 3 & 4: Canvas Management & Layout
-import { canvasMerger } from '../src/canvas/CanvasMerger.js';
-import { layoutOptimizer } from '../src/layout/LayoutOptimizer.js';
+import { canvasMerger } from '../canvas/CanvasMerger.js';
+import { layoutOptimizer } from '../layout/LayoutOptimizer.js';
 
 // Phase 5: Intelligence & Templates
-import { WidgetTemplates } from '../src/templates/WidgetTemplates.js';
+import { WidgetTemplates } from '../templates/WidgetTemplates.js';
 
 
 export class DesignerAgent {

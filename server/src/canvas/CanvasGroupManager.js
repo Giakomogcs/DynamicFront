@@ -3,7 +3,7 @@
  * Gerencia decisão de criar novo canvas vs merge com existente
  */
 
-import prisma from '../../registry.js';
+import prisma from '../registry.js';
 
 export class CanvasGroupManager {
     constructor() {

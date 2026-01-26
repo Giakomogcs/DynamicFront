@@ -7,19 +7,19 @@ import { executorAgent } from './Executor.js';
 import { designerAgent } from './Designer.js';
 
 // Phase 1: Context & Auth Intelligence
-import { canvasContextAnalyzer } from '../src/core/CanvasContextAnalyzer.js';
-import { authStrategyManager } from '../src/auth/AuthStrategyManager.js';
+import { canvasContextAnalyzer } from '../core/CanvasContextAnalyzer.js';
+import { authStrategyManager } from '../auth/AuthStrategyManager.js';
 
 // Phase 2: Strategic Reasoning
 import { routerAgent } from './Router.js';
 
 // Phase 2: Strategic Reasoning
-import { strategicAgent } from '../src/agents/StrategicAgent.js';
-import { templateCache } from '../src/cache/TemplateCache.js';
+import { strategicAgent } from './StrategicAgent.js';
+import { templateCache } from '../cache/TemplateCache.js';
 
 // Phase 3: Canvas Groups
-import { canvasGroupManager } from '../src/canvas/CanvasGroupManager.js';
-import { canvasMerger } from '../src/canvas/CanvasMerger.js';
+import { canvasGroupManager } from '../canvas/CanvasGroupManager.js';
+import { canvasMerger } from '../canvas/CanvasMerger.js';
 
 export class AgentOrchestrator {
     constructor() { }

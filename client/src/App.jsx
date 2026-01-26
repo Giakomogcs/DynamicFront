@@ -34,20 +34,13 @@ function AppContent() {
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
     const [newProjectData, setNewProjectData] = useState({ title: '', description: '' });
     const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
 
 
     // --- Onboarding State ---
     const [systemStatus, setSystemStatus] = useState(null); // { initialized, hasModels, hasResources }
 
-    // Auto-close settings if onboarding is triggered
-    useEffect(() => {
-        if (systemStatus && (!systemStatus.initialized || !systemStatus.hasModels || !systemStatus.hasResources) && !onboardingDismissed) {
-            if (showSettings) {
-                console.log("[App] Closing settings because onboarding was triggered");
-                setShowSettings(false);
-            }
-        }
-    }, [systemStatus, onboardingDismissed, showSettings]);
+    // Auto-close settings logic removed per user request
 
     useEffect(() => {
         // Only run if user is authenticated to assume protected API access, 
@@ -64,8 +57,17 @@ function AppContent() {
                 })
                 .then(data => {
                     setSystemStatus(data);
-                    if (data && data.initialized === false) {
-                        setOnboardingDismissed(false);
+                    // CHECK INITIALIZATION STATUS
+                    if (data && (!data.initialized || !data.hasModels || !data.hasResources)) {
+                        if (!onboardingDismissed) {
+                             setShowOnboarding(true);
+                        }
+                    } else {
+                        // If everything is good, we don't force it open, but if it was already open we don't force close it here?
+                        // Actually, if status becomes good EXTERNALLY (e.g. CLI login), we might want to auto-dismiss?
+                        // BUT user said "Stay on step, confirm success".
+                        // So let's NOT auto-close if showOnboarding is true.
+                        // Let OnboardingWizard handle the transition to completion step.
                     }
                 })
                 .catch(err => {
@@ -879,20 +881,27 @@ function AppContent() {
     return (
         <>
             {/* ONBOARDING OVERLAY */}
-            {(!systemStatus.initialized || !systemStatus.hasModels || !systemStatus.hasResources) && !onboardingDismissed && (
+            {/* ONBOARDING OVERLAY */}
+            {showOnboarding && !onboardingDismissed && !showSettings && (
                 <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-500">
                     <div className="w-full max-w-4xl">
                         <OnboardingWizard
                             status={systemStatus}
+                            onStatusUpdate={() => setRefreshResourcesTrigger(prev => prev + 1)}
                             onComplete={() => {
                                 // Re-fetch status to clear the overlay
                                 fetch('http://localhost:3000/api/system/status')
                                     .then(res => res.json())
                                     .then(data => setSystemStatus(data));
 
+                                setOnboardingDismissed(true); // Close it explicitly
+                                setShowOnboarding(false);
                                 setRefreshProjectsTrigger(prev => prev + 1);
                             }}
-                            onSkip={() => setOnboardingDismissed(true)}
+                            onSkip={() => {
+                                setOnboardingDismissed(true);
+                                setShowOnboarding(false);
+                            }}
                             onOpenApiModal={() => setModalType('api')}
                             onOpenDbModal={() => setModalType('db')}
                             refreshTrigger={refreshResourcesTrigger}
@@ -915,7 +924,11 @@ function AppContent() {
 
                 // Settings Drawer Props
                 isSettingsOpen={showSettings}
-                onSettingsClose={() => setShowSettings(false)}
+                onSettingsClose={() => {
+                    // Refresh status when closing settings to ensure onboarding reflects any changes
+                    setRefreshResourcesTrigger(prev => prev + 1);
+                    setShowSettings(false);
+                }}
                 settingsContent={<SettingsView
                     isOpen={showSettings}
                     onClose={() => setShowSettings(false)}
@@ -1094,7 +1107,10 @@ function AppContent() {
                 }
                 {
                     activeTab === 'resources' && (
-                        <ResourcesView refreshTrigger={refreshResourcesTrigger} />
+                        <ResourcesView 
+                            refreshTrigger={refreshResourcesTrigger} 
+                            onResourcesUpdated={() => setRefreshResourcesTrigger(prev => prev + 1)}
+                        />
                     )
                 }
 

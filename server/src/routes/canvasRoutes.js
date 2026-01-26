@@ -1,5 +1,5 @@
 import express from 'express';
-import { canvasGroupManager } from '../src/canvas/CanvasGroupManager.js';
+import { canvasGroupManager } from '../canvas/CanvasGroupManager.js';
 
 const router = express.Router();
 

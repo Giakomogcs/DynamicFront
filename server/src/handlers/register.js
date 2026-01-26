@@ -2,7 +2,7 @@ import prisma from '../registry.js';
 import { validateApiSpec } from './api.js';
 import { validateDbConnection } from './db.js';
 import { generateApiToolsFromDocs } from './api_generator.js';
-import { resourceEnricher } from '../src/core/ResourceEnricher.js'; // Added import
+import { resourceEnricher } from '../core/ResourceEnricher.js'; // Added import
 
 export const registerTools = [
     {

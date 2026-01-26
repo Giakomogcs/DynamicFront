@@ -248,7 +248,7 @@ export class AuthStrategyManager {
         console.log(`[AuthStrategy] Authenticating ${email}...`);
 
         // Import auth service dynamically to avoid circular dependencies
-        const { authService } = await import('../../services/authService.js');
+        const { authService } = await import('../services/authService.js');
 
         // Call the appropriate auth method based on profile type
         const result = await authService.authenticate({

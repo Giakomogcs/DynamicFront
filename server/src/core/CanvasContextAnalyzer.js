@@ -1,4 +1,4 @@
-import { modelManager } from '../../services/ai/ModelManager.js';
+import { modelManager } from '../services/ai/ModelManager.js';
 
 /**
  * CanvasContextAnalyzer - Phase 1.1

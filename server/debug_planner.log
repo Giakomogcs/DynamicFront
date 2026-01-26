@@ -1,10 +1,10 @@
-[2026-01-23T14:15:03.891Z] Error: [{
+[2026-01-26T21:45:45.883Z] Error: [{
   "error": {
     "code": 429,
-    "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
+    "message": "You have exhausted your capacity on this model. Your quota will reset after 1s.",
     "errors": [
       {
-        "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
+        "message": "You have exhausted your capacity on this model. Your quota will reset after 1s.",
         "domain": "global",
         "reason": "rateLimitExceeded"
       }
@@ -16,15 +16,15 @@
         "reason": "RATE_LIMIT_EXCEEDED",
         "domain": "cloudcode-pa.googleapis.com",
         "metadata": {
-          "quotaResetTimeStamp": "2026-01-23T14:15:23Z",
+          "quotaResetDelay": "1.193687816s",
+          "quotaResetTimeStamp": "2026-01-26T21:45:47Z",
           "uiMessage": "true",
-          "model": "gemini-2.0-flash",
-          "quotaResetDelay": "849.499068ms"
+          "model": "gemini-2.5-flash"
         }
       },
       {
         "@type": "type.googleapis.com/google.rpc.RetryInfo",
-        "retryDelay": "0.849499068s"
+        "retryDelay": "1.193687816s"
       }
     ]
   }
@@ -33,10 +33,10 @@
 Error: [{
   "error": {
     "code": 429,
-    "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
+    "message": "You have exhausted your capacity on this model. Your quota will reset after 1s.",
     "errors": [
       {
-        "message": "You have exhausted your capacity on this model. Your quota will reset after 0s.",
+        "message": "You have exhausted your capacity on this model. Your quota will reset after 1s.",
         "domain": "global",
         "reason": "rateLimitExceeded"
       }
@@ -48,22 +48,22 @@ Error: [{
         "reason": "RATE_LIMIT_EXCEEDED",
         "domain": "cloudcode-pa.googleapis.com",
         "metadata": {
-          "quotaResetTimeStamp": "2026-01-23T14:15:23Z",
+          "quotaResetDelay": "1.193687816s",
+          "quotaResetTimeStamp": "2026-01-26T21:45:47Z",
           "uiMessage": "true",
-          "model": "gemini-2.0-flash",
-          "quotaResetDelay": "849.499068ms"
+          "model": "gemini-2.5-flash"
         }
       },
       {
         "@type": "type.googleapis.com/google.rpc.RetryInfo",
-        "retryDelay": "0.849499068s"
+        "retryDelay": "1.193687816s"
       }
     ]
   }
 }
 ]
-    at Gaxios._request (C:\Github\DynamicFront\node_modules\gaxios\build\cjs\src\gaxios.js:155:23)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async OAuth2Client.requestAsync (C:\Github\DynamicFront\node_modules\google-auth-library\build\src\auth\oauth2client.js:463:20)
-    at async GeminiInternalProvider.generateContent (file:///C:/Github/DynamicFront/server/services/gemini/GeminiInternalProvider.js:95:21)
-    at async RequestQueue.process (file:///C:/Github/DynamicFront/server/services/ai/ModelManager.js:816:29)
+    at Gaxios._request (/Users/giovanics/Documents/Repostórios/DynamicFront/node_modules/gaxios/build/cjs/src/gaxios.js:155:23)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async OAuth2Client.requestAsync (/Users/giovanics/Documents/Repostórios/DynamicFront/node_modules/google-auth-library/build/src/auth/oauth2client.js:463:20)
+    at async GeminiInternalProvider.generateContent (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/src/services/gemini/GeminiInternalProvider.js:102:21)
+    at async RequestQueue.process (file:///Users/giovanics/Documents/Reposto%CC%81rios/DynamicFront/server/src/services/ai/ModelManager.js:948:29)

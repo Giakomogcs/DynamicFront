@@ -4,8 +4,8 @@
  */
 
 import { templateCache } from '../cache/TemplateCache.js';
-import { plannerAgent } from '../../agents/Planner.js';
-import { executorAgent } from '../../agents/Executor.js';
+import { plannerAgent } from '../agents/Planner.js';
+import { executorAgent } from '../agents/Executor.js';
 
 export class StrategicReasoningEngine {
     constructor() {

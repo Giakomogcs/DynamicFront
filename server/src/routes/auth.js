@@ -20,7 +20,7 @@ import { modelManager } from '../services/ai/ModelManager.js';
 // Google Auth Trigger
 router.get(
     '/google',
-    passport.authenticate('google', { scope: ['profile', 'email'] })
+    passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'select_account' })
 );
 
 // Google Auth Callback
@@ -41,7 +41,8 @@ router.get(
         // Redirect to frontend with token
         // In production, use secure cookies or a redirect page that posts the token
         // For now, passing as query param (safe enough for localhost/dev)
-        res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
+        // CHANGED: Redirect to ROOT not /auth/callback to avoid sticky URL
+        res.redirect(`http://localhost:5173/?token=${token}`);
     }
 );
 
@@ -163,7 +164,7 @@ router.get('/gemini-cli/connect', (req, res) => {
             'https://www.googleapis.com/auth/userinfo.email',
             'https://www.googleapis.com/auth/userinfo.profile'
         ],
-        prompt: 'consent', // Force prompts to ensure Refresh Token is returned
+        prompt: 'consent select_account', // Force prompts to ensure Refresh Token is returned AND account selection
         redirect_uri: redirectUri // Explicitly pass it again to be absolutely sure
     });
 

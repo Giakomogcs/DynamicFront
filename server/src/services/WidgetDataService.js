@@ -1,5 +1,5 @@
 import { toolService } from './toolService.js';
-import { resourceEnricher } from '../src/core/ResourceEnricher.js';
+import { resourceEnricher } from '../core/ResourceEnricher.js';
 
 export class WidgetDataService {
 

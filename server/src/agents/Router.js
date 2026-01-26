@@ -57,8 +57,19 @@ OUTPUT FORMAT (JSON):
                 model: "gemini-2.0-flash",
                 jsonMode: true
             });
-            const text = result.response.text();
-            return JSON.parse(text);
+            let text = result.response.text();
+            
+            // Clean up Markdown code blocks if present
+            text = text.replace(/```json\n|\n```/g, "").replace(/```/g, "").trim();
+
+            try {
+                return JSON.parse(text);
+            } catch (jsonErr) {
+                 console.warn("[Router] JSON Parse failed, raw text:", text);
+                 // Fallback: If it looks like valid JSON but failed, try regex extraction?
+                 // For now, default to CHAT which will trigger normal execution
+                 return { intent: "CHAT", confidence: 0 };
+            }
         } catch (e) {
             console.error("[Router] Failed:", e);
             return { intent: "EXECUTE", confidence: 0 };

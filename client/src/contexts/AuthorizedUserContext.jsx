@@ -55,6 +55,11 @@ export const AuthorizedUserProvider = ({ children }) => {
             localStorage.removeItem('authToken');
         } finally {
             setIsLoading(false);
+            
+            // Safety cleanup: If we are still on a callback path for some reason, fix it
+            if (window.location.pathname.endsWith('/auth/callback')) {
+                window.history.replaceState({}, document.title, '/');
+            }
         }
     };
 

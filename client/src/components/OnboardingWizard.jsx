@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, Key, Check, ChevronRight, Globe, Database, Shield, Github, Loader2, ArrowRight, X, RotateCw, Cpu } from 'lucide-react';
 import { useToast } from './ui/Toast';
 
-export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, onOpenDbModal, refreshTrigger }) => {
+export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, onOpenDbModal, refreshTrigger, onStatusUpdate }) => {
     const { success, error: showError, info } = useToast();
     // Smart Step Detection
     // Simplified Step Mapping:
@@ -39,6 +39,9 @@ export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, o
     // Parse initial settings to detecting enabled state
     const [enabledProviders, setEnabledProviders] = useState({});
     const [providerStatuses, setProviderStatuses] = useState({});
+
+    const [availableResources, setAvailableResources] = useState({ apis: [], dbs: [] });
+    const [toggleLoading, setToggleLoading] = useState(null); // { type: 'api'|'db', id: string }
 
     // Calculate Active Steps on Mount/Status Change
     useEffect(() => {
@@ -115,14 +118,62 @@ export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, o
     // Watch for resource updates to auto-advance
     useEffect(() => {
         if (step === 4) {
+            fetchResources(); 
             checkResources().then(has => has && setResourceCount(1));
+            
+            // Regular check to detect new/external registrations
             const interval = setInterval(async () => {
                 const res = await checkResources();
                 setResourceCount(res ? 1 : 0);
-            }, 2000);
+            }, 5000); // 5s is enough for background, manual actions trigger immediate check
+            
             return () => clearInterval(interval);
         }
     }, [refreshTrigger, step]);
+
+    const fetchResources = async () => {
+        try {
+            const res = await fetch('http://localhost:3000/api/resources');
+            const data = await res.json();
+            // Filter out system resources so they don't clutter the UI or confuse the user
+            const filtered = {
+                apis: (data.apis || []).filter(r => !r.name?.includes('Gemini Internal') && !r.name?.includes('DataNavigator') && !r.name?.includes('Gemini CLI') && !r.idString?.startsWith('sys-')),
+                dbs: (data.dbs || []).filter(r => !r.idString?.startsWith('sys-'))
+            };
+            setAvailableResources(filtered);
+        } catch (e) {
+            console.error("Failed to fetch resources", e);
+        }
+    };
+
+    const handleToggleResource = async (type, id, currentStatus) => {
+        setToggleLoading({ type, id });
+        try {
+            await fetch(`http://localhost:3000/api/resources/${type}/${id}/toggle`, {
+                method: 'PATCH'
+            });
+            // Optimistic update
+            setAvailableResources(prev => {
+                const list = prev[type === 'api' ? 'apis' : 'dbs'];
+                const updated = list.map(r => r.idString === id ? { ...r, isEnabled: !currentStatus } : r);
+                return { ...prev, [type === 'api' ? 'apis' : 'dbs']: updated };
+            });
+            
+            // 1. Notify parent to refresh system status
+            if (onStatusUpdate) onStatusUpdate();
+
+            // 2. Immediately check resources locally to unlock "Continue"
+            const has = await checkResources();
+            setResourceCount(has ? 1 : 0);
+
+            // 3. Refresh the list to stay in sync
+            fetchResources(); 
+        } catch (e) {
+            showError("Failed to toggle resource");
+        } finally {
+            setToggleLoading(null);
+        }
+    };
 
     const loadSettings = async () => {
         try {
@@ -361,8 +412,7 @@ export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, o
             await new Promise(resolve => setTimeout(resolve, 500));
 
             // --- VALIDATION PHASE ---
-            info('Validating connections...');
-
+            // --- VERIFICATION PHASE ---
             const providersToValidate = [];
             if (enabledProviders.GEMINI) providersToValidate.push('gemini');
             if (enabledProviders.OPENAI) providersToValidate.push('openai');
@@ -370,95 +420,70 @@ export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, o
             if (enabledProviders.GROQ) providersToValidate.push('groq');
             if (enabledProviders.XAI) providersToValidate.push('xai');
 
-            // --- RETRY HELPER ---
-            const validateWithRetry = async (pid, attempts = 3) => {
-                for (let i = 0; i < attempts; i++) {
-                    try {
-                        const res = await fetch(`http://localhost:3000/api/providers/${pid}/validate`, { method: 'POST' });
-                        if (!res.ok) {
-                            if (res.status === 500 || res.status === 502) {
-                                // Server error, retryable
-                                throw new Error(`Server Error ${res.status}`);
-                            }
-                            // Client error (400, 401) is likely real auth error, but retry once just in case it's a blip
-                            if (i === 0) throw new Error("Validation rejected");
-                        }
-                        const data = await res.json();
-                        return { pid, valid: data.valid, error: data.valid ? null : (data.status?.errorMessage || 'Invalid Key') };
-                    } catch (e) {
-                        // Only retry on network/server errors
-                        if (i === attempts - 1) return { pid, valid: false, error: e.message };
-                        await new Promise(r => setTimeout(r, 1000 * (i + 1))); // Exponential backoffish
-                    }
+            info('Verifying connections...');
+            
+            // Trigger a full system status refresh (this reloads ModelManager on backend)
+            await fetch('http://localhost:3000/api/system/status?t=' + Date.now());
+            
+            // Fetch updated provider statuses and models
+            const [providersRes, modelsRes] = await Promise.all([
+                fetch('http://localhost:3000/api/providers?t=' + Date.now()),
+                fetch('http://localhost:3000/api/models?all=true&t=' + Date.now())
+            ]);
+            
+            const statuses = await providersRes.json();
+            const modelsData = await modelsRes.json();
+            
+            setProviderStatuses(statuses); // Sync local state
+            setAvailableModelsList(modelsData.models || []);
+
+            // Identify which selected providers are actually online/working
+            const passed = [];
+            const failed = [];
+            
+            providersToValidate.forEach(pid => {
+                const s = statuses[pid];
+                const hasModels = (s?.models && s.models.length > 0);
+                if (s?.healthy && hasModels) {
+                    passed.push(pid);
+                } else {
+                    failed.push(pid);
                 }
-            };
+            });
 
-            // PARALLEL VALIDATION
-            const results = await Promise.all(providersToValidate.map(pid => validateWithRetry(pid)));
-
-            const failed = results.filter(r => !r.valid);
-            const passed = results.filter(r => r.valid);
-
-            // REPORTING
+            // REPORTING (Grouped to avoid spam)
             if (passed.length > 0) {
-                success(`✓ ${passed.length} provider(s) verified!`);
+                const passedList = passed.map(p => p.toUpperCase()).join(', ');
+                success(`✓ Active: ${passedList}`);
             }
 
             if (failed.length > 0) {
-                failed.forEach(f => showError(`${f.pid.toUpperCase()}: ${f.error}`));
-                // If ALL failed, stop?
-                // If we have at least one passed, or Copilot/CLI/Internal active, let's proceed but warn.
+                const failedList = failed.map(f => `${f.toUpperCase()}`).join(', ');
+                showError(`⚠️ Could not reach: ${failedList}`);
             }
 
-            // Verify models and system status
-            const [modelsRes, statusRes] = await Promise.all([
-                fetch('http://localhost:3000/api/models?t=' + Date.now()),
-                fetch('http://localhost:3000/api/system/status?t=' + Date.now())
-            ]);
+            // --- PERMISSIVE CHECK ---
+            const hasAnyModels = (modelsData.models && modelsData.models.length > 0);
+            const anyPassed = passed.length > 0;
+            const isInternalConnected = statuses['gemini-internal']?.healthy && enabledProviders['GEMINI-INTERNAL'] !== false;
 
-            const modelsData = await modelsRes.json();
-            const statusData = await statusRes.json();
-
-            // Success if models are found OR if backend says models are available (CLI/Copilot cases)
-            const hasModels = (modelsData.models && modelsData.models.length > 0) || statusData.hasModels;
-
-            if (hasModels) {
-                // Fetch models for the next step before advancing
-                await fetchModels();
+            if (hasAnyModels || anyPassed || isInternalConnected) {
+                // If we have models, we can proceed!
                 handleNext();
+                return;
             } else {
-                // If we passed validation but have NO models, it's likely a Rate Limit / Quota issue (as seen with Anthropic 429)
-                if (passed.length > 0) {
-                    showError(`Providers validated, but no models returned. Possible Quota/Rate Limit issue (e.g. 429).`);
-                    // Optionally allow user to force continue?
-                    // For now, let's stop and force them to check, OR add a "Force Continue" button logic?
-                    // Actually, user wants to know why.
-                    info("Check server logs for specific provider errors.");
+                // Completely blocked flow
+                if (failed.length > 0) {
+                    showError("Please check your API keys or connection.");
+                } else if (providersToValidate.length === 0 && !isInternalConnected) {
+                    info("Please configure and enable at least one provider.");
                 } else {
-                    // Standard failure
-                    // FALLBACK: If status says initialized, proceed anyway
-                    if (statusData.initialized) {
-                        handleNext();
-                        return;
-                    }
-
-                    // Check Special Providers
-                    if (statusData.connectedProviders > 0 || statusData.hasCopilot) {
-                        success("✓ Configuration validated!");
-                        handleNext();
-                    } else {
-                        if (failed.length === providersToValidate.length && providersToValidate.length > 0) {
-                            // All attempts failed
-                            info("Validation failed. Please check your keys or skipping for now.");
-                        } else {
-                            info("Please configure at least one provider to continue.");
-                        }
-                    }
+                    showError("No active models detected. Try enabling another provider.");
                 }
             }
         } catch (err) {
             console.error('Save providers error:', err);
-            showError("Failed to save settings: " + err.message);
+            showError("An error occurred during verification.");
         } finally {
             setLoading(false);
         }
@@ -635,7 +660,12 @@ export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, o
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleProviderToggleState('GEMINI-INTERNAL', !enabledProviders['GEMINI-INTERNAL']);
+                                            const nextVal = !enabledProviders['GEMINI-INTERNAL'];
+                                            handleProviderToggleState('GEMINI-INTERNAL', nextVal);
+                                            // Trigger backend refresh immediately so models are available
+                                            saveSetting('PROVIDER_ENABLED_GEMINI-INTERNAL', nextVal).then(() => {
+                                                if (onStatusUpdate) onStatusUpdate();
+                                            });
                                         }}
                                         className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${enabledProviders['GEMINI-INTERNAL'] !== false ? 'bg-indigo-600' : 'bg-slate-700'}`}
                                         title={enabledProviders['GEMINI-INTERNAL'] !== false ? "Disable Provider" : "Enable Provider"}
@@ -905,7 +935,7 @@ export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, o
                     <X size={24} />
                 </button>
 
-                <div className="mb-8">
+                <div className="mb-4">
                     <div className="text-sm text-indigo-400 font-semibold mb-2">
                         {status?.initialized ? 'MISSING DATA' : `STEP ${currentStepIdx + 1} OF ${activeWizardSteps.length}`}
                     </div>
@@ -914,6 +944,58 @@ export const OnboardingWizard = ({ status, onComplete, onSkip, onOpenApiModal, o
                         Connect an existing API or Database so the agent can interact with your data.
                     </p>
                 </div>
+
+                {/* SHOW EXISTING RESOURCES IF ANY EXIST (Even if enabled, so user can toggle them if system status is weird) */}
+                {(availableResources.apis?.length > 0 || availableResources.dbs?.length > 0) && (
+                    <div className="mb-6 bg-slate-900/50 border border-slate-800 rounded-xl p-4 animate-in slide-in-from-top-2">
+                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <RotateCw size={14} /> Manage Existing Resources
+                        </h3>
+                        <div className="space-y-2 max-h-[150px] overflow-y-auto custom-scrollbar pr-1">
+                            {availableResources.apis?.map(api => (
+                                <div key={api.idString} className="flex items-center justify-between p-3 bg-slate-950/50 rounded-lg border border-slate-800">
+                                    <div className="flex items-center gap-3">
+                                        <Globe size={16} className="text-blue-400" />
+                                        <div className="flex flex-col">
+                                            <span className="text-sm text-slate-300 font-medium">{api.name}</span>
+                                            {/* <span className="text-[10px] text-slate-500">{api.baseUrl}</span> */}
+                                        </div>
+                                        {!api.isEnabled && <span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded uppercase">Disabled</span>}
+                                        {api.isEnabled && <span className="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded uppercase">Active</span>}
+                                    </div>
+                                    <button
+                                        disabled={toggleLoading?.id === api.idString}
+                                        onClick={() => handleToggleResource('api', api.idString, api.isEnabled)}
+                                        className={`text-xs px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${api.isEnabled ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300'}`}
+                                    >
+                                        {toggleLoading?.id === api.idString && <Loader2 className="size-3 animate-spin" />}
+                                        {api.isEnabled ? 'Disable' : 'Enable'}
+                                    </button>
+                                </div>
+                            ))}
+                            {availableResources.dbs?.map(db => (
+                                <div key={db.idString} className="flex items-center justify-between p-3 bg-slate-950/50 rounded-lg border border-slate-800">
+                                    <div className="flex items-center gap-3">
+                                        <Database size={16} className="text-emerald-400" />
+                                        <div className="flex flex-col">
+                                            <span className="text-sm text-slate-300 font-medium">{db.name}</span>
+                                        </div>
+                                        {!db.isEnabled && <span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded uppercase">Disabled</span>}
+                                        {db.isEnabled && <span className="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded uppercase">Active</span>}
+                                    </div>
+                                    <button
+                                        disabled={toggleLoading?.id === db.idString}
+                                        onClick={() => handleToggleResource('db', db.idString, db.isEnabled)}
+                                        className={`text-xs px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${db.isEnabled ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300'}`}
+                                    >
+                                        {toggleLoading?.id === db.idString && <Loader2 className="size-3 animate-spin" />}
+                                        {db.isEnabled ? 'Disable' : 'Enable'}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                     <button

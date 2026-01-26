@@ -1,8 +1,8 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 import fs from 'fs';
-import { resourceEnricher } from '../src/core/ResourceEnricher.js';
-import { PlannerOutputSchema } from '../src/schemas/PlannerOutput.schema.js';
-import { NoProfilesAvailableError } from '../src/errors/AuthErrors.js';
+import { resourceEnricher } from '../core/ResourceEnricher.js';
+import { PlannerOutputSchema } from '../schemas/PlannerOutput.schema.js';
+import { NoProfilesAvailableError } from '../errors/AuthErrors.js';
 
 export class PlannerAgent {
     constructor() { }

@@ -1,5 +1,5 @@
-import { modelManager } from '../../services/ai/ModelManager.js';
-import { executorAgent } from '../../agents/Executor.js';
+import { modelManager } from '../services/ai/ModelManager.js';
+import { executorAgent } from './Executor.js';
 
 /**
  * StrategicAgent - Phase 2.1

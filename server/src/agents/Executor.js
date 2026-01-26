@@ -5,8 +5,8 @@
 import { modelManager } from '../services/ai/ModelManager.js';
 import fs from 'fs';
 import { toolService } from '../services/toolService.js';
-import { resourceEnricher } from '../src/core/ResourceEnricher.js';
-import { NoProfilesAvailableError } from '../src/errors/AuthErrors.js';
+import { resourceEnricher } from '../core/ResourceEnricher.js';
+import { NoProfilesAvailableError } from '../errors/AuthErrors.js';
 import { getOriginalToolName } from '../ToolAdapter.js';
 import { cacheService } from '../services/CacheService.js';
 

@@ -3,7 +3,7 @@
  * Analyzes raw MCP tools to generate high-level "Resource Profiles" and Knowledge Graphs.
  * NOW BACKED BY POSTGRESQL (Prisma).
  */
-import prisma from '../../registry.js';
+import prisma from '../registry.js';
 import { log } from '../utils/logger.js';
 import {
     ProfileNotFoundError,

@@ -4,8 +4,8 @@
  * Elimina necessidade de hardcode domain-specific
  */
 
-import prisma from '../../registry.js';
-import { modelManager } from '../../services/ai/ModelManager.js';
+import prisma from '../registry.js';
+import { modelManager } from '../services/ai/ModelManager.js';
 
 export class SemanticResourceAnalyzer {
     constructor() {
