@@ -56,6 +56,30 @@ export class AgentOrchestrator {
                     newPageTitle: routing.pageTitle
                 };
             }
+
+            // NEW: Handle CHAT intent - Pure conversation, no tools
+            if (routing.intent === 'CHAT') {
+                console.log(`[Orchestrator] 💬 Chat Intent detected. Skipping complex tool planning.`);
+
+                // Execute directly with NO tools
+                const executionData = await executorAgent.execute(
+                    userMessage,
+                    history,
+                    modelName,
+                    [], // No tools
+                    { intent: 'CHAT' },
+                    location,
+                    ""
+                );
+
+                console.log("=== [Orchestrator] Chat Process Complete ===\n");
+                return {
+                    text: executionData.text || "Olá! Como posso ajudar?",
+                    widgets: [],
+                    metadata: { intent: 'CHAT' },
+                    usedModel: executionData.usedModel
+                };
+            }
         }
 
         if (canvasContext && canvasContext.sessionId) {

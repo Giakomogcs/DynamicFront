@@ -30,7 +30,7 @@ router.get(
     (req, res) => {
         // Successful authentication
         const user = req.user;
-        console.log(`[Auth Routes] Google Callback Success for user: ${user?.email}`);
+        // console.log(`[Auth Routes] Google Callback Success for user: ${user?.email}`);
 
         // Generate JWT
         const token = jwt.sign(
@@ -46,7 +46,7 @@ router.get(
         // For now, passing as query param (safe enough for localhost/dev)
         // CHANGED: Redirect to ROOT not /auth/callback to avoid sticky URL
         const redirectUrl = `http://localhost:5173/?token=${token}`;
-        console.log(`[Auth Routes] Redirecting to: ${redirectUrl.split('?')[0]}...`);
+        // console.log(`[Auth Routes] Redirecting to: ${redirectUrl.split('?')[0]}...`);
         res.redirect(redirectUrl);
     }
 );
@@ -136,7 +136,7 @@ router.get('/me', async (req, res) => {
     try {
         console.log('[Auth Routes] /me: Verifying token...');
         const decoded = jwt.verify(token, JWT_SECRET);
-        console.log('[Auth Routes] /me: Token decoded for user ID:', decoded.id);
+        // console.log('[Auth Routes] /me: Token decoded for user ID:', decoded.id);
 
         // Fetch fresh user data from DB to ensure isActive/role/limits are up to date
         const user = await prisma.user.findUnique({
@@ -158,7 +158,7 @@ router.get('/me', async (req, res) => {
             return res.status(401).json({ error: 'User not found' });
         }
 
-        console.log('[Auth Routes] /me: User found and authenticated:', user.email);
+        // console.log('[Auth Routes] /me: User found and authenticated');
         res.json(user);
     } catch (err) {
         console.error('[Auth Routes] /me: Token verification failed:', err.message);

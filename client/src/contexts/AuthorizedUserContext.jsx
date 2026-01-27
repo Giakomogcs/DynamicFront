@@ -9,7 +9,7 @@ export const AuthorizedUserProvider = ({ children }) => {
     const checkAuth = useCallback(async () => {
         const fullUrl = window.location.href;
         const search = window.location.search;
-        console.log('[AuthContext] checkAuth invoked. URL:', fullUrl);
+        console.log('[AuthContext] checkAuth invoked.');
 
         const tokenInStorage = localStorage.getItem('authToken');
 
@@ -19,11 +19,7 @@ export const AuthorizedUserProvider = ({ children }) => {
 
         const effectiveToken = urlToken || tokenInStorage;
 
-        console.log('[AuthContext] Token state:', {
-            hasLocal: !!tokenInStorage,
-            hasUrl: !!urlToken,
-            effective: !!effectiveToken
-        });
+        // console.log('[AuthContext] Token state:', { ... });
 
         if (!effectiveToken) {
             console.log('[AuthContext] No token available, clearing auth state');
@@ -33,7 +29,7 @@ export const AuthorizedUserProvider = ({ children }) => {
         }
 
         try {
-            console.log(`[AuthContext] Verifying token with backend... (Token preview: ${effectiveToken.substring(0, 10)}...)`);
+            console.log(`[AuthContext] Verifying token...`);
             const res = await fetch('http://localhost:3000/auth/me', {
                 headers: {
                     'Authorization': `Bearer ${effectiveToken}`
@@ -44,13 +40,15 @@ export const AuthorizedUserProvider = ({ children }) => {
 
             if (res.ok) {
                 const userData = await res.json();
-                console.log('[AuthContext] Auth Success! User:', userData.email);
+                console.log('[AuthContext] Auth Success!');
 
                 // Only save and clear URL if we actually got it from URL
                 if (urlToken) {
                     console.log('[AuthContext] Persisting URL token to localStorage');
                     localStorage.setItem('authToken', urlToken);
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Use replaceState to remove the query params without reloading
+                    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.replaceState({ path: newUrl }, '', newUrl);
                 }
 
                 setUser(userData);
@@ -62,9 +60,9 @@ export const AuthorizedUserProvider = ({ children }) => {
             }
         } catch (e) {
             console.error("[AuthContext] Fetch failed (Network Error?):", e);
-            // Don't clear token on network error, might be temporary?
-            // Actually, safer to stay logged out if we can't verify.
-            setUser(null);
+            // Don't clear token on network error (like CORS or offline)
+            // localStorage.removeItem('authToken'); 
+            // setUser(null);
         } finally {
             setIsLoading(false);
         }
