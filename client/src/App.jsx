@@ -22,7 +22,6 @@ function AppContent() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const { error, success, info } = useToast();
 
-    console.log('[AppContent] Rendering...', { isAuthenticated, isLoading, hasUser: !!user });
 
     // --- Global State ---
     const [activeTab, setActiveTab] = useState('showcase'); // 'showcase', 'project', 'resources'
@@ -47,7 +46,6 @@ function AppContent() {
     useEffect(() => {
         // Only run if user is authenticated to assume protected API access
         if (isAuthenticated) {
-            console.log('[App] isAuthenticated changed to true, fetching system status...');
             fetch('http://localhost:3000/api/system/status')
                 .then(async res => {
                     if (!res.ok) {
@@ -57,7 +55,6 @@ function AppContent() {
                     return res.json();
                 })
                 .then(data => {
-                    console.log('[App] System status received:', data);
                     setSystemStatus(data);
                     // CHECK INITIALIZATION STATUS
                     if (data && (!data.initialized || !data.hasModels || !data.hasResources)) {
@@ -72,7 +69,6 @@ function AppContent() {
                     setSystemStatus({ initialized: true, hasModels: true, hasResources: true, error: err.message });
                 });
         } else {
-            console.log('[App] isAuthenticated is false');
         }
     }, [refreshResourcesTrigger, isAuthenticated]);
 
@@ -210,7 +206,6 @@ function AppContent() {
                         lng: position.coords.longitude,
                         // accuracy: position.coords.accuracy
                     };
-                    console.log("Device Location obtained:", loc);
                     setLocation(loc);
                 },
                 (err) => {

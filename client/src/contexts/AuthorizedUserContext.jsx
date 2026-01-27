@@ -9,7 +9,6 @@ export const AuthorizedUserProvider = ({ children }) => {
     const checkAuth = useCallback(async () => {
         const fullUrl = window.location.href;
         const search = window.location.search;
-        console.log('[AuthContext] checkAuth invoked.');
 
         const tokenInStorage = localStorage.getItem('authToken');
 
@@ -29,22 +28,18 @@ export const AuthorizedUserProvider = ({ children }) => {
         }
 
         try {
-            console.log(`[AuthContext] Verifying token...`);
             const res = await fetch('http://localhost:3000/auth/me', {
                 headers: {
                     'Authorization': `Bearer ${effectiveToken}`
                 }
             });
 
-            console.log('[AuthContext] Backend response status:', res.status);
 
             if (res.ok) {
                 const userData = await res.json();
-                console.log('[AuthContext] Auth Success!');
 
                 // Only save and clear URL if we actually got it from URL
                 if (urlToken) {
-                    console.log('[AuthContext] Persisting URL token to localStorage');
                     localStorage.setItem('authToken', urlToken);
                     // Use replaceState to remove the query params without reloading
                     const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
@@ -69,7 +64,6 @@ export const AuthorizedUserProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        console.log('[AuthContext] Provider mounted, triggering initial checkAuth');
         checkAuth();
     }, [checkAuth]);
 
