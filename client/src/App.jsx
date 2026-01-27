@@ -22,6 +22,8 @@ function AppContent() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const { error, success, info } = useToast();
 
+    console.log('[AppContent] Rendering...', { isAuthenticated, isLoading, hasUser: !!user });
+
     // --- Global State ---
     const [activeTab, setActiveTab] = useState('showcase'); // 'showcase', 'project', 'resources'
     const [isProcessing, setIsProcessing] = useState(false);
@@ -43,10 +45,9 @@ function AppContent() {
     // Auto-close settings logic removed per user request
 
     useEffect(() => {
-        // Only run if user is authenticated to assume protected API access, 
-        // OR run always but handle 401? System status might be public?
-        // Let's keep it safe. If not auth, we don't care about system status yet (login first).
+        // Only run if user is authenticated to assume protected API access
         if (isAuthenticated) {
+            console.log('[App] isAuthenticated changed to true, fetching system status...');
             fetch('http://localhost:3000/api/system/status')
                 .then(async res => {
                     if (!res.ok) {
@@ -56,27 +57,22 @@ function AppContent() {
                     return res.json();
                 })
                 .then(data => {
+                    console.log('[App] System status received:', data);
                     setSystemStatus(data);
                     // CHECK INITIALIZATION STATUS
                     if (data && (!data.initialized || !data.hasModels || !data.hasResources)) {
                         if (!onboardingDismissed) {
-                             setShowOnboarding(true);
+                            setShowOnboarding(true);
                         }
-                    } else {
-                        // If everything is good, we don't force it open, but if it was already open we don't force close it here?
-                        // Actually, if status becomes good EXTERNALLY (e.g. CLI login), we might want to auto-dismiss?
-                        // BUT user said "Stay on step, confirm success".
-                        // So let's NOT auto-close if showOnboarding is true.
-                        // Let OnboardingWizard handle the transition to completion step.
                     }
                 })
                 .catch(err => {
-                    console.warn("[App] Failed to check system status:", err);
-                    // If it's a 500 or connection error, we stay in "loading" or "error" state
-                    // rather than assuming everything is fine.
-                    // But we don't want to block the user forever if the server is actually fine but the endpoint is bugged.
-                    // However, for onboarding, it's safer to not skip it.
+                    console.error("[App] Failed to check system status:", err);
+                    // FALLBACK: Set a fake "healthy" status so the app doesn't stay on the loader forever
+                    setSystemStatus({ initialized: true, hasModels: true, hasResources: true, error: err.message });
                 });
+        } else {
+            console.log('[App] isAuthenticated is false');
         }
     }, [refreshResourcesTrigger, isAuthenticated]);
 
@@ -1107,8 +1103,8 @@ function AppContent() {
                 }
                 {
                     activeTab === 'resources' && (
-                        <ResourcesView 
-                            refreshTrigger={refreshResourcesTrigger} 
+                        <ResourcesView
+                            refreshTrigger={refreshResourcesTrigger}
                             onResourcesUpdated={() => setRefreshResourcesTrigger(prev => prev + 1)}
                         />
                     )

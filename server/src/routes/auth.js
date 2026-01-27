@@ -30,6 +30,7 @@ router.get(
     (req, res) => {
         // Successful authentication
         const user = req.user;
+        console.log(`[Auth Routes] Google Callback Success for user: ${user?.email}`);
 
         // Generate JWT
         const token = jwt.sign(
@@ -38,11 +39,15 @@ router.get(
             { expiresIn: '24h' }
         );
 
+        console.log(`[Auth Routes] JWT generated. Redirecting to frontend...`);
+
         // Redirect to frontend with token
         // In production, use secure cookies or a redirect page that posts the token
         // For now, passing as query param (safe enough for localhost/dev)
         // CHANGED: Redirect to ROOT not /auth/callback to avoid sticky URL
-        res.redirect(`http://localhost:5173/?token=${token}`);
+        const redirectUrl = `http://localhost:5173/?token=${token}`;
+        console.log(`[Auth Routes] Redirecting to: ${redirectUrl.split('?')[0]}...`);
+        res.redirect(redirectUrl);
     }
 );
 
@@ -122,11 +127,16 @@ router.post('/login', async (req, res) => {
 router.get('/me', async (req, res) => {
     // Expect "Authorization: Bearer <token>"
     const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+    if (!authHeader) {
+        console.warn('[Auth Routes] /me: No token provided in header');
+        return res.status(401).json({ error: 'No token provided' });
+    }
 
     const token = authHeader.split(' ')[1];
     try {
+        console.log('[Auth Routes] /me: Verifying token...');
         const decoded = jwt.verify(token, JWT_SECRET);
+        console.log('[Auth Routes] /me: Token decoded for user ID:', decoded.id);
 
         // Fetch fresh user data from DB to ensure isActive/role/limits are up to date
         const user = await prisma.user.findUnique({
@@ -143,11 +153,15 @@ router.get('/me', async (req, res) => {
             }
         });
 
-        if (!user) return res.status(401).json({ error: 'User not found' });
+        if (!user) {
+            console.warn('[Auth Routes] /me: User not found in database for ID:', decoded.id);
+            return res.status(401).json({ error: 'User not found' });
+        }
 
+        console.log('[Auth Routes] /me: User found and authenticated:', user.email);
         res.json(user);
     } catch (err) {
-        console.error("Auth check error:", err);
+        console.error('[Auth Routes] /me: Token verification failed:', err.message);
         res.status(401).json({ error: 'Invalid token' });
     }
 });

@@ -9,11 +9,13 @@ export default function Login() {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
 
+    console.log('[Login] Component mounted');
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
         setLoading(true);
-        
+
         try {
             const endpoint = isRegistering ? '/auth/register' : '/auth/login';
             const res = await fetch(`http://localhost:3000${endpoint}`, {
@@ -21,17 +23,17 @@ export default function Login() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
-            
+
             const data = await res.json();
-            
+
             if (!res.ok) {
                 throw new Error(data.error || 'Action failed');
             }
-            
+
             // Success
             localStorage.setItem('authToken', data.token);
             window.location.href = '/'; // Refresh to load app
-            
+
         } catch (err) {
             setError(err.message);
         } finally {
@@ -42,7 +44,7 @@ export default function Login() {
     return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden p-8">
-                
+
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-slate-100 mb-2">DynamicFront</h1>
                     <p className="text-slate-400">
@@ -93,13 +95,13 @@ export default function Login() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {isRegistering && (
-                         <div>
+                        <div>
                             <label className="block text-sm font-medium text-slate-400 mb-1">Name</label>
                             <input
                                 type="text"
                                 required
                                 value={formData.name}
-                                onChange={e => setFormData({...formData, name: e.target.value})}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                                 placeholder="John Doe"
                             />
@@ -113,7 +115,7 @@ export default function Login() {
                                 type="email"
                                 required
                                 value={formData.email}
-                                onChange={e => setFormData({...formData, email: e.target.value})}
+                                onChange={e => setFormData({ ...formData, email: e.target.value })}
                                 className="w-full bg-slate-800/50 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                                 placeholder="you@example.com"
                             />
@@ -121,13 +123,13 @@ export default function Login() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-400 mb-1">Password</label>
-                         <div className="relative">
+                        <div className="relative">
                             <LogIn className="absolute left-3 top-3.5 h-5 w-5 text-slate-500" />
                             <input
                                 type="password"
                                 required
                                 value={formData.password}
-                                onChange={e => setFormData({...formData, password: e.target.value})}
+                                onChange={e => setFormData({ ...formData, password: e.target.value })}
                                 className="w-full bg-slate-800/50 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                                 placeholder="••••••••"
                             />

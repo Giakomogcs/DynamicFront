@@ -60,21 +60,22 @@ app.use('/api/test', testRoutes);
 // 1. System Status (Onboarding Check)
 // 1. System Status (Onboarding Check)
 app.get('/api/system/status', async (req, res) => {
+    console.log('[API] /api/system/status requested');
     try {
         // Clear models cache to ensure we pick up recent provider toggles/keys
-        await modelManager.reload(); 
-        
+        await modelManager.reload();
+
         const resources = await toolService.getRegisteredResources();
         // User Request: Status only counts ENABLED resources AND valid USER resources (not system/internal)
         // Filter out INTERNAL system resources so they don't count towards user resources
-        const activeApis = resources.apis?.filter(a => 
-            a.isEnabled !== false && 
-            !a.name?.includes('Gemini Internal') && 
+        const activeApis = resources.apis?.filter(a =>
+            a.isEnabled !== false &&
+            !a.name?.includes('Gemini Internal') &&
             !a.name?.includes('DataNavigator') &&
             !a.name?.includes('Gemini CLI') &&
             !a.idString?.startsWith('sys-') // Future proofing for system IDs
         ) || [];
-        
+
         const activeDbs = resources.dbs?.filter(d => d.isEnabled !== false) || [];
         const hasResources = activeApis.length > 0 || activeDbs.length > 0;
 
@@ -100,6 +101,8 @@ app.get('/api/system/status', async (req, res) => {
 
         const hasModels = models.length > 0;
 
+        console.log(`[API] /api/system/status: hasModels=${hasModels}, hasResources=${hasResources}`);
+
         res.json({
             initialized: hasModels && hasResources,
             hasModels,
@@ -109,6 +112,7 @@ app.get('/api/system/status', async (req, res) => {
             hasCopilot
         });
     } catch (e) {
+        console.error('[API] /api/system/status error:', e.message);
         res.status(500).json({ error: e.message });
     }
 });

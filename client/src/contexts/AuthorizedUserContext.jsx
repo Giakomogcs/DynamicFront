@@ -1,93 +1,112 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-const AuthorizedUserContext = createContext({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    login: () => {},
-    logout: () => {},
-    checkAuth: () => {}
-});
-
-export const useAuth = () => useContext(AuthorizedUserContext);
+const AuthorizedUserContext = createContext(null);
 
 export const AuthorizedUserProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const checkAuth = async () => {
-        const token = localStorage.getItem('authToken');
-        
+    const checkAuth = useCallback(async () => {
+        const fullUrl = window.location.href;
+        const search = window.location.search;
+        console.log('[AuthContext] checkAuth invoked. URL:', fullUrl);
+
+        const tokenInStorage = localStorage.getItem('authToken');
+
         // 1. Check for token in URL (OAuth Callback)
-        const params = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(search);
         const urlToken = params.get('token');
-        
-        const effectiveToken = urlToken || token;
+
+        const effectiveToken = urlToken || tokenInStorage;
+
+        console.log('[AuthContext] Token state:', {
+            hasLocal: !!tokenInStorage,
+            hasUrl: !!urlToken,
+            effective: !!effectiveToken
+        });
 
         if (!effectiveToken) {
+            console.log('[AuthContext] No token available, clearing auth state');
+            setUser(null);
             setIsLoading(false);
             return;
         }
 
-        if (urlToken) {
-            // Save to storage and clear URL
-            localStorage.setItem('authToken', urlToken);
-            window.history.replaceState({}, document.title, window.location.pathname); // clear query params
-        }
-
         try {
+            console.log(`[AuthContext] Verifying token with backend... (Token preview: ${effectiveToken.substring(0, 10)}...)`);
             const res = await fetch('http://localhost:3000/auth/me', {
                 headers: {
                     'Authorization': `Bearer ${effectiveToken}`
                 }
             });
 
+            console.log('[AuthContext] Backend response status:', res.status);
+
             if (res.ok) {
                 const userData = await res.json();
+                console.log('[AuthContext] Auth Success! User:', userData.email);
+
+                // Only save and clear URL if we actually got it from URL
+                if (urlToken) {
+                    console.log('[AuthContext] Persisting URL token to localStorage');
+                    localStorage.setItem('authToken', urlToken);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+
                 setUser(userData);
             } else {
-                // Invalid token
+                const errData = await res.json().catch(() => ({}));
+                console.warn('[AuthContext] Auth failed on backend:', errData.error || res.statusText);
                 localStorage.removeItem('authToken');
                 setUser(null);
             }
         } catch (e) {
-            console.error("Auth check failed", e);
-            localStorage.removeItem('authToken');
+            console.error("[AuthContext] Fetch failed (Network Error?):", e);
+            // Don't clear token on network error, might be temporary?
+            // Actually, safer to stay logged out if we can't verify.
+            setUser(null);
         } finally {
             setIsLoading(false);
-            
-            // Safety cleanup: If we are still on a callback path for some reason, fix it
-            if (window.location.pathname.endsWith('/auth/callback')) {
-                window.history.replaceState({}, document.title, '/');
-            }
         }
-    };
-
-    useEffect(() => {
-        checkAuth();
     }, []);
 
+    useEffect(() => {
+        console.log('[AuthContext] Provider mounted, triggering initial checkAuth');
+        checkAuth();
+    }, [checkAuth]);
+
     const login = () => {
-        // Redirect to Google Auth
+        console.log('[AuthContext] Redirecting to Google Login via backend 3000...');
         window.location.href = 'http://localhost:3000/auth/google';
     };
-    
+
     const logout = () => {
+        console.log('[AuthContext] Logging out');
         localStorage.removeItem('authToken');
         setUser(null);
         window.location.href = '/login';
     };
 
+    const value = {
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        logout,
+        checkAuth
+    };
+
     return (
-        <AuthorizedUserContext.Provider value={{
-            user,
-            isAuthenticated: !!user,
-            isLoading,
-            login,
-            logout,
-            checkAuth
-        }}>
+        <AuthorizedUserContext.Provider value={value}>
             {children}
         </AuthorizedUserContext.Provider>
     );
+};
+
+export const useAuth = () => {
+    const context = useContext(AuthorizedUserContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthorizedUserProvider');
+    }
+    return context;
 };
