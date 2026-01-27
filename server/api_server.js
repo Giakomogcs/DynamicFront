@@ -268,8 +268,19 @@ app.delete('/api/chats/:id', async (req, res) => {
 // 1. Chat Endpoint
 app.post('/api/chat', async (req, res) => {
     try {
-        const { message, history, location, model, canvasContext, sessionId, chatId } = req.body;
+        let { message, history, location, model, canvasContext, sessionId, chatId } = req.body;
         console.log(`[API Server] Received chat request: "${message?.substring(0, 50)}..." (ChatID: ${chatId})`);
+
+        // Normalize Location (Frontend sends { lat, lng }, Backend uses { lat, lon })
+        if (location) {
+            location = {
+                lat: location.lat || location.latitude,
+                lon: location.lon || location.lng || location.longitude
+            };
+            if (location.lat && location.lon) {
+                console.log(`[API] 📍 Normalized Location: Lat ${location.lat}, Lon ${location.lon}`);
+            }
+        }
 
         let targetChatId = chatId;
 
@@ -384,26 +395,9 @@ app.get('/api/resources/:type/:id/tools', async (req, res) => {
     console.log(`[API] Get tools request: type=${type}, id=${id}`);
 
     try {
-        // Get all tools from toolService
-        const allTools = await toolService.getAllTools();
-
-        // Filter tools for this specific resource
-        const resourceTools = allTools.filter(tool => {
-            const execInfo = toolService.executionMap.get(tool.name);
-
-            if (type === 'api') {
-                // Check if tool belongs to this API
-                return execInfo?.type === 'mcp' && tool.name.includes(`api_${id}`);
-            } else if (type === 'db') {
-                // Check if tool belongs to this DB
-                return execInfo?.type === 'mcp' && tool.name.includes(`db_${id}`);
-            }
-
-            return false;
-        });
-
-        console.log(`[API] Found ${resourceTools.length} tools for ${type} ${id}`);
-        res.json(resourceTools);
+        const tools = await toolService.getResourceTools(type, id);
+        console.log(`[API] Found ${tools.length} tools for ${type} ${id}`);
+        res.json(tools);
     } catch (e) {
         console.error(`[API] Get tools error:`, e);
         res.status(500).json({ error: e.message });

@@ -390,6 +390,88 @@ export class ResourceEnricher {
         }
     }
 
+    /**
+     * TRANSFORMATION STEP: Adapts tool schemas found in `tools` to be LLM-friendly.
+     * Injects smart defaults, relaxes strict requirements, and adds Auth hints.
+     * @param {Array} tools - Raw tools from McpClient/Static
+     * @returns {Array} Transformed tools
+     */
+    transformTools(tools) {
+        if (!tools) return [];
+
+        return tools.map(tool => {
+            // Clone to avoid mutation side-effects on cache
+            const t = JSON.parse(JSON.stringify(tool));
+
+            // 1. Identify Resource Profile for this tool
+            let resourceName = "Default";
+            if (t.name.includes('__')) {
+                const parts = t.name.split('__');
+                resourceName = parts[0].replace('api_', '').replace('db_', '');
+            }
+            const profile = this.resources.get(resourceName); // populated by analyzeTools earlier
+
+            // 2. SMART DEFAULTS & WILDCARD INJECTION
+            if (t.parameters && t.parameters.properties) {
+                const required = t.parameters.required || [];
+                const newRequired = []; // rebuild required list if we make things optional
+
+                for (const [key, schema] of Object.entries(t.parameters.properties)) {
+                    const lowerKey = key.toLowerCase();
+                    const isRequired = required.includes(key);
+
+                    // A. Search/Filter Fields
+                    if (lowerKey.includes('search') || lowerKey.includes('name') || lowerKey.includes('query')) {
+                        // Enhance description
+                        let hint = " (Use '%' or 'All' to list everything if no specific filter is needed).";
+
+                        if (lowerKey === 'search_bar') {
+                            hint = " (Primary Search Field: Enter Name, City, or Category here. Required.) " + hint;
+                        }
+
+                        schema.description = (schema.description || "") + hint;
+
+                        // If required, we KEEP it required but the improved description helps the LLM know what to send.
+                        // Alternatively, we could make it optional and inject '%' in Executor. 
+                        // Strategy: Keep Required to force LLM to make a decision (send '%'), supported by Executor 'Generic Wildcard' fallback.
+                    }
+
+                    // B. Auth Fields (Hide from LLM or Mark as Injected)
+                    if (profile && profile.authRequired) {
+                        const isAuthField = ['password', 'token', 'secret', 'key', 'apikey'].some(k => lowerKey.includes(k));
+                        if (isAuthField) {
+                            // Mark as optional so LLM doesn't worry, Executor will inject.
+                            schema.description = (schema.description || "") + " [AUTO-INJECTED by System]";
+                            // Remove from required list effectively
+                            continue;
+                        }
+
+                        // CNPJ/CompanyID context injection
+                        if (lowerKey === 'cnpj' || lowerKey === 'companyid') {
+                            schema.description = (schema.description || "") + " [Context Injected]";
+                        }
+                    }
+
+                    if (isRequired) newRequired.push(key);
+                }
+
+                t.parameters.required = newRequired;
+
+                // 3. AUTH HINT INJECTION (Extra parameter for Profile Selection)
+                if (profile && profile.authProfiles && profile.authProfiles.length > 0) {
+                    // Add _authProfile parameter
+                    t.parameters.properties['_authProfile'] = {
+                        type: "string",
+                        description: `Optional: Auth profile to use. Available: ${profile.authProfiles.map(p => p.label).join(', ')}`,
+                        nullable: true
+                    };
+                }
+            }
+
+            return t;
+        });
+    }
+
     _generateSummary(resources) {
         if (resources.size === 0) return "No resources available.";
 

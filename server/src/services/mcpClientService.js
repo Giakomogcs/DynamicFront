@@ -234,6 +234,50 @@ class McpClientService {
             });
 
             this.toolsCache.set(serverName, tools);
+
+            // ---------------------------------------------------------
+            // DB INTROSPECTION INJECTION
+            // ---------------------------------------------------------
+            if (serverName.startsWith('db_')) {
+                const dbPrefix = serverName; // e.g. db_12345
+
+                // 1. Tool: list_tables
+                const listTablesTool = {
+                    name: `${dbPrefix}__list_tables`,
+                    description: `[Meta] List all tables in this database with row counts. Use this first to explore.`,
+                    inputSchema: { type: "object", properties: {}, required: [] },
+                    _exec: {
+                        type: 'meta_db',
+                        action: 'list_tables',
+                        serverName: serverName,
+                        originalName: 'list_tables' // Virtual
+                    }
+                };
+
+                // 2. Tool: describe_table
+                const describeTableTool = {
+                    name: `${dbPrefix}__describe_table`,
+                    description: `[Meta] Get schema information (columns, types) and sample data for a specific table.`,
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            tableName: { type: "string", description: "Name of the table to describe" }
+                        },
+                        required: ["tableName"]
+                    },
+                    _exec: {
+                        type: 'meta_db',
+                        action: 'describe_table',
+                        serverName: serverName,
+                        originalName: 'describe_table' // Virtual
+                    }
+                };
+
+                tools.push(listTablesTool);
+                tools.push(describeTableTool);
+                console.log(`[McpClient] 💉 Injected DB Meta-Tools for '${serverName}'`);
+            }
+
             console.log(`[McpClient] Loaded ${tools.length} tools from '${serverName}'`);
         } catch (e) {
             console.error(`[McpClient] Error fetching tools from '${serverName}':`, e);
@@ -251,6 +295,19 @@ class McpClientService {
     }
 
     async executeTool(serverName, toolName, args) {
+        // 1. Check for Virtual Meta Tools first (stored in cache config)
+        // However, executeTool receives raw args. We need to know if it's special.
+        // The Service caller (ToolService) usually passes the configs.
+        // Wait, `executeTool` here is low-level. 
+        // But `ToolService` passes `execInfo.config` which we access?
+        // No, ToolService calls `mcpClientService.executeTool(execInfo.config.serverName, execInfo.config.originalName, args)`
+
+        // Ensure we handle virtual actions if passed 'originalName' is our virtual one
+        // Check if toolName (which is passed as originalName from ToolService) is a virtual action
+        if (toolName === 'list_tables' || toolName === 'describe_table') {
+            return this.executeMetaDbTool(serverName, toolName, args);
+        }
+
         const client = this.clients.get(serverName);
         if (!client) throw new Error(`MCP Server '${serverName}' not connected.`);
 
@@ -263,6 +320,61 @@ class McpClientService {
         // Normalize result to our App's format: { content: [{ type: 'text', text: ... }] }
         // MCP SDK result structure: { content: [ { type: 'text', text: '...' }, ... ], isError: boolean }
         return result;
+    }
+
+    /**
+     * Handles virtual DB introspection tools by executing SQL queries on the actual Postgres MCP server.
+     */
+    async executeMetaDbTool(serverName, action, args) {
+        console.log(`[McpClient] 🐢 Executing Meta-DB Action: ${action} on ${serverName}`);
+
+        let sql = "";
+
+        if (action === 'list_tables') {
+            // Postgres Table List Query
+            sql = `
+                SELECT 
+                    schemaname || '.' || tablename as "table",
+                    (xpath('/row/cnt/text()', xml_count))[1]::text::int as "row_count"
+                FROM (
+                    SELECT schemaname, tablename, 
+                           query_to_xml(format('select count(*) as cnt from %I.%I', schemaname, tablename), false, true, '') as xml_count
+                    FROM pg_tables
+                    WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+                ) t;
+            `;
+        } else if (action === 'describe_table') {
+            const tableName = args.tableName || "";
+            // Safety check: simplistic protection against injection if we interpolate, 
+            // but here we should use parameters if the MCP server supports it.
+            // The ModelContextProtocol 'query' tool usually takes a single sql string.
+            // We will try to rely on the fact that this is an internal tool usage.
+            // Postgres "Describe" is effectively querying information_schema
+
+            // 1. Get Columns
+            sql = `
+                SELECT column_name, data_type, is_nullable
+                FROM information_schema.columns
+                WHERE table_name = '${tableName}' OR (table_schema || '.' || table_name) = '${tableName}';
+             `;
+
+            // 2. Get Sample (We can't do multiple statements easily in one query tool call often, 
+            // so we'll just get columns first. Or we can try UNION or just focus on header.)
+
+            // Better: Just select * limit 3 to show data and columns relative.
+            if (tableName) {
+                return this.executeTool(serverName, 'query', { sql: `SELECT * FROM ${tableName} LIMIT 3` });
+            } else {
+                return { isError: true, content: [{ type: 'text', text: "Table name required." }] };
+            }
+        }
+
+        if (sql) {
+            // Call the REAL generic 'query' tool (standard in postgres-mcp)
+            return this.executeTool(serverName, 'query', { sql });
+        }
+
+        return { isError: true, content: [{ type: 'text', text: "Unknown meta action" }] };
     }
 }
 

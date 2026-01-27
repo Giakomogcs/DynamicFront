@@ -55,10 +55,14 @@ export class ToolService {
         const enrichment = resourceEnricher.analyzeTools(tools);
         // console.log("[ToolService] Enrichment Summary:\n", enrichment.summary);
 
-        this.toolsCache = tools;
+        // TRANSFORMATION STEP (Smart Adapter)
+        const transformedTools = resourceEnricher.transformTools(tools);
+        console.log(`[ToolService] Transformed ${transformedTools.length} tools with Smart Adapter.`);
+
+        this.toolsCache = transformedTools; // Cache the transformed tools
         this.paramsCache = enrichment; // Cache the enrichment result
         this.lastCacheTime = Date.now();
-        return tools;
+        return transformedTools;
     }
 
     /**
@@ -73,7 +77,7 @@ export class ToolService {
             console.log(`[ToolService] Tool '${name}' not found. Attempting lazy refresh...`);
             await this.getAllTools(true);
             execInfo = this.executionMap.get(name);
-            
+
             if (!execInfo) {
                 return { isError: true, content: [{ type: "text", text: `Tool '${name}' not found.` }] };
             }
@@ -368,6 +372,23 @@ export class ToolService {
         }
         return this.paramsCache?.summary || "Analyzing resources...";
     }
+}
+
+// Helper Functions
+async function getApiTools(api) {
+    const serverName = `api_${api.idString}`;
+    // Try to get from MCP Service
+    if (mcpClientService.toolsCache.has(serverName)) {
+        return mcpClientService.toolsCache.get(serverName);
+    }
+    // Try forcing a refresh
+    await mcpClientService.refreshTools(serverName);
+    return mcpClientService.toolsCache.get(serverName) || [];
+}
+
+function getDbTools(db) {
+    const serverName = `db_${db.idString}`;
+    return mcpClientService.toolsCache.get(serverName) || [];
 }
 
 // Singleton instance

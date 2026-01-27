@@ -3651,3 +3651,162 @@
 {"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 08:19:23"}
 {"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 08:19:23"}
 {"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 08:19:23"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:16:31"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:16:31"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:16:35"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:16:35"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:16:35"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:16:35"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:16:35"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:18:09"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:18:09"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:18:14"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:18:14"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:18:14"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:18:14"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:18:14"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:21:18"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:21:18"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:21:22"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:21:22"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:21:22"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:21:22"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:21:22"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:21:26"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:21:26"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:21:29"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:21:29"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:21:33"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:21:33"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:21:33"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:21:33"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:21:33"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:22:15"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:22:15"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:22:20"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:22:20"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:22:20"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:22:20"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:22:20"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:25:35"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:25:35"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:25:41"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:25:41"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:25:41"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:25:41"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:25:41"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:29:43"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:29:43"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:29:48"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:29:48"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:29:48"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:29:48"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:29:48"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:31:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:31:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:31:06"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:31:06"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:31:06"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:31:06"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:31:06"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:35:36"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:35:36"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:35:41"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:35:41"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:35:41"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:35:41"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:35:41"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:35:47"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:35:47"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:35:51"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:35:51"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:35:51"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:35:51"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:35:51"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:46:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:46:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:47:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:47:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:47:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:47:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:47:00"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:47:02"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:47:02"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:47:06"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:47:06"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:47:06"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:47:06"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:47:06"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:47:32"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:47:32"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 12:47:34"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 12:47:34"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 12:47:38"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 12:47:38"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 12:47:38"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 12:47:38"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 12:47:38"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 13:12:21"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 13:12:21"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 13:12:21"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:12:21"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:12:21"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 13:14:12"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 13:14:12"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 13:14:15"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 13:14:15"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 13:14:15"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:14:15"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:14:15"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 13:15:51"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 13:15:51"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 13:15:53"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 13:15:53"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 13:15:57"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 13:15:57"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 13:15:57"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:15:57"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:15:57"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:16:46"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:16:46"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:16:46"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:16:46"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:16:51"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:16:51"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:16:51"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:16:51"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 13:17:03"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 13:17:03"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 13:17:08"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 13:17:08"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 13:17:08"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:17:08"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:17:08"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:18:23"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:18:23"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 13:18:24"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 13:18:24"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 13:18:24"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:18:24"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:18:24"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 13:20:18"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 13:20:19"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 13:20:23"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 13:20:23"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 13:20:23"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:20:23"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:20:23"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 13:29:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 13:29:56"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 13:30:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 13:30:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 13:30:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:30:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:30:00"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-27 13:35:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-27 13:35:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"a3ff2cda","timestamp":"2026-01-27 13:35:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Matched shortened ID a3ff2cda to full ID a3ff2cda-9225-4308-92af-42757b1e25c9","timestamp":"2026-01-27 13:35:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:35:01"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 13:39:01"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 13:39:01"}

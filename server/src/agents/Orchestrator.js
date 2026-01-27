@@ -460,7 +460,7 @@ export class AgentOrchestrator {
             // FALLBACK: Return sanitized text response
             console.log("=== [Orchestrator] Process Complete (with fallback) ===\n");
             return {
-                text: this._sanitizeResponse(executionResult.result?.text),
+                text: this._sanitizeResponse(executionResult.result?.text, executionResult.result?.gatheredData),
                 widgets: [],
                 usedModel: modelName // Return the model that was actually used (persisted)
             };
@@ -468,8 +468,13 @@ export class AgentOrchestrator {
     }
 
 
-    _sanitizeResponse(text) {
-        if (!text) return "Desculpe, não consegui processar sua solicitação.";
+    _sanitizeResponse(text, gatheredData = []) {
+        // If we have no text and no data, we failed to execute properly.
+        if (!text && (!gatheredData || gatheredData.length === 0)) {
+            return "Desculpe, tive um problema ao tentar buscar os dados. O modelo de r.A. pode estar sobrecarregado. Por favor, tente novamente em alguns instantes.";
+        }
+
+        if (!text) return "Processamento concluído.";
 
         // Remove function call syntax
         text = text.replace(/<function=.*?<\/function>/g, '');
@@ -483,6 +488,9 @@ export class AgentOrchestrator {
 
         // If text is empty after sanitization, provide friendly message
         if (!text.trim()) {
+            if (gatheredData && gatheredData.length > 0) {
+                return "Dados coletados com sucesso. Gerando visualizações...";
+            }
             return "Processamento concluído. Os dados foram coletados mas não há informações para exibir no momento.";
         }
 

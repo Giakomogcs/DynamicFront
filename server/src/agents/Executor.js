@@ -135,8 +135,8 @@ CRITICAL MULTI-AUTH RULES:
             4. If the plan says to "Call Tool X", you MUST return a Function Call for Tool X.
             5. If you lack credentials for a data tool, explain this in the text response, BUT DO NOT BLOCK the 'manage_pages' call.
             6. Return a Function Call object to invoke a tool.
-            7. **STRICTLY FORBIDDEN**: Do NOT output code blocks, python scripts, TODO lists, or "placeholder" implementations. You are an Agent, not a Code Editor. If you cannot do it with tools, say you cannot.
-            8. If you cannot execute a tool, return a text explanation but still TRY to execute 'manage_pages' if relevant.
+            7. **STRICTLY FORBIDDEN**: Do NOT output code blocks, python scripts, TODO lists, or "placeholder" implementations.
+            8. **REQUIRED PARAMS**: If a tool 'search' parameter is required but the user wants "everything", use a broad term (e.g. "%" or the Resource Name). NEVER send an empty string for a required parameter.
         `;
 
         let gatheredData = [];
@@ -166,6 +166,22 @@ CRITICAL MULTI-AUTH RULES:
                 const response = result.response;
                 const text = response.text() || "";
                 const toolCalls = response.functionCalls ? response.functionCalls() : [];
+
+                // DETECT SILENT FAILURE (Rate Limit / Safety / Empty Stream)
+                if (!text && toolCalls.length === 0) {
+                    // If we are in the first turn and got NOTHING, it's likely a provider failure.
+                    // The retry mechanism in modelManager might have exhausted or just returned empty.
+                    if (turn === 1) {
+                        throw new Error("Model returned empty response (Silence). identifying as potential Rate Limit or Overload.");
+                    }
+                }
+
+                // If text is non-empty but just whitespace/newlines
+                if (!text.trim() && toolCalls.length === 0) {
+                    if (turn === 1) {
+                        throw new Error("Model returned only whitespace. identifying as potential Rate Limit or Overload.");
+                    }
+                }
                 const knownToolNames = tools.map(t => t.name);
 
                 finalResponseText = text;
@@ -419,7 +435,7 @@ CRITICAL MULTI-AUTH RULES:
      * @param {object} [location] - Optional user location data {lat, lon}
      * @returns {object} - Filtered arguments
      */
-    applyIntelligentFilters(toolName, args, userMessage, tools, location = null, authContext = null) {
+    async applyIntelligentFilters(toolName, args, userMessage, tools, location = null, authContext = null) {
         const filtered = { ...args };
 
         // 1. Robust Tool Lookup (Direct -> Suffix -> Sanitized)
@@ -428,273 +444,124 @@ CRITICAL MULTI-AUTH RULES:
         if (!tool) {
             // Try matching by suffix (e.g. 'dn_auth...' matching 'api_...__dn_auth...')
             tool = tools.find(t => toolName.endsWith(t.name) || (t.name.includes('__') && t.name.endsWith(toolName)));
-
-            if (tool) {
-                console.log(`[Executor] 🔄 Fuzzy matched tool definition: '${tool.name}' for '${toolName}'`);
-            }
         }
 
         if (!tool || !tool.parameters || !tool.parameters.properties) {
-            // If still not found, check if it's an auth tool to allow injection regardless?
-            // No, we need parameters schema to be safe. But for auth tools we might want to force check.
-            if (toolName.includes('auth') || toolName.includes('session')) {
-                console.warn(`[Executor] ⚠️ Tool definition not found for '${toolName}', but proceeding for potential Auth Injection.`);
-            } else {
-                return filtered;
-            }
+            // Fallback for missing definitions (rare)
+            return filtered;
         }
 
         const params = tool.parameters.properties;
+        const paramKeys = Object.keys(params);
 
-        // 1. AUTO-PAGINATION: Apply default limits to prevent massive data pulls
+        // ---------------------------------------------------------
+        // 1. GENERIC PAGINATION DEFAULTS
+        // ---------------------------------------------------------
         if (params.limit && !filtered.limit) {
             filtered.limit = 10;
-            console.log(`[Executor] 📊 Auto-applied limit: 10`);
         }
-
         if (params.page && !filtered.page) {
             filtered.page = 1;
-            console.log(`[Executor] 📄 Auto-applied page: 1`);
         }
 
-        // 2. CONTEXT-BASED FILTERS: Extract filters from user message
-        const lowerMessage = userMessage.toLowerCase();
+        // ---------------------------------------------------------
+        // 2. GENERIC LOCATION INJECTION (System Feature: "Near Me")
+        // ---------------------------------------------------------
+        // If the tool accepts geo-coordinates and we have the user's location, inject it.
+        const latKeys = ['lat', 'latitude', 'userLat', 'userLatitude', 'companyLat'];
+        const lonKeys = ['lon', 'longitude', 'lng', 'userLng', 'userLongitude', 'companyLng'];
 
-        // Extract city names
-        let explicitCityDetected = false;
-        if (params.city && !filtered.city) {
-            const cityPatterns = [
-                /em\s+([\wÀ-ÿ\s]+?)(?:\s|$|\?|,)/i,
-                /de\s+([\wÀ-ÿ\s]+?)(?:\s|$|\?|,)/i,
-                /cidade\s+de\s+([\wÀ-ÿ\s]+?)(?:\s|$|\?|,)/i,
-                /moro\s+em\s+([\wÀ-ÿ\s]+?)(?:\s|$|\?|,)/i,
-                /no\s+municipio\s+de\s+([\wÀ-ÿ\s]+?)(?:\s|$|\?|,)/i
-            ];
+        const hasLatParam = paramKeys.find(k => latKeys.includes(k));
+        const hasLonParam = paramKeys.find(k => lonKeys.includes(k));
 
-            for (const pattern of cityPatterns) {
-                const match = userMessage.match(pattern);
-                if (match && match[1]) {
-                    const city = match[1].trim();
-                    // Common city names check
-                    if (city.length > 3 && city.length < 30) {
-                        filtered.city = city;
-                        explicitCityDetected = true;
-                        console.log(`[Executor] 🏙️ Auto-detected city filter: "${city}"`);
+        if (hasLatParam && hasLonParam && location) {
+            // Only inject if NOT already provided by the model (Planner/Executor might have set specific coords)
+            if (!filtered[hasLatParam] && !filtered[hasLonParam]) {
+                const latVal = location.lat || location.latitude;
+                const lonVal = location.lon || location.longitude || location.lng;
 
-                        // PRIORITY FIX: If user specifies city, remove Geo-Coords to force City-Search
-                        if (filtered.lat) delete filtered.lat;
-                        if (filtered.lon) delete filtered.lon;
-                        if (filtered.latitude) delete filtered.latitude;
-                        if (filtered.longitude) delete filtered.longitude;
-                        if (filtered.userLat) delete filtered.userLat;
-                        if (filtered.userLng) delete filtered.userLng;
-                        console.log(`[Executor] 🎯 Enforcing City Search (Cleared Lat/Lon context)`);
-                        break;
+                if (latVal && lonVal) {
+                    filtered[hasLatParam] = latVal;
+                    filtered[hasLonParam] = lonVal;
+                    console.log(`[Executor] 📍 Generic Location Injection: ${latVal}, ${lonVal}`);
+                }
+            }
+        }
+
+        // Auto-set distance if not present (default 50km for geo searches)
+        if (params.distance && !filtered.distance) {
+            filtered.distance = 50;
+        }
+
+        // ---------------------------------------------------------
+        // 3. GENERIC CONTEXT INJECTION (Accumulated Memory)
+        // ---------------------------------------------------------
+        if (this.contextAccumulator) {
+            // Iterate over all params the tool accepts
+            for (const key of paramKeys) {
+                // If the param is missing in the call BUT exists in our memory
+                if (!filtered[key] && this.contextAccumulator[key]) {
+                    filtered[key] = this.contextAccumulator[key];
+                    console.log(`[Executor] 🧠 Context Injection: Injected '${key}' from memory.`);
+                }
+
+                // Fuzzy Match for common context keys (e.g. 'companyCnpj' -> 'cnpj')
+                if (!filtered[key]) {
+                    if (key === 'cnpj' && this.contextAccumulator.companyCnpj) {
+                        filtered[key] = this.contextAccumulator.companyCnpj;
+                        console.log(`[Executor] 🧠 Context Injection: Injected 'companyCnpj' into 'cnpj'.`);
+                    }
+                    if (key === 'token' && this.contextAccumulator.authToken) {
+                        filtered[key] = this.contextAccumulator.authToken;
                     }
                 }
             }
         }
 
-        // Extract state (UF)
-        if (params.state && !filtered.state) {
-            const statePattern = /\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/i;
-            const match = userMessage.match(statePattern);
-            if (match) {
-                filtered.state = match[1].toUpperCase();
-                console.log(`[Executor] 🗺️ Auto-detected state filter: "${filtered.state}"`);
+        // ---------------------------------------------------------
+        // 4. GENERIC AUTH PROFILE INJECTION (Auto-Auth)
+        // ---------------------------------------------------------
+        // Determine the RESOURCE ID for this tool to find the correct profile
+        let resourceId = 'default';
+        if (toolName.includes('__')) {
+            const parts = toolName.split('__');
+            // Format: api_UUID__action OR db_UUID__action
+            const prefix = parts[0];
+            // extract UUID
+            const uuid = prefix.replace('api_', '').replace('db_', '');
+            if (uuid) resourceId = uuid;
+        }
+
+        // Find applicable profile
+        let authorizedUser = null;
+        if (authContext && authContext.profile) {
+            authorizedUser = authContext.profile; // Priority: Enforced Context
+        } else {
+            // Try to find a profile linked to this resource
+            const resource = this.resourceEnricher.resources.get(resourceId);
+            if (resource && resource.authProfiles && resource.authProfiles.length > 0) {
+                authorizedUser = resource.authProfiles[0]; // Use first available profile for this resource
             }
         }
 
-        // 3. SMART DEFAULTS: Set reasonable defaults for optional filters
-        if (params.isRecommended !== undefined && filtered.isRecommended === undefined) {
-            filtered.isRecommended = true;
-            console.log(`[Executor] ⭐ Auto-applied isRecommended: true`);
-        }
+        if (authorizedUser && authorizedUser.credentials) {
+            // Iterate over tool params and inject matching credentials
+            for (const [paramName, paramValue] of Object.entries(authorizedUser.credentials)) {
 
-        // 4. SPECIFIC FIX: dn_schoolscontroller_getshools - Clear generic 'search_bar'
-        // 4. SPECIFIC FIX: dn_schoolscontroller_getshools - Clear generic 'search_bar'
-        // PLANNER HINT: When searching for schools to find a course, the planner should:
-        // 1. **Find Units**: Call `dn_schoolscontroller_getshools(city="CityName", name="")`.
-        //    - **IMPORTANT**: set `name` to EMPTY string (or omit it). Do NOT filter schools by the course name (e.g. "Mechatronics"). We need ANY school nearby.
-        if (toolName.includes('schoolscontroller_getshools')) {
-            const genericTerms = ['escola', 'escolas', 'school', 'schools', 'unidade', 'senai'];
-            // Also clear if it looks like a COURSE topic, because we want 'getshools' to return ALL schools.
-            const courseTerms = ['mecatronica', 'mecatrônica', 'robotica', 'robótica', 'elétrica', 'eletrica', 'eletronica', 'eletrônica', 'quimica', 'química', 'segurança', 'logistica', 'gestão', 'ti', 'informatica', 'informática'];
+                // Only inject if the tool explicitly asks for this parameter
+                if (paramKeys.includes(paramName)) {
+                    // Force overwrite for sensitive/auth fields (password, token)
+                    // Soft overwrite for others (email, user)
+                    const isSensitive = ['password', 'token', 'secret', 'key'].some(s => paramName.toLowerCase().includes(s));
+                    const isAuthField = ['email', 'user', 'username', 'login'].includes(paramName);
 
-            // Check both 'search_bar' (planner instruction legacy) and 'name' (actual schema)
-            const valToCheck = filtered.search_bar || filtered.name || "";
-            const term = valToCheck.toLowerCase().trim();
-
-            if (term && (genericTerms.includes(term) || courseTerms.some(t => term.includes(t)))) {
-                console.log(`[Executor] 🧹 Clearing schools filter term: "${valToCheck}" (Generic or Course Topic) to allow broad school search.`);
-                if (filtered.search_bar) filtered.search_bar = "";
-                if (filtered.name) filtered.name = "";
-            }
-        }
-
-        // 4.1.1. SPECIFIC FIX: dn_companiescontroller_getcompanyprofile
-        // - Also benefits from CNPJ injection
-        if (toolName.includes('companiescontroller_getcompanyprofile')) {
-            // 🔥 INJECT CNPJ from auth if available
-            if (this.contextAccumulator && this.contextAccumulator.companyCnpj) {
-                if (!filtered.cnpj || filtered.cnpj.trim() === "") {
-                    console.log(`[Executor] 💉 Auto-injecting CNPJ for company profile: ${this.contextAccumulator.companyCnpj}`);
-                    filtered.cnpj = this.contextAccumulator.companyCnpj;
-                }
-            }
-        }
-
-        // 4.1. SPECIFIC FIX: dn_enterprisecontroller_listenterprise
-        // - Requires search_bar (cannot be empty).
-        // - Does NOT support lat/lon.
-        if (toolName.includes('enterprisecontroller_listenterprise')) {
-            // Clean Geo Context
-            if (filtered.lat) delete filtered.lat;
-            if (filtered.lon) delete filtered.lon;
-            if (filtered.latitude) delete filtered.latitude;
-            if (filtered.longitude) delete filtered.longitude;
-
-            // 🔥 INJECT CNPJ from auth if available
-            if (this.contextAccumulator && this.contextAccumulator.companyCnpj) {
-                if (!filtered.search_bar || filtered.search_bar.trim() === "") {
-                    console.log(`[Executor] 💉 Auto-injecting CNPJ from auth: ${this.contextAccumulator.companyCnpj}`);
-                    filtered.search_bar = this.contextAccumulator.companyCnpj;
-                }
-            }
-
-            // Handle search_bar
-            if (!filtered.search_bar || filtered.search_bar.trim() === "") {
-                console.log(`[Executor] 🏢 Enterprise Search: search_bar is empty. Defaulting to "Empresa" (Generic) to list available.`);
-                filtered.search_bar = "Empresa";
-            }
-        }
-
-        // 4.2. AUTO-AUTH INJECTION (Sagaz Security)
-        // If the tool is an Auth tool and parameters are missing, try to auto-inject from Resource Profile.
-        if (toolName.includes('authcontroller_session') || toolName.includes('login') || toolName.includes('createsession')) {
-            console.log(`[Executor] 🔍 DEBUG: Auth tool detected! Tool: ${toolName}`);
-            console.log(`[Executor] 🔍 DEBUG: authContext =`, authContext);
-            console.log(`[Executor] 🔍 DEBUG: filtered args BEFORE injection =`, filtered);
-
-            let resourceId = null;
-            if (!toolName.includes('__') && tools) {
-                const match = tools.find(t => t.name.endsWith(toolName) || t.name === toolName);
-                if (match && match.name.includes('__')) {
-                    const parts = match.name.split('__');
-                    const rawId = parts[0].replace('api_', '').replace('db_', '');
-                    if (resourceEnricher.resources.has(rawId)) resourceId = rawId;
-                    else resourceId = 'default';
-                }
-            } else if (toolName.includes('__')) {
-                const parts = toolName.split('__');
-                const rawId = parts[0].replace('api_', '').replace('db_', '');
-                resourceId = resourceEnricher.resources.has(rawId) ? rawId : 'default';
-            }
-            if (!resourceId) resourceId = 'default';
-
-            console.log(`[Executor] 🧠 Using Resource ID: '${resourceId}' for Auth Profile Lookup`);
-            const resource = resourceEnricher.resources.get(resourceId);
-            let authorizedUser = null;
-
-            if (authContext && authContext.profile) {
-                authorizedUser = authContext.profile;
-                console.log(`[Executor] 🔐 Using Enforced Auth Context: ${authorizedUser.label}`);
-            }
-
-            if (!authorizedUser && resource && resource.authProfiles && resource.authProfiles.length > 0) {
-                authorizedUser = resource.authProfiles[0];
-                if (toolName.includes('dashboard') || toolName.includes('admin') || toolName.includes('session')) {
-                    const adminProfile = resource.authProfiles.find(p => p.role === 'senai_admin');
-                    if (adminProfile) authorizedUser = adminProfile;
-                }
-            }
-
-            if (authorizedUser && authorizedUser.credentials) {
-                console.log(`[Executor] 🔐 Auto-Auth: Injecting credentials for user '${authorizedUser.label}' (${authorizedUser.role})`);
-
-                // STRICT PARAMETER MATCHING: Only inject credentials that the tool actually requests.
-                // Find tool definition
-                const toolDef = tools ? tools.find(t => t.name === toolName) : null;
-                const allowedParams = toolDef ? (toolDef.inputSchema?.properties ? Object.keys(toolDef.inputSchema.properties) : []) : [];
-
-                if (toolDef) {
-                    console.log(`[Executor] 🛡️ Strict Auth: Tool '${toolName}' accepts: [${allowedParams.join(', ')}]`);
-                }
-
-                for (const [paramName, paramValue] of Object.entries(authorizedUser.credentials)) {
-                    // 1. STRICT CHECK: Only inject if tool defines this parameter
-                    if (allowedParams.length > 0 && !allowedParams.includes(paramName)) {
-                        continue; // Skip keys not in schema (e.g. don't send 'cnpj' to a login endpoint that only wants 'email'/'password')
-                    }
-
-                    // 2. For AUTH tools: ALWAYS override existing values with profile credentials
-                    // This prevents LLM from hallucinating fake emails
-                    if (toolName.includes('auth') || toolName.includes('session') || toolName.includes('login')) {
+                    if (isSensitive || isAuthField || !filtered[paramName]) {
                         filtered[paramName] = paramValue;
-                        console.log(`[Executor]    -> ✅ FORCED injection '${paramName}' = ${paramName === 'password' ? '****' : paramValue}`);
-                    } else {
-                        // For non-auth tools, only inject if missing or invalid
-                        const currentVal = filtered[paramName];
-                        let shouldOverwrite = false;
-                        if (!currentVal) shouldOverwrite = true;
-                        else if (paramName === 'email' && !currentVal.includes('@')) shouldOverwrite = true;
-                        else if (paramName === 'user' && !currentVal.includes('@')) shouldOverwrite = true;
-                        else if (paramName === 'cnpj' && currentVal.length < 5) shouldOverwrite = true;
-
-                        if (shouldOverwrite) {
-                            filtered[paramName] = paramValue;
-                            console.log(`[Executor]    -> ✅ Injected '${paramName}'`);
-                        }
+                        const logValue = isSensitive ? '****' : paramValue;
+                        console.log(`[Executor] 🔐 Auth Injection: '${paramName}' = ${logValue}`);
                     }
                 }
             }
-        }
-
-        // 5. SAGAZ DEFAULTS: Auto-fill Location and CNPJ
-        const paramKeys = Object.keys(params);
-        if ((paramKeys.includes('lat') || paramKeys.includes('latitude') || paramKeys.includes('userLat') || paramKeys.includes('companyLat')) &&
-            (!filtered.lat && !filtered.latitude && !filtered.userLat && !filtered.companyLat)) {
-
-            let lat = -23.5505; // Default SP
-            if (location && location.lat) {
-                lat = location.lat;
-                console.log(`[Executor] 📍 Sagaz Mode: Using BROWSER Location: ${lat}`);
-            } else {
-                console.log(`[Executor] 📍 Sagaz Mode: Using DEFAULT Location (Sao Paulo): ${lat}`);
-            }
-
-            if (paramKeys.includes('lat')) filtered.lat = lat;
-            if (paramKeys.includes('latitude')) filtered.latitude = lat;
-            if (paramKeys.includes('userLat')) filtered.userLat = lat;
-            if (paramKeys.includes('companyLat')) filtered.companyLat = lat;
-
-            // Auto-set distance if not present (default 50km for geo searches)
-            if (paramKeys.includes('distance') && !filtered.distance) {
-                filtered.distance = 50;
-                console.log(`[Executor] 📏 Sagaz Mode: Auto-setting distance to 50km`);
-            }
-        }
-
-        if ((paramKeys.includes('lon') || paramKeys.includes('longitude') || paramKeys.includes('userLng') || paramKeys.includes('companyLng')) &&
-            (!filtered.lon && !filtered.longitude && !filtered.userLng && !filtered.companyLng)) {
-
-            let lon = -46.6333; // Default SP
-            if (location && location.lon) lon = location.lon;
-
-            if (paramKeys.includes('lon')) filtered.lon = lon;
-            if (paramKeys.includes('longitude')) filtered.longitude = lon;
-            if (paramKeys.includes('userLng')) filtered.userLng = lon;
-            if (paramKeys.includes('companyLng')) filtered.companyLng = lon;
-        }
-
-        if (paramKeys.includes('schoolsCnpj') && (!filtered.schoolsCnpj || filtered.schoolsCnpj.length === 0)) {
-            console.log(`[Executor] 🏢 Sagaz Mode: Injecting Default CNPJ Context`);
-            filtered.schoolsCnpj = [{
-                cnpj: "60.627.955/0001-31",
-                latitude: -23.5505,
-                longitude: -46.6333,
-                name: "Escola SENAI Default"
-            }];
         }
 
         return filtered;
