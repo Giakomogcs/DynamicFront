@@ -41,13 +41,17 @@ Your goal is to classify the INTENT.
         1. ** NAVIGATE **: User wants to go to an EXISTING page listed above(e.g., "Go to dashboard").
 2. ** CREATE_PAGE **: User wants to create a NEW distinct page(e.g., "Create a settings page", "Add a marketing dashboard").
 3. ** UPDATE_CURRENT **: User wants to modify the CURRENT page(e.g., "Add a calendar here", "Put a chart on this page", "Change the title").
-4. ** CHAT **: User is greeting, saying thanks, or asking general questions with no UI intent(e.g., "Olá", "Who are you?", "Help").
+4. ** DATA_REQUEST **: User is asking for information, data, organizations, searching for items, or using system tools (e.g., "Show me schools", "List companies", "Find courses", "Search for X"). This requires TOOL USAGE.
+5. ** CHAT **: User is greeting, saying thanks, or asking general questions with no UI/Data intent(e.g., "Olá", "Who are you?", "Help").
 
-            IMPORTANT: If the user says something like "Olá", "Tudo bem", or "Bom dia", ALWAYS classify as CHAT.
+            IMPORTANT Rules: 
+            - If the user asks for specific **DATA** or **RESOURCES** (e.g. "List items", "Show X", "Find Y", "Analysis of Z") -> Classify as ** DATA_REQUEST ** or ** UPDATE_CURRENT **.
+            - If the request implies **fetching**, **listing**, **searching**, or **calculating** information from the backend -> ** DATA_REQUEST **.
+            - If the user says something like "Olá", "Tudo bem", or "Bom dia", ALWAYS classify as CHAT.
 
 OUTPUT FORMAT(JSON):
         {
-            "intent": "NAVIGATE" | "CREATE_PAGE" | "UPDATE_CURRENT" | "CHAT",
+            "intent": "NAVIGATE" | "CREATE_PAGE" | "UPDATE_CURRENT" | "DATA_REQUEST" | "CHAT",
                 "targetSlug": "string"(For NAVIGATE: exact slug.For CREATE_PAGE: suggested new slug.For UPDATE_CURRENT: "${currentSlug}"),
                     "pageTitle": "string"(For CREATE_PAGE: suggested title),
                         "confidence": number(0 - 1)

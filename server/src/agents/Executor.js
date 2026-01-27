@@ -302,350 +302,77 @@ CRITICAL MULTI-AUTH RULES:
                     });
 
                     // Execute Tools
-                    for (const call of toolCalls) {
+                    // Execute Tools in PARALLEL (Turbo Mode)
+                    const toolPromises = toolCalls.map(async (call) => {
                         // FIX: Map sanitized name back to original MCP name
                         const originalName = getOriginalToolName(call.name);
                         if (originalName !== call.name) {
-                            console.log(`[Executor] 🔄 Mapping sanitized name '${call.name}' back to '${originalName}'`);
                             call.name = originalName;
                         }
 
-                        console.log(`[Executor] >>> Calling Tool: ${call.name}`);
+                        console.log(`[Executor] 🚀 Async Launch: ${call.name}`);
 
-                        // Apply intelligent filters BEFORE execution
+                        // Apply filters
                         const filteredArgs = this.applyIntelligentFilters(call.name, call.args, userMessage, tools, location, authContext);
 
-                        // ✨ PRE-VALIDATION: Check if required params are present
+                        // Validation
                         const validation = this._validateToolParams(call.name, filteredArgs, tools);
                         if (!validation.valid) {
-                            console.log(`[Executor] ⚠️ Tool params invalid: ${validation.reason}`);
-
-                            // Return structured error that StrategicAgent can understand
-                            const toolResultError = {
+                            const errorContent = {
                                 isError: true,
-                                content: [{
-                                    text: JSON.stringify({
-                                        error: 'MISSING_REQUIRED_PARAMS',
-                                        missing: validation.missing,
-                                        suggestion: validation.suggestion,
-                                        tool: call.name
-                                    })
-                                }]
+                                content: [{ text: JSON.stringify({ error: 'MISSING_PARAMS', details: validation.missing }) }]
                             };
-
-                            // Add to gathered data and continue
-                            gatheredData.push({ tool: call.name, result: toolResultError });
-                            messages.push({
-                                role: 'tool',
-                                name: call.name,
-                                content: toolResultError.content
-                            });
-
-                            continue; // Skip actual execution
+                            return { call, result: errorContent, filteredArgs, isError: true };
                         }
 
-                        // SMART CONTEXT INJECTION (Accumulator)
-                        // If we have previous context for this tool's parameters, inject it if missing
+                        // Context Injection (Snapshot for this call)
                         if (this.contextAccumulator) {
-                            // Inject Schools CNPJ (List)
-                            if (filteredArgs.schoolsCnpj === undefined && this.contextAccumulator.schoolsCnpj && toolName.includes('courses')) {
+                            if (filteredArgs.schoolsCnpj === undefined && this.contextAccumulator.schoolsCnpj && call.name.includes('courses')) {
                                 filteredArgs.schoolsCnpj = this.contextAccumulator.schoolsCnpj;
-                                console.log(`[Executor] 🧠 Injecting Context: schoolsCnpj = ${JSON.stringify(filteredArgs.schoolsCnpj)}`);
-                            }
-                            // Inject Course ID (Single)
-                            if ((filteredArgs.courseId === undefined || filteredArgs.courseId === "") && this.contextAccumulator.courseId) {
-                                // Check if tool likely needs an ID (has 'details' or 'get' in name)
-                                if (toolName.includes('details') || toolName.includes('getcourse')) {
-                                    filteredArgs.courseId = this.contextAccumulator.courseId;
-                                    console.log(`[Executor] 🧠 Injecting Context: courseId = ${filteredArgs.courseId}`);
-                                }
                             }
                         }
 
-                        let toolResult;
+                        // Execution
                         try {
-                            // CHECK CACHE FIRST
+                            // Check Cache
                             const cached = cacheService.get(call.name, filteredArgs);
+                            let toolResult;
 
                             if (cached) {
-                                console.log(`[Executor] ⚡ Using cached result for ${call.name}`);
+                                console.log(`[Executor] ⚡ Cache Hit: ${call.name}`);
                                 toolResult = cached;
                             } else {
-                                // Execute tool
                                 toolResult = await toolService.executeTool(call.name, filteredArgs);
-
-                                // Cache successful results
                                 if (!toolResult.isError) {
-                                    const ttl = cacheService.getRecommendedTTL(call.name);
-                                    cacheService.set(call.name, filteredArgs, toolResult, ttl);
+                                    cacheService.set(call.name, filteredArgs, toolResult, cacheService.getRecommendedTTL(call.name));
                                 }
                             }
-
-                            // 🔥 EXTRACT CONTEXT from AUTH responses & UPDATE PROFILE
-                            if (!toolResult.isError && toolResult.content && (call.name.includes('auth') || call.name.includes('login') || call.name.includes('session'))) {
-                                try {
-                                    const authText = toolResult.content[0]?.text;
-                                    if (authText) {
-                                        const authData = JSON.parse(authText);
-
-                                        // 1. Update Context Accumulator (Runtime)
-                                        this.contextAccumulator = this.contextAccumulator || {};
-                                        if (authData.cnpj) this.contextAccumulator.companyCnpj = authData.cnpj;
-                                        if (authData.name) this.contextAccumulator.companyName = authData.name;
-                                        if (authData.id) this.contextAccumulator.companyId = authData.id;
-                                        if (authData.token) this.contextAccumulator.authToken = authData.token;
-
-                                        console.log(`[Executor] 🧠 Extracted from auth: CNPJ=${authData.cnpj || 'N/A'}, Name=${authData.name || 'N/A'}`);
-
-                                        // 2. DYNAMIC PROFILE UPDATE (Persistence)
-                                        // Find which profile was used for this call
-                                        let usedEmail = filteredArgs.email || filteredArgs.user;
-                                        if (usedEmail) {
-                                            const profiles = this.resourceEnricher.getAllProfiles();
-                                            const usedProfile = profiles.find(p => p.credentials?.email === usedEmail || p.credentials?.user === usedEmail);
-
-                                            if (usedProfile) {
-                                                console.log(`[Executor] 💾 Updating Auth Profile '${usedProfile.label}' with new data...`);
-
-                                                // Merge new data into credentials
-                                                const newCredentials = { ...usedProfile.credentials };
-                                                const updates = {};
-                                                let hasUpdates = false;
-
-                                                // 1. Credentials Updates (Generic/Dynamic)
-                                                // User requested to save EVERYTHING ("pode salvar tudo") because different resources return different data.
-                                                // We merge ALL fields from authData into credentials.
-                                                Object.entries(authData).forEach(([key, value]) => {
-                                                    // Skip complex objects if needed, or unnecessary fields like 'message' or 'statusCode' if they exist?
-                                                    // Assuming authData is the "user" object or "session" object returned.
-                                                    // We'll skip standard HTTP response fields if they leak in, but usually tool result text is the data payload.
-                                                    if (key !== 'message' && key !== 'statusCode' && key !== 'error') {
-                                                        if (JSON.stringify(newCredentials[key]) !== JSON.stringify(value)) {
-                                                            newCredentials[key] = value;
-                                                            hasUpdates = true;
-                                                        }
-                                                    }
-                                                });
-
-                                                if (hasUpdates) {
-                                                    updates.credentials = newCredentials;
-                                                }
-
-                                                // 2. Core Profile Updates (Role, Label/Name)
-                                                // Update Label (Name in UI)
-                                                if (authData.name && usedProfile.label !== authData.name) {
-                                                    updates.label = authData.name;
-                                                    hasUpdates = true;
-                                                }
-                                                // Update Role if provided and different
-                                                if (authData.role && usedProfile.role !== authData.role) {
-                                                    updates.role = authData.role;
-                                                    hasUpdates = true;
-                                                }
-
-                                                if (hasUpdates) {
-                                                    await this.resourceEnricher.updateProfile(usedProfile.resourceId, usedProfile.id, updates);
-                                                    console.log(`[Executor] ✅ Auth Profile Updated in DB (Label, Role, or Creds changed).`);
-                                                } else {
-                                                    console.log(`[Executor] No new data to update in profile.`);
-                                                }
-                                            }
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.warn(`[Executor] Failed to process auth response for profile update: ${e.message}`);
-                                }
-                            }
-
-                            // EXTRACT ENTITIES for future context (Generic Entity Recognition)
-                            if (toolResult && !toolResult.isError && toolResult.content) {
-                                this.extractContextEntities(toolResult.content);
-                            }
-
-                            // 5.1. AUTO-RETRY: Schools Not Found -> Fallback to Hub (São Paulo)
-                            // If user is in a location with no schools, we must find *some* schools to allow course search to proceed.
-                            if (call.name.includes('schoolscontroller_getshools')) {
-                                const resultStr = JSON.stringify(toolResult.content);
-                                let isEmpty = false;
-                                try {
-                                    const parsed = JSON.parse(toolResult.content[0].text);
-                                    const list = Array.isArray(parsed) ? parsed : (parsed.items || parsed.data || []);
-                                    if (list.length === 0) isEmpty = true;
-                                } catch (e) {
-                                    if (resultStr.includes('"length":0') || resultStr.includes('[]')) isEmpty = true;
-                                }
-
-                                if (isEmpty && !filteredArgs._isFallback) {
-                                    // Use 'distance' to detect if we were doing a GEO search
-                                    const wasGeoSearch = (filteredArgs.lat || filteredArgs.latitude) && (filteredArgs.lon || filteredArgs.longitude);
-
-                                    if (wasGeoSearch) {
-                                        console.log(`[Executor] 🔄 Auto-Retry: No schools found at current location/radius. Retrying with WIDER RADIUS (100km)...`);
-                                        const retryArgs = {
-                                            ...filteredArgs,
-                                            distance: 100, // Expand radius
-                                            _isFallback: true
-                                        };
-
-                                        try {
-                                            toolResult = await toolService.executeTool(call.name, retryArgs);
-                                            console.log(`[Executor] ✅ Auto-Retry (Wider Radius) SUCCESS.`);
-
-                                            messages.push({
-                                                role: 'tool',
-                                                name: call.name,
-                                                content: this.compressResult(toolResult, 5)
-                                            });
-                                            gatheredData.push({ tool: call.name, result: this.compressResult(toolResult, 15) });
-                                            continue;
-                                        } catch (retryErr) {
-                                            console.warn(`[Executor] Wider radius retry failed: ${retryErr.message}`);
-                                        }
-                                    }
-                                }
-
-
-                            }
-
-                            // SELF-CORRECTION: Check if tool was not found (Hallucination prevention)
-                            if (toolResult && toolResult.isError && toolResult.content && toolResult.content[0].text.includes('not found')) {
-                                const validToolNames = tools.map(t => t.name).join(', ');
-                                console.warn(`[Executor] ⚠️ Hallucination detected: '${call.name}'. Triggering Self-Correction.`);
-
-                                // Override error with GUIDANCE
-                                toolResult.content[0].text = `[SYSTEM ERROR]: Tool '${call.name}' does not exist. You are HALLUCINATING generic tools. You MUST use one of the following available tools: [${validToolNames}]. Retry now using the correct tool name.`;
-                            }
-                            // DATA ROBUSTNESS: Check for empty results and suggest retries
-                            else if (toolResult && !toolResult.isError) {
-                                const resultStr = JSON.stringify(toolResult.content);
-                                // Simple heuristic: length of result is small or explicit "empty"/"no results"
-                                if (resultStr.length < 50 || resultStr.includes('"length":0') || resultStr.includes('[]')) {
-                                    const argValues = Object.values(call.args).filter(v => typeof v === 'string');
-                                    if (argValues.length > 0) {
-                                        console.log(`[Executor] 🔄 Empty result detected. Suggesting normalization retry for: ${argValues.join(', ')}`);
-                                        toolResult.content.push({
-                                            type: "text",
-                                            text: `\n[SYSTEM HINT]: The search returned NO results for "${argValues.join(', ')}". \n1. Try REMOVING accents (e.g. "São Paulo" -> "Sao Paulo").\n2. Try UPPERCASE or lowercase.\n3. Try a broader search term.\n\n[AUTH HINT]: If this tool requires login, ensure you have called the authentication tool first. If you suspect missing privileges, report this to the user.`
-                                        });
-                                    }
-                                } else {
-                                }
-                            }
-
+                            return { call, result: toolResult, filteredArgs, isError: false };
                         } catch (e) {
-                            console.error(`[Executor] Tool Error (${call.name}):`, e);
-                            toolResult = { isError: true, content: [{ text: `Error: ${e.message}` }] };
+                            console.error(`[Executor] 💥 Error in ${call.name}:`, e);
+                            return { call, result: { isError: true, content: [{ text: `Error: ${e.message}` }] }, filteredArgs, isError: true };
+                        }
+                    });
+
+                    // Await ALL tools
+                    const results = await Promise.all(toolPromises);
+
+                    // Process Results Sequentially for History Consistency
+                    for (const { call, result, isError, filteredArgs } of results) {
+                        // Auth & Side Effects (Post-Processing)
+                        if (!isError && result.content && (call.name.includes('auth') || call.name.includes('session'))) {
+                            this._processAuthSideEffects(result, call.args, authContext);
                         }
 
+                        gatheredData.push({ tool: call.name, result: this.compressResult(result, 15) });
 
-                        // const uiResult = this.compressResult(toolResult, 15); // Removed duplicate
-                        const uiResult = this.compressResult(toolResult, 15); // Efficient limit for UI (was 50)
-
-                        // AUTO-RETRY LOGIC 1: Recommended Courses (Broad Search)
-                        if (call.name.includes('recommendedcourses') && (!uiResult.content[0].text.includes('id') && !uiResult.content[0].text.includes('courseId'))) {
-                            let isEmpty = false;
-                            try {
-                                const parseCheck = JSON.parse(uiResult.content[0].text);
-                                const listCheck = Array.isArray(parseCheck) ? parseCheck : (parseCheck.items || parseCheck.data);
-                                if (!listCheck || listCheck.length === 0) isEmpty = true;
-                            } catch (e) {
-                                if (uiResult.content[0].text.length < 50) isEmpty = true;
-                            }
-
-                            if (isEmpty && (filteredArgs.isRecommended === true || filteredArgs.isRecommended === undefined)) {
-                                console.log(`[Executor] 🔄 Auto-Retry: Found 0 recommended courses. Retrying with isRecommended=false (Broad Search)...`);
-                                const retryArgs = { ...filteredArgs, isRecommended: false };
-
-                                try {
-                                    toolResult = await toolService.executeTool(call.name, retryArgs); // FIX: Use toolService, not executeApiTool
-                                    const retryUiResult = this.compressResult(toolResult, 15);
-                                    const retryParse = JSON.parse(retryUiResult.content[0].text);
-                                    const retryList = Array.isArray(retryParse) ? retryParse : (retryParse.items || retryParse.data);
-                                    if (retryList && retryList.length > 0) {
-                                        console.log(`[Executor] ✅ Auto-Retry SUCCESS: Found ${retryList.length} courses in broad search.`);
-                                        gatheredData.push({ tool: call.name, result: retryUiResult });
-                                        messages.push({ role: 'tool', name: call.name, content: this.compressResult(toolResult, 5) });
-                                        continue;
-                                    }
-                                } catch (retryError) {
-                                    console.warn(`[Executor] Auto-retry failed: ${retryError.message}`);
-                                }
-                            }
-                        }
-
-                        // AUTO-RETRY LOGIC 2: Enterprise Search (Broadening & Refinement)
-                        if (call.name.includes('enterprisecontroller_listenterprise')) {
-                            let isEmpty = false;
-                            try {
-                                const parseCheck = JSON.parse(uiResult.content[0].text);
-                                const listCheck = Array.isArray(parseCheck) ? parseCheck : (parseCheck.items || parseCheck.data);
-                                if (!listCheck || listCheck.length === 0) isEmpty = true;
-                            } catch (e) {
-                                if (uiResult.content[0].text.length < 50) isEmpty = true;
-                            }
-
-                            if (isEmpty) {
-                                // Strategy A: Simplify Name (e.g. "Selco Industria" -> "Selco")
-                                const currentSearch = filteredArgs.search_bar || "";
-                                const words = currentSearch.trim().split(/\s+/);
-
-                                if (words.length > 1) {
-                                    const broadTerm = words[0]; // Try just the first word
-                                    console.log(`[Executor] 🔄 Auto-Retry: Company not found. Retrying with BROADER term: "${broadTerm}"`);
-
-                                    const retryArgs = { ...filteredArgs, search_bar: broadTerm };
-                                    try {
-                                        const retryResult = await toolService.executeTool(call.name, retryArgs);
-                                        const retryUiResult = this.compressResult(retryResult, 15);
-                                        const check = JSON.parse(retryUiResult.content[0].text);
-                                        const list = Array.isArray(check) ? check : (check.items || check.data);
-
-                                        if (list && list.length > 0) {
-                                            console.log(`[Executor] ✅ Auto-Retry SUCCESS: Found ${list.length} companies with "${broadTerm}".`);
-                                            // Sort by location if possible (Sagaz) - already implicit in data return usually? No, we must sort in frontend or here.
-                                            // For now, just return the data.
-                                            gatheredData.push({ tool: call.name, result: retryUiResult });
-                                            messages.push({ role: 'tool', name: call.name, content: this.compressResult(retryResult, 5) });
-                                            toolResult = retryResult; // Update reference for fallback history push
-                                            continue;
-                                        }
-                                    } catch (e) { console.warn("Retry A failed", e); }
-                                }
-
-                                // Strategy B: Fallback State (if not SP and no location given, maybe try SP?)
-                                // Only if Strategy A failed or wasn't applicable.
-                                if (filteredArgs.state && filteredArgs.state !== 'SP') {
-                                    console.log(`[Executor] 🔄 Auto-Retry: Trying in SP (Hub) as fallback...`);
-                                    const retryArgs = { ...filteredArgs, state: 'SP' };
-                                    try {
-                                        const retryResult = await toolService.executeTool(call.name, retryArgs);
-                                        const retryUiResult = this.compressResult(retryResult, 15);
-                                        const check = JSON.parse(retryUiResult.content[0].text);
-                                        const list = Array.isArray(check) ? check : (check.items || check.data);
-
-                                        if (list && list.length > 0) {
-                                            console.log(`[Executor] ✅ Auto-Retry SUCCESS: Found companies in SP.`);
-                                            gatheredData.push({ tool: call.name, result: retryUiResult });
-                                            messages.push({ role: 'tool', name: call.name, content: this.compressResult(retryResult, 5) });
-                                            continue;
-                                        }
-                                    } catch (e) { console.warn("Retry B failed", e); }
-                                }
-                            }
-                        }
-
-                        // Standard Push (if retry didn't happen or didn't supersede)
-                        gatheredData.push({ tool: call.name, result: uiResult });
-
-                        const historyContent = this.compressResult(toolResult, 5); // Strict limit for Context
-
-                        // Append Tool Output to History
                         messages.push({
                             role: 'tool',
                             name: call.name,
-                            content: historyContent
+                            content: this.compressResult(result, 5)
                         });
                     }
+
                 } else {
                     break;
                 }
@@ -1266,6 +993,8 @@ CRITICAL MULTI-AUTH RULES:
             }
         }
 
+
+
         if (neededProfiles.length === 0) return null;
 
         // Retorna MÚLTIPLOS perfis se necessário
@@ -1279,6 +1008,48 @@ CRITICAL MULTI-AUTH RULES:
             profiles: neededProfiles,
             profile: neededProfiles[0] // Mantém compatibilidade com código existente
         };
+    }
+    /**
+     * Processes side effects from Authentication tool results (Profile updates, token extraction)
+     */
+    async _processAuthSideEffects(toolResult, args, authContext) {
+        try {
+            const authText = toolResult.content[0]?.text;
+            if (!authText) return;
+
+            const authData = JSON.parse(authText);
+
+            // 1. Update Context Accumulator (Runtime)
+            this.contextAccumulator = this.contextAccumulator || {};
+            if (authData.cnpj) this.contextAccumulator.companyCnpj = authData.cnpj;
+            if (authData.name) this.contextAccumulator.companyName = authData.name;
+            if (authData.id) this.contextAccumulator.companyId = authData.id;
+            if (authData.token) this.contextAccumulator.authToken = authData.token;
+
+            console.log(`[Executor] 🧠 Extracted from auth: CNPJ=${authData.cnpj || 'N/A'}, Name=${authData.name || 'N/A'}`);
+
+            // 2. DYNAMIC PROFILE UPDATE (Persistence)
+            let usedEmail = args.email || args.user;
+            if (usedEmail) {
+                const profiles = this.resourceEnricher.getAllProfiles();
+                const usedProfile = profiles.find(p => p.credentials?.email === usedEmail || p.credentials?.user === usedEmail);
+
+                if (usedProfile) {
+                    console.log(`[Executor] 💾 Updating Auth Profile '${usedProfile.label}' with new data...`);
+                    const newCredentials = { ...usedProfile.credentials, ...authData };
+
+                    // Simple update check (could be more granular but this is safe)
+                    await this.resourceEnricher.updateProfile(usedProfile.resourceId, usedProfile.id, {
+                        credentials: newCredentials,
+                        label: authData.name || usedProfile.label,
+                        role: authData.role || usedProfile.role
+                    });
+                    console.log(`[Executor] ✅ Auth Profile Updated.`);
+                }
+            }
+        } catch (e) {
+            console.warn(`[Executor] Auth side-effect error: ${e.message}`);
+        }
     }
 }
 

@@ -77,6 +77,26 @@ Todo conteúdo voltado ao usuário ou desenvolvedor **DEVE** estar em português
 
 > **Exceção**: Nomes de variáveis, funções, classes e arquivos permanecem em **inglês** para manter compatibilidade com padrões da indústria.
 
+### 5. ARQUITETURA AGNÓSTICA E ANTI-VIÉS (CRÍTICO 🚨)
+
+Este é um sistema **GENÉRICO**. Ele não conhece "Alunos", "Pacientes" ou "Produtos" nativamente. Ele conhece **Resources**, **Tools** e **Entities**.
+
+- **Proibido**: Criar componentes com nomes de domínio específico no Core.
+  - ❌ `StudentCard.jsx`, `PayrollService.js`, `SchoolController.js`
+  - ✅ `EntityCard.jsx`, `ResourceService.js`, `GenericController.js`
+
+- **Proibido**: Hardcoded Business Logic no Orchestrator/Executor.
+  - ❌ `if (toolName == 'get_student') doSomething()`
+  - ✅ `if (tool.metadata.type == 'search') doSomething()`
+
+- **Regra do "New Tenant"**:
+  - Pergunte-se: "Se eu instalar este sistema para um Hospital amanhã, este código quebra ou fica estranho?"
+  - Se a resposta for SIM, você está introduzindo **Viés de Domínio**. **REFATORE IMEDIATAMENTE.**
+
+- **Prompt Engineering**:
+  - Ao criar prompts para LLMs, nunca assuma o schema. Use injeção dinâmica de schema baseada na inspeção do Resource.
+
+
 ## ⚙️ WORKFLOW OPERACIONAL (CICLO DE VIDA)
 
 **1. ANÁLISE E DIAGNÓSTICO (Audit Mode):**

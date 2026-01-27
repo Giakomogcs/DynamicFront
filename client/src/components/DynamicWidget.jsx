@@ -5,6 +5,8 @@ import {
 } from 'recharts';
 import { ExpandableWidget } from './ExpandableWidget';
 import { ExternalLink, Play, ArrowRight, MousePointer2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { GenerativeRenderer } from '../gen-ui/GenerativeRenderer';
+import { ComponentRegistry } from '../gen-ui/ComponentRegistry';
 
 class WidgetErrorBoundary extends React.Component {
     constructor(props) {
@@ -38,7 +40,21 @@ class WidgetErrorBoundary extends React.Component {
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-const DynamicWidgetContent = ({ type, data, config, title, sections, items, steps, content, sentiment, actions, dataSource, onAction, onNavigateScreen, onRefresh }) => {
+const DynamicWidgetContent = (props) => {
+    // Unpack common props but keep 'rest' for GenUI
+    const { type, data, config, title, sections, items, steps, content, sentiment, actions, dataSource, onAction, onNavigateScreen, onRefresh, ...rest } = props;
+
+    // --- GEN UI INTEGRATION ---
+    if (ComponentRegistry[type] || type === 'root') {
+        // Construct the node structure for renderer
+        // The 'props' from parent become the properties of this node
+        const node = {
+            type,
+            props: props.props || rest, // Use 'props' field if exists (from JSON), else rest
+            children: props.children
+        };
+        return <GenerativeRenderer data={node} />;
+    }
 
     // --- State for Filters ---
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -93,11 +109,11 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
 
     if (type === 'chart') {
         const ChartComponent = config?.chartType === 'bar' ? BarChart :
-            config?.chartType === 'pie' ? PieChart : 
-            config?.chartType === 'area' ? AreaChart : LineChart;
-            
+            config?.chartType === 'pie' ? PieChart :
+                config?.chartType === 'area' ? AreaChart : LineChart;
+
         // Enhanced Chart Config
-        const dataKeys = config?.dataKeys || [{ key: "value", color: "#6366f1" }]; 
+        const dataKeys = config?.dataKeys || [{ key: "value", color: "#6366f1" }];
         // If simple data, normalkeys
         const isMultiSeries = Array.isArray(config?.series);
 
@@ -108,7 +124,7 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
                         <h4 className="text-base font-semibold text-slate-200">{config?.title || 'Data Visualization'}</h4>
                         {config?.subtitle && <p className="text-xs text-slate-500 mt-1">{config.subtitle}</p>}
                     </div>
-                
+
                     <div className="flex items-center gap-2">
                         {renderRefreshButton()}
                         {config?.navigationTarget && (
@@ -126,22 +142,22 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
                         <ChartComponent data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                            <XAxis 
-                                dataKey="name" 
-                                stroke="#64748b" 
-                                fontSize={11} 
+                            <XAxis
+                                dataKey="name"
+                                stroke="#64748b"
+                                fontSize={11}
                                 tickLine={false}
                                 axisLine={false}
                                 dy={10}
                             />
-                            <YAxis 
-                                stroke="#64748b" 
-                                fontSize={11} 
+                            <YAxis
+                                stroke="#64748b"
+                                fontSize={11}
                                 tickLine={false}
                                 axisLine={false}
                                 tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
@@ -153,29 +169,29 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
                                 cursor={{ fill: '#1e293b', opacity: 0.4 }}
                             />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                                
+
                             {/* Render Series Dynamically */}
                             {config?.chartType === 'area' && (
                                 <Area type="monotone" dataKey="value" stroke="#818cf8" fillOpacity={1} fill="url(#colorValue)" />
                             )}
-                            
+
                             {config?.chartType === 'bar' && (
                                 <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={50} />
                             )}
-                            
+
                             {config?.chartType === 'line' && (
                                 <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#1e1b4b', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                             )}
-                            
+
                             {config?.chartType === 'pie' && (
-                                <Pie 
-                                    data={data} 
-                                    dataKey="value" 
-                                    nameKey="name" 
-                                    cx="50%" 
-                                    cy="50%" 
+                                <Pie
+                                    data={data}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
                                     innerRadius={60}
-                                    outerRadius={80} 
+                                    outerRadius={80}
                                     paddingAngle={5}
                                     stroke="none"
                                 >
@@ -194,10 +210,10 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
 
     if (type === 'table') {
         const columns = Object.keys(data[0] || {}).map(key => ({ header: key, accessorKey: key }));
-        
+
         // Filter Data
         const filteredData = data.filter(row => {
-            const matchesSearch = Object.values(row).some(val => 
+            const matchesSearch = Object.values(row).some(val =>
                 String(val).toLowerCase().includes(searchTerm.toLowerCase())
             );
             // Simple date filtering (if row has 'date' or 'createdAt')
@@ -214,30 +230,30 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
                 <div className="p-4 border-b border-slate-800/50 flex flex-col gap-4 bg-slate-800/20">
                     <div className="flex justify-between items-center">
                         <h4 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                             {title || "Data Table"}
-                             <span className="text-xs font-normal text-slate-500 px-2 py-0.5 bg-slate-800 rounded-full border border-slate-700">
+                            {title || "Data Table"}
+                            <span className="text-xs font-normal text-slate-500 px-2 py-0.5 bg-slate-800 rounded-full border border-slate-700">
                                 {filteredData.length} items
-                             </span>
+                            </span>
                         </h4>
                         {renderRefreshButton()}
                     </div>
-                    
+
                     {/* Filters */}
                     <div className="flex items-center gap-3">
                         <div className="relative flex-1 max-w-xs">
-                             <input 
-                                type="text" 
-                                placeholder="Search..." 
+                            <input
+                                type="text"
+                                placeholder="Search..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                             />
+                            />
                         </div>
                         {/* Optional Date Filter Mockup - simplistic for now */}
                         {/* <input type="date" className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-400" /> */}
                     </div>
                 </div>
-                
+
                 <div className="overflow-x-auto max-h-[400px]">
                     <table className="w-full text-sm text-left text-slate-400">
                         <thead className="text-xs text-slate-200 uppercase bg-slate-800/50 sticky top-0 backdrop-blur-sm z-10">
@@ -373,7 +389,7 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
 
     if (type === 'calendar') {
         const [currentDate, setCurrentDate] = React.useState(new Date());
-        
+
         const getDaysInMonth = (date) => {
             const year = date.getFullYear();
             const month = date.getMonth();
@@ -395,7 +411,7 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
         const daysInMonth = getDaysInMonth(currentDate);
         const firstDay = getFirstDayOfMonth(currentDate);
         const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-        
+
         // Data format: [{ date: '2024-03-15', title: 'Event', type: 'warning/success' }]
         const getEventsForDay = (day) => {
             if (!data) return [];
@@ -415,35 +431,35 @@ const DynamicWidgetContent = ({ type, data, config, title, sections, items, step
                         <span className="text-sm font-normal text-slate-400">({monthName})</span>
                     </h4>
                     <div className="flex items-center gap-2">
-                         <button onClick={() => navigateMonth(-1)} className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors">
-                             <ArrowRight className="rotate-180" size={16} />
-                         </button>
-                         <button onClick={() => navigateMonth(1)} className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors">
-                             <ArrowRight size={16} />
-                         </button>
+                        <button onClick={() => navigateMonth(-1)} className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors">
+                            <ArrowRight className="rotate-180" size={16} />
+                        </button>
+                        <button onClick={() => navigateMonth(1)} className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors">
+                            <ArrowRight size={16} />
+                        </button>
                     </div>
                 </div>
-                
+
                 {/* Days Header */}
                 <div className="grid grid-cols-7 mb-2 text-center">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
                         <div key={d} className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-1">{d}</div>
                     ))}
                 </div>
-                
+
                 {/* Calendar Grid */}
                 <div className="grid grid-cols-7 gap-1">
                     {/* Empty Slots */}
                     {Array.from({ length: firstDay }).map((_, i) => (
                         <div key={`empty-${i}`} className="h-24 bg-transparent border border-transparent" />
                     ))}
-                    
+
                     {/* Days */}
                     {Array.from({ length: daysInMonth }).map((_, i) => {
                         const day = i + 1;
                         const events = getEventsForDay(day);
                         const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
-                        
+
                         return (
                             <div key={day} className={`h-24 border border-slate-800/50 rounded-lg p-2 relative hover:bg-slate-800/20 transition-colors ${isToday ? 'bg-indigo-500/5 border-indigo-500/30' : 'bg-slate-900/30'}`}>
                                 <span className={`text-sm font-medium ${isToday ? 'text-indigo-400' : 'text-slate-400'}`}>{day}</span>

@@ -19,12 +19,18 @@
 
 ### 🌟 Diferencial Principal
 
-**ANTES:** Sistema hardcoded para SENAI específico  
-**AGORA:** Sistema genérico que funciona com **QUALQUER** recurso automaticamente
+**DynamicFront** elimina o "Business Logic Hardcoding".
 
-- Adicione "Hospital API" → Detecta "Healthcare" automaticamente ✓
-- Adicione "E-commerce API" → Detecta domínio e gera UI ✓
-- Adicione "Finance API" → Funciona sem modificar código ✓
+- **Arquitetura Tradicional**: Desenvolvedor cria `StudentController`, `ProductService`, `PatientView`. (Rígido, Lento).
+- **DynamicFront**: Desenvolvedor conecta **Recursos** (APIs/Banco). O sistema entende o domínio e gera a aplicação. (Líquido, Instantâneo).
+
+**Exemplos de Adaptação Imediata:**
+
+1. **🏥 Domínio Saúde**: Conecte `hospital-db` → Sistema gera UI de Pacientes e Triagem.
+2. **📚 Domínio Educação**: Conecte `school-api` → Sistema gera UI de Cursos e Matrículas.
+3. **🏭 Domínio Indústria**: Conecte `erp-api` → Sistema gera Dashboards de Produção.
+
+*Tudo isso sem alterar uma única linha de código fonte da plataforma.*
 
 ---
 
@@ -123,24 +129,20 @@ OPENAI_API_KEY="your_key"
 
 ### 🎓 Guias Essenciais (LEIA PRIMEIRO)
 
-1. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Arquitetura detalhada do sistema
-2. **[INTELLIGENCE_GUIDE.md](./docs/INTELLIGENCE_GUIDE.md)** - Sistema de inteligência (Fases 1-4)
-3. **[SEMANTIC_ANALYSIS.md](./docs/SEMANTIC_ANALYSIS.md)** - Como funciona análise semântica
-4. **[STRATEGIC_REASONING.md](./docs/STRATEGIC_REASONING.md)** - Motor de raciocínio estratégico
-5. **[CANVAS_MANAGEMENT.md](./docs/CANVAS_MANAGEMENT.md)** - Sistema de canvas inteligente
+1. **[AGENTS.md](./agents.md)** - **System Prompt** e Guia de Identidade dos Agentes (CRÍTICO PARA IAs).
+2. **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Guia de Arquitetura Agnóstica e Anti-Viés.
+3. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Visão técnica dos módulos React/Node.
 
-### 📖 Guias por Funcionalidade
+### 📖 Guias de Inteligência
 
-- **[MCP_INTEGRATION.md](./docs/MCP_INTEGRATION.md)** - Como conectar novos resources
-- **[DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md)** - Schema completo do banco
-- **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)** - Como rodar e criar testes
-- **[API_REFERENCE.md](./docs/API_REFERENCE.md)** - Referência completa de APIs
+- **[AGENT_ARCHITECTURE.md](./docs/AGENT_ARCHITECTURE.md)** - Detalhes da implementação dos Agentes.
+- **[INTELLIGENCE_GUIDE.md](./docs/INTELLIGENCE_GUIDE.md)** - Explicação do Motor de Raciocínio (antigo).
+
+*(Nota: Mais documentações específicas estão sendo migradas para a pasta `docs/`)*
 
 ### 🔧 Para Desenvolvedores
 
-- **[DEVELOPMENT.md](./docs/DEVELOPMENT.md)** - Setup de desenvolvimento
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Como contribuir
-- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Guia de deploy
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - **LEITURA OBRIGATÓRIA**: O Teste do Hospital.
 
 ---
 

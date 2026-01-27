@@ -80,7 +80,7 @@ class McpClientService {
             console.log(`[McpClient] Server '${serverName}' already running. Closing before respawn...`);
             try {
                 const client = this.clients.get(serverName);
-                await client.close(); 
+                await client.close();
                 // Note: client.close() might not kill the spawned process if transport doesn't handle it. 
                 // StdioClientTransport usually kills the child process.
                 this.clients.delete(serverName);
@@ -110,22 +110,57 @@ class McpClientService {
 
     async reload() {
         console.log("[McpClient] Reloading all servers...");
+        await this.syncWithRegistry();
+    }
 
-        // Close all existing connections
-        for (const [name, client] of this.clients.entries()) {
-            try {
-                await client.close();
-            } catch (e) {
-                console.error(`[McpClient] Error closing ${name}:`, e);
+    /**
+     * Synchronizes running MCP servers with the database registry.
+     * Spawns new servers and stops removed ones.
+     */
+    async syncWithRegistry() {
+        console.log("[McpClient] Syncing Registry...");
+
+        // Fetch current desired state
+        const dbs = await prisma.verifiedDb.findMany({ where: { isEnabled: true } });
+        const apis = await prisma.verifiedApi.findMany({ where: { isEnabled: true } });
+
+        const activeServerNames = new Set(this.clients.keys());
+        const desiredServerNames = new Set([
+            ...Object.keys(MCP_SERVERS),
+            ...dbs.map(db => `db_${db.idString}`),
+            ...apis.map(api => `api_${api.idString}`)
+        ]);
+
+        // 1. STOP removed servers
+        for (const name of activeServerNames) {
+            if (!desiredServerNames.has(name)) {
+                console.log(`[McpClient] Stopping removed server: ${name}`);
+                try {
+                    const client = this.clients.get(name);
+                    await client.close();
+                    this.clients.delete(name);
+                    this.toolsCache.delete(name);
+                } catch (e) {
+                    console.error(`[McpClient] Error stopping ${name}:`, e);
+                }
             }
         }
 
-        this.clients.clear();
-        this.toolsCache.clear();
-        this.isInitialized = false;
+        // 2. START new servers
+        for (const db of dbs) {
+            const name = `db_${db.idString}`;
+            if (!this.clients.has(name)) {
+                await this.spawnDbServer(db);
+            }
+        }
+        for (const api of apis) {
+            const name = `api_${api.idString}`;
+            if (!this.clients.has(name)) {
+                await this.spawnApiServer(api);
+            }
+        }
 
-        // Reinitialize
-        await this.initialize();
+        console.log("[McpClient] Sync Complete.");
     }
 
     async connectToServer(name, config) {
@@ -166,19 +201,19 @@ class McpClientService {
             const result = await client.listTools();
             const tools = result.tools.map(t => {
                 const fullName = `${serverName}__${t.name}`;
-                
+
                 // OpenAI/Copilot limit is 64 characters
                 let toolName = fullName;
                 if (fullName.length > 64) {
                     // Strategy: Shorten the prefix. 
                     // UUIDs are roughly 36 chars. api_ + 36 + __ = ~41 chars.
                     // If we use only the first 8 chars of the ID: api_8chars + __ = 12 chars.
-                    const serverPrefix = serverName.startsWith('api_') || serverName.startsWith('db_') 
+                    const serverPrefix = serverName.startsWith('api_') || serverName.startsWith('db_')
                         ? serverName.split('_')[0] + '_' + serverName.split('_')[1].substring(0, 8)
                         : serverName.substring(0, 12);
-                    
+
                     toolName = `${serverPrefix}__${t.name}`;
-                    
+
                     // If still too long, truncate tool name
                     if (toolName.length > 64) {
                         const overflow = toolName.length - 64;

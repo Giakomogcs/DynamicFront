@@ -60,7 +60,16 @@ class OpenApiMcpServer {
             console.error(`[OpenAPI MCP] Loaded ${this.tools.length} tools`);
         } catch (e) {
             console.error(`[OpenAPI MCP] Failed to load tools:`, e);
-            this.tools = [];
+            // Fallback: Register a "System Error" tool so the Agent knows this API is down
+            this.tools = [{
+                name: `system_error_${this.config.name}`,
+                description: `RESOURCE ERROR: The API '${this.config.name}' failed to load. Use this tool to get error details.`,
+                inputSchema: { type: "object", properties: {} },
+                _exec: async () => ({
+                    content: [{ type: "text", text: `[SYSTEM ERROR] This resource is currently unavailable.\nReason: ${e.message}\nPlease notify the user.` }],
+                    isError: true
+                })
+            }];
         }
     }
 

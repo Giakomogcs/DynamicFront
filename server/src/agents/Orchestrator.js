@@ -80,6 +80,10 @@ export class AgentOrchestrator {
                     usedModel: executionData.usedModel
                 };
             }
+
+            if (routing.intent === 'DATA_REQUEST' || routing.intent === 'UPDATE_CURRENT') {
+                console.log(`[Orchestrator] 🔍 Data/Update Intent detected: ${routing.intent}. Proceeding to Tool Planning.`);
+            }
         }
 
         if (canvasContext && canvasContext.sessionId) {
@@ -130,9 +134,21 @@ export class AgentOrchestrator {
         console.log(`[Orchestrator] Planner selected: [${selectedToolNames.join(', ')}]`);
         console.log(`[Orchestrator] Strategy: ${plan.thought}`);
 
+        // Sanitize Planner Output (ensure strings)
+        const normalizedToolNames = selectedToolNames.map(t => {
+            if (typeof t === 'string') return t;
+            if (typeof t === 'object' && t !== null) {
+                if (t.name) return t.name;
+                if (t.tool) return t.tool; // Common hallucination
+            }
+            return String(t);
+        });
+
         // 🔥 VALIDATE tools exist before proceeding
-        let validatedTools = selectedToolNames.filter(name => {
+        let validatedTools = normalizedToolNames.filter(name => {
             // Strip prefix if present to match sanitized names
+            if (typeof name !== 'string') return false; // Safety check
+
             const sanitizedName = name.includes('__') ? name.split('__').pop() : name;
 
             const exists = allCompatibleTools.find(t =>
