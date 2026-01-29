@@ -3810,3 +3810,11 @@
 {"component":"ResourceEnricher","level":"debug","message":"Found profiles for resource","profileCount":2,"resourceId":"a3ff2cda","timestamp":"2026-01-27 13:35:01"}
 {"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-27 13:39:01"}
 {"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 1 resources","resourceCount":1,"timestamp":"2026-01-27 13:39:01"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-28 22:08:32"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 0 resources","resourceCount":0,"timestamp":"2026-01-28 22:08:32"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-28 22:08:33"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-28 22:08:33"}
+{"component":"ResourceEnricher","level":"info","message":"Loading profiles from database","timestamp":"2026-01-28 22:08:36"}
+{"component":"ResourceEnricher","level":"debug","message":"Loaded profiles for 0 resources","resourceCount":0,"timestamp":"2026-01-28 22:08:36"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"Default","timestamp":"2026-01-28 22:08:37"}
+{"component":"ResourceEnricher","level":"debug","message":"Getting profiles for resource","resourceId":"filesystem","timestamp":"2026-01-28 22:08:37"}
